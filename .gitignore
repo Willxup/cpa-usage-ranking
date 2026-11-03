@@ -1,0 +1,20 @@
+# Local development plans and design material are not public documentation.
+/plans/
+
+# Local working areas and agent instructions.
+/.worktrees/
+/AGENTS.md
+
+# Local configuration, dependencies and generated output.
+.env
+.env.*
+!.env.example
+/bin/
+/data/
+node_modules/
+/web/dist/
+/coverage/
+/web/coverage/
+/web/test/results/
+/web/test/report/
+*.log
