@@ -15,6 +15,14 @@ go test ./...
 
 Tests live in each module's `test/` directory, not beside production files.
 
+## HTTP foundation
+
+- `GET /healthz`: 200 with `{"status":"ok"}` means the process is alive.
+- `GET /readyz`: 503 while business services are not implemented.
+- Unknown routes and unsupported methods return JSON errors (404/405).
+- Panic responses are generic; request bodies, headers and panic values are not logged.
+- Forwarded client-IP headers are not trusted by default.
+
 ## Configuration
 
 | Variable | Default | Meaning |
