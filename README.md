@@ -11,7 +11,13 @@ Requires Go 1.26.10 or newer.
 
 ```sh
 go test ./...
+go run ./cmd/ranking
 ```
+
+The service listens on `http://127.0.0.1:8080` by default. SIGINT/SIGTERM
+stop admission and drain active requests within the configured grace period.
+A shutdown timeout closes remaining connections and exits unsuccessfully.
+Startup and shutdown events are logged as JSON to stderr.
 
 Tests live in each module's `test/` directory, not beside production files.
 
