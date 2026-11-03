@@ -17,6 +17,21 @@ go run ./cmd/ranking
 
 测试统一放在对应模块的 `test/` 目录，不与生产文件混放。
 
+## 前端开发
+
+需要 Node.js 24.15+（24.x）和 npm。运行时仅依赖 React 与 React DOM，当前没有业务功能。
+
+```sh
+npm --prefix web ci
+npm --prefix web run dev
+npm --prefix web run typecheck
+npm --prefix web run lint
+npm --prefix web test
+npm --prefix web run build
+```
+
+前端测试及初始化放在 `web/src/**/test/`。由于 lint 解析器支持的 TypeScript 上限低于 6.1，暂使用 6.0。其传递依赖 `minimatch` 单独锁定到 11.0.1，修复 GHSA-g3hv-75wg-m249；上游允许安全版本后应移除该 override。
+
 ## HTTP 基础
 
 - `GET /healthz`：200 与 `{"status":"ok"}` 仅表示进程存活。

@@ -21,6 +21,25 @@ Startup and shutdown events are logged as JSON to stderr.
 
 Tests live in each module's `test/` directory, not beside production files.
 
+## Frontend development
+
+Requires Node.js 24.15+ (24.x) and npm. Runtime dependencies are only React and
+React DOM; the application does not have business features yet.
+
+```sh
+npm --prefix web ci
+npm --prefix web run dev
+npm --prefix web run typecheck
+npm --prefix web run lint
+npm --prefix web test
+npm --prefix web run build
+```
+
+Frontend tests and setup live under `web/src/**/test/`. TypeScript stays on
+6.0 while the lint parser supports versions below 6.1. The lint parser's
+`minimatch` is overridden to 11.0.1 to address GHSA-g3hv-75wg-m249; remove the
+override when its upstream dependency range includes a fixed release.
+
 ## HTTP foundation
 
 - `GET /healthz`: 200 with `{"status":"ok"}` means the process is alive.
