@@ -24,7 +24,9 @@ Tests live in each module's `test/` directory, not beside production files.
 ## Frontend development
 
 Requires Node.js 24.15+ (24.x) and npm. Runtime dependencies are only React and
-React DOM; the application does not have business features yet.
+React DOM; the application does not have business features yet. Tailwind runs
+at build time. Shared colors, typography and focus styling live in
+`web/src/styles/tokens.css`; no external font or icon services are required.
 
 ```sh
 npm --prefix web ci

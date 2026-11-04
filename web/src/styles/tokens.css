@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  font-family: Inter, "Noto Sans CJK SC", "Microsoft YaHei", system-ui, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --surface: #071114;
+  --surface-raised: #0d1b20;
+  --surface-soft: #11252b;
+  --ink: #eef7f6;
+  --muted: #a0b5b9;
+  --subtle: #819b9f;
+  --accent: #91f3d2;
+  --accent-ink: #09251e;
+  --electric: #81d5fa;
+  --warning: #f1ca8e;
+  --danger: #ffaaa7;
+  --line: rgb(164 216 214 / 15%);
+  --radius-panel: 24px;
+}
+
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-line: var(--line);
+  --font-sans: Inter, "Noto Sans CJK SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+@layer base {
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 100px; }
+  body { margin: 0; min-width: 320px; background: var(--surface); color: var(--ink); }
+  button, input { font: inherit; }
+  button, a { -webkit-tap-highlight-color: transparent; }
+  button:not(:disabled), a { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; }
+  ::selection { background: var(--accent); color: var(--accent-ink); }
+  h1, h2, h3, p { margin: 0; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+  }
+}
