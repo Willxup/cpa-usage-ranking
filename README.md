@@ -38,6 +38,11 @@ not simulate standings or usage totals. The check button calls the real
 8 seconds, supports retry and cancels requests on unmount. There is no polling.
 A successful check does not mark the ranking business as ready.
 
+Decorative motion respects `prefers-reduced-motion` and stops when the control
+is offscreen, disabled or the document is hidden. Missing observer APIs fall
+back to a static control. Observers/listeners are removed on unmount; the page
+has no canvas, WebGL, external fonts or background JavaScript animation loop.
+
 For local development, run `go run ./cmd/ranking` and `npm --prefix web run dev`
 in separate terminals. Vite binds to loopback and proxies health endpoints to
 `http://127.0.0.1:8080`; override `RANKING_DEV_PROXY_TARGET` if needed. No CORS

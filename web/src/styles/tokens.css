@@ -44,6 +44,6 @@
   ::selection { background: var(--accent); color: var(--accent-ink); }
   h1, h2, h3, p { margin: 0; }
   @media (prefers-reduced-motion: reduce) {
-    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   }
 }
