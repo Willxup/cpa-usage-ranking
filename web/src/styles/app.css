@@ -93,8 +93,8 @@
 .site-footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-block: 24px; border-top: 1px solid var(--line); font-size: 9px; color: var(--subtle); letter-spacing: 1.3px; }
 .site-footer p { letter-spacing: 0; font-size: 11px; }
 .footer-state { color: var(--muted); }
-.skip-link { position: fixed; z-index: 10; top: 12px; left: 12px; padding: 12px 18px; background: var(--accent); color: var(--accent-ink); border-radius: 8px; transform: translateY(-150%); }
-.skip-link:focus { transform: none; }
+.skip-link { position: fixed; z-index: 10; top: 12px; left: 12px; padding: 12px 18px; background: var(--accent); color: var(--accent-ink); border-radius: 8px; clip-path: inset(50%); }
+.skip-link:focus { clip-path: none; }
 @media (max-width: 960px) {
   .page-width { width: calc(100% - 48px); }
   .hero { grid-template-columns: 1.3fr 0.7fr; padding-block: 60px; }

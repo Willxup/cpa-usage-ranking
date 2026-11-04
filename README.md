@@ -70,6 +70,8 @@ With Go, Node/npm and Make installed:
 make deps       # Go modules and frozen npm lockfile
 make verify     # formatting, vet, Go tests, web type/lint/tests, both builds
 make test-race  # Go concurrency checks
+make browser-install # install the single headless Chromium test browser
+make verify-all      # verify + race + production browser smoke checks
 make run        # build and serve the frontend with Go on port 8080
 ```
 
@@ -77,6 +79,16 @@ make run        # build and serve the frontend with Go on port 8080
 Builds need no local secrets or planning files. The frontend build includes
 React Bits attribution and its complete license at
 `web/dist/assets/third-party-notices.txt`. Keep that file when deploying.
+
+Browser tests/configuration live in `web/test/`. `make test-browser` builds and
+starts an isolated Go process on loopback port 4187, checks desktop/mobile
+layouts, real health requests, keyboard/touch access, reduced motion, retry
+and 404 boundaries, then stops the process. It refuses to reuse an existing
+service. Override `RANKING_TEST_PORT` if occupied. Results default to
+`web/test/results/`; `PLAYWRIGHT_OUTPUT_DIR` and `PLAYWRIGHT_BROWSERS_PATH` can
+relocate artifacts and browser downloads. A minimal Linux host may first need
+Playwright's Chromium system dependencies installed by its administrator.
+These smoke checks do not establish 100,000-client capacity.
 
 ## Production frontend serving
 

@@ -46,10 +46,14 @@ npm --prefix web run build
 make deps       # Go 模块及 npm 锁定依赖
 make verify     # 格式、vet、Go 测试、前端类型/lint/测试，以及双端构建
 make test-race  # Go 并发检查
+make browser-install # 安装唯一的无头 Chromium 测试浏览器
+make verify-all      # 基础检查 + race + 正式产物浏览器冒烟
 make run        # 构建后由 Go 在 8080 端口提供页面
 ```
 
 `BIN_DIR` 默认 `bin`，`GO_TEST_FLAGS` 默认 `-p 2`，均可覆盖。构建不依赖本地秘密或内部规划文件。前端产物在 `web/dist/assets/third-party-notices.txt` 中包含 React Bits 来源及完整许可，部署时保留该文件。
+
+浏览器测试及配置位于 `web/test/`。`make test-browser` 构建并启动独立 Go 进程，使用回环端口 4187，验证桌面/手机布局、真实健康请求、键盘/触控、减少动效、失败重试及 404 边界，然后停止进程；不会接管已有服务。端口占用时可覆盖 `RANKING_TEST_PORT`。产物默认在 `web/test/results/`，可用 `PLAYWRIGHT_OUTPUT_DIR`、`PLAYWRIGHT_BROWSERS_PATH` 调整产物及浏览器下载位置。精简 Linux 环境可能需要管理员先补齐 Playwright 的 Chromium 系统依赖。这些冒烟测试不代表已经验证十万客户端容量。
 
 ## 正式前端托管
 
