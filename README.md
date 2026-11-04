@@ -31,6 +31,12 @@ The selected React Bits control uses CSS only and adds no animation runtime.
 See [third-party source notices](THIRD_PARTY_NOTICES.md) for its pinned source,
 local adaptations and MIT + Commons Clause license.
 
+The interface uses a light, wide layout with coral/violet accents and compact
+desktop sizing without page zoom; mobile sizing remains independent. Summary
+values stay unknown (`—`), and time/search/model filters remain disabled until
+business functionality is implemented. Project icons and regeneration details
+are documented in [Brand icons](docs/brand-icons.md).
+
 The responsive preview has in-page navigation, an explicit empty-data view and
 a service-status panel with unchecked/loading/success/error states. It does
 not simulate standings or usage totals. The check button calls the real

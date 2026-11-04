@@ -7,7 +7,7 @@ test('loads the real production build and checks the live Go process', async ({ 
   page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()) })
   page.on('request', (request) => { if (new URL(request.url()).origin !== baseURL) externalRequests.push(request.url()) })
   await page.goto('/')
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('让每一份用量')
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('AI 用量排行榜')
   const response = page.waitForResponse((value) => new URL(value.url()).pathname === '/healthz')
   await page.getByRole('button', { name: '检查服务连接' }).click()
   expect((await response).status()).toBe(200)
@@ -18,6 +18,21 @@ test('loads the real production build and checks the live Go process', async ({ 
   await page.screenshot({ path: info.outputPath('desktop.png'), fullPage: true })
   expect(errors).toEqual([])
   expect(externalRequests).toEqual([])
+})
+
+test('uses compact desktop sizing without scaling down mobile or applying page zoom', async ({ page }) => {
+  await page.goto('/')
+  const heading = page.getByRole('heading', { level: 1 })
+  expect(await heading.evaluate((node) => parseFloat(getComputedStyle(node).fontSize))).toBeLessThan(34)
+  expect((await page.locator('.site-header').boundingBox())!.height).toBeLessThanOrEqual(72)
+  expect(await page.locator('body').evaluate((node) => getComputedStyle(node).zoom)).toBe('1')
+  expect((await page.locator('.brand .project-icon').boundingBox())!.width).toBe(62)
+  expect(await page.locator('.brand').evaluate((node) => getComputedStyle(node).columnGap)).toBe('0px')
+  await page.setViewportSize({ width: 375, height: 812 })
+  expect(await heading.evaluate((node) => parseFloat(getComputedStyle(node).fontSize))).toBe(34)
+  expect((await page.locator('.site-header').boundingBox())!.height).toBeGreaterThanOrEqual(116)
+  expect((await page.locator('.brand .project-icon').boundingBox())!.width).toBe(52)
+  expect(await page.locator('.brand').evaluate((node) => getComputedStyle(node).columnGap)).toBe('0px')
 })
 
 for (const width of [320, 375, 768]) {
@@ -33,14 +48,13 @@ for (const width of [320, 375, 768]) {
   })
 }
 
-test('supports skip navigation and keyboard-only health checks', async ({ page }) => {
+test('supports normal tab navigation and keyboard-only health checks', async ({ page }) => {
   await page.goto('/')
-  await page.keyboard.press('Tab')
-  await expect(page.getByRole('link', { name: '跳到主要内容' })).toBeFocused()
-  await page.keyboard.press('Enter')
-  await expect(page.getByRole('main')).toBeFocused()
-  await page.keyboard.press('Tab')
-  await expect(page.getByRole('link', { name: '查看服务状态' })).toBeFocused()
+  await expect(page.getByRole('link', { name: '跳到主要内容' })).toHaveCount(0)
+  for (const name of ['CPA Usage Ranking 首页', '排行榜', '模型洞察', '关于', '查看服务状态']) {
+    await page.keyboard.press('Tab')
+    await expect(page.getByRole('link', { name, exact: true })).toBeFocused()
+  }
   await page.keyboard.press('Tab')
   await expect(page.getByRole('button', { name: '检查服务连接' })).toBeFocused()
   await page.keyboard.press('Enter')
@@ -85,6 +99,27 @@ test('preserves API and missing-resource boundaries and ships source notices', a
   expect(notices.status()).toBe(200)
   expect(await notices.text()).toContain('MIT + Commons Clause')
   expect(await notices.text()).toContain('Copyright (c) 2025 David Haz')
+})
+
+test('serves decodable project icons and browser favicon variants', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.locator('.brand .project-icon')).toBeVisible()
+  await expect(page.locator('link[rel="icon"][type="image/svg+xml"]')).toHaveAttribute('href', '/favicon.svg?v=2')
+  const files = ['/favicon.svg', '/assets/brand/project-icon.svg', '/assets/brand/favicon.ico',
+    ...[16, 32, 48].map((size) => `/assets/brand/favicon-${size}.png`),
+    ...[180, 192, 512].map((size) => `/assets/brand/project-icon-${size}.png`)]
+  for (const file of files) {
+    const size = await page.evaluate(async (src) => {
+      const image = new Image()
+      image.src = src
+      await image.decode()
+      return { width: image.naturalWidth, height: image.naturalHeight }
+    }, file)
+    expect(size.width).toBeGreaterThan(0)
+    expect(size.width).toBe(size.height)
+    const match = file.match(/-(\d+)\.png$/)
+    if (match) expect(size.width).toBe(Number(match[1]))
+  }
 })
 
 test.describe('touch interaction', () => {

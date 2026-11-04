@@ -1,8 +1,9 @@
 export function BrandMark({ className = '' }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 48 48" fill="none" aria-hidden="true" focusable="false">
-      <path d="M24 4 42 14v20L24 44 6 34V14L24 4Z" stroke="currentColor" strokeWidth="1.5" />
-      <path d="m15 29 8-14 7 12 5-8M15 29h18" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+    <svg className={className} viewBox="0 0 40 40" fill="none" aria-hidden="true" focusable="false">
+      <path d="M4 26h8v10H4z" fill="currentColor" opacity=".65" />
+      <path d="M16 16h8v20h-8z" fill="currentColor" opacity=".82" />
+      <path d="M28 4h8v32h-8z" fill="currentColor" />
     </svg>
   )
 }

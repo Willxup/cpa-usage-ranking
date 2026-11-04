@@ -7,51 +7,50 @@ export default function App() {
   const health = useHealth()
   return (
     <div className="app-shell">
-      <div className="ambient-field" aria-hidden="true" />
-      <a className="skip-link" href="#main">跳到主要内容</a>
-      <header className="site-header page-width">
-        <a className="brand" href="#overview" aria-label="CPA Usage Ranking 首页"><BrandMark /><span>CPA<span className="brand-divider">/</span><strong>RANK</strong></span></a>
-        <nav aria-label="页面导航"><a href="#overview">概览</a><a href="#status">服务状态</a><a href="#foundation">关于框架</a></nav>
-        <span className="build-badge"><span />FOUNDATION</span>
+      <header className="header-wrap">
+        <div className="site-header page-width">
+          <a className="brand" href="#overview" aria-label="CPA Usage Ranking 首页"><img className="project-icon" src="/assets/brand/project-icon.svg" width="40" height="40" alt="" /><span>CPA Usage Ranking</span></a>
+          <nav aria-label="页面导航"><a className="nav-current" href="#ranking">排行榜</a><a href="#models">模型洞察</a><a href="#foundation">关于</a></nav>
+          <button className="management-button" disabled title="排名管理尚未开放">排名管理 · 待开放</button>
+        </div>
       </header>
-
-      <main id="main" className="page-width" tabIndex={-1}>
-        <section id="overview" className="hero" aria-labelledby="hero-title">
-          <div className="hero-copy">
-            <p className="eyebrow hero-eyebrow"><span className="tiny-line" />THE SIGNAL BEHIND EVERY TOKEN</p>
-            <h1 id="hero-title">让每一份用量，<br /><span>都有清晰的坐标。</span></h1>
-            <p className="hero-description">把分散的使用，汇成清晰的视野。<br />一个独立、开放接入的通用用量排名服务，正在从这里开始。</p>
-            <div className="hero-actions"><a href="#status" className="primary-link">查看服务状态<ArrowIcon /></a><span className="preview-note">基础框架预览 · 非正式榜单</span></div>
-          </div>
-          <div className="signal-art" aria-hidden="true">
-            <div className="orbit orbit--outer" /><div className="orbit orbit--middle" /><div className="orbit orbit--inner" />
-            <div className="signal-cross signal-cross--horizontal" /><div className="signal-cross signal-cross--vertical" />
-            <div className="orbit-node orbit-node--one" /><div className="orbit-node orbit-node--two" /><div className="orbit-node orbit-node--three" />
-            <div className="signal-core"><BrandMark /></div>
-            <span className="art-label art-label--top">CLEAR SIGNAL.</span><span className="art-label art-label--bottom">MEANINGFUL USAGE.</span>
-          </div>
+      <main id="main" className="page-width">
+        <section id="overview" className="overview" aria-labelledby="page-title">
+          <div><p className="eyebrow">A CLEARER VIEW OF AI USAGE</p><h1 id="page-title">AI 用量排行榜</h1><p className="page-description">每一次调用，都将在这里被看见。</p></div>
+          <dl className="summary" aria-label="用量概览，尚无数据">
+            <div><dd>—</dd><dt>参与客户端</dt></div>
+            <div><dd className="violet">—</dd><dt>Token 用量</dt></div>
+            <div><dd>—</dd><dt>活跃模型</dt></div>
+          </dl>
         </section>
 
-        <div className="workspace-grid">
-          <section className="empty-panel glass-panel" aria-labelledby="empty-heading">
-            <div className="section-topline"><span className="eyebrow">THE NEXT CHAPTER</span><span className="outline-pill">尚未开放</span></div>
-            <div className="empty-visual" aria-hidden="true"><span /><span /><span /><span /><span /><span /><div className="empty-scanline" /></div>
-            <div className="empty-copy"><h2 id="empty-heading">等待第一份真实数据</h2><p>这里将呈现真实的用量与排名。<br />当前尚未开放上报与排名，不显示模拟名次或虚构统计。</p></div>
-            <div className="empty-footer"><span className="small-dot" />真实数据优先<span className="empty-footer-line" /><span>清晰，而不喧闹</span></div>
-          </section>
-          <StatusPanel state={health.state} message={health.message} onCheck={health.check} />
-        </div>
-
-        <section id="foundation" className="foundation" aria-labelledby="foundation-heading">
-          <div className="foundation-heading"><span className="eyebrow">BUILT WITH INTENTION</span><h2 id="foundation-heading">先把基础做好。</h2></div>
-          <div className="feature-grid">
-            <article><span className="feature-index">01 / INTERFACE</span><h3>有质感，也足够轻。</h3><p>React 与按需视觉组件。没有整套特效库，让每一处光影各有其用。</p></article>
-            <article><span className="feature-index">02 / CONNECTION</span><h3>连接真实，状态透明。</h3><p>检测入口与业务状态分开呈现，避免把基础服务误当作完整榜单。</p></article>
-            <article><span className="feature-index">03 / FOUNDATION</span><h3>一步一步，稳稳向前。</h3><p>当前仅提供基础框架。注册、存储与排名将在后续功能中逐步接入。</p></article>
+        <section id="ranking" className="ranking-section" aria-label="排行榜，等待数据">
+          <div className="ranking-toolbar">
+            <fieldset className="period-control" disabled><legend className="sr-only">时间范围（尚未开放）</legend><button type="button">今日</button><button type="button">本周</button><button type="button">本月</button></fieldset>
+            <div className="filter-controls"><label className="search-control"><span aria-hidden="true">⌕</span><span className="sr-only">搜索参与者（尚未开放）</span><input disabled placeholder="搜索参与者" /></label><label><span className="sr-only">模型筛选（尚未开放）</span><select disabled defaultValue=""><option value="">全部模型</option></select></label></div>
           </div>
+          <p className="filter-note">数据尚未接入 · 时间范围、搜索与筛选暂未开放</p>
+          <div className="ranking-columns" aria-hidden="true"><span>排名</span><span>参与者</span><span>用量信息</span><span>请求信息</span><span>使用模型</span></div>
+          <div className="ranking-empty">
+            <div className="empty-symbol" aria-hidden="true"><BrandMark /><span className="empty-symbol-dot" /></div>
+            <span className="empty-label">WAITING FOR DATA</span>
+            <h2>等待第一份真实数据</h2>
+            <p>榜单正在准备中，真实的使用将在这里汇聚。<br />当前尚未开放上报与排名，不显示模拟名次或虚构统计。</p>
+            <a href="#status" className="primary-link">查看服务状态<ArrowIcon /></a>
+            <span className="empty-caption">排名规则与统计口径将在后续确认</span>
+          </div>
+          <div className="ranking-bottom"><span><i />尚无排名数据</span><span>真实数据接入后展示</span></div>
+        </section>
+
+        <section id="models" className="model-distribution" aria-labelledby="models-heading">
+          <h2 id="models-heading">模型分布</h2><div className="distribution-placeholder" aria-hidden="true" /><p>等待模型用量数据<span>暂无分布比例</span></p>
+        </section>
+        <section id="foundation" className="foundation" aria-labelledby="foundation-heading">
+          <div className="foundation-copy"><span className="eyebrow">ABOUT THIS PREVIEW</span><h2 id="foundation-heading">先连接，再看见。</h2><p>这是 CPA Usage Ranking 的界面预览。<br />目前仅支持服务存活检测，注册、上报与排名业务尚未开放。</p><div className="preview-badge">界面预览 <span>/</span> 非正式榜单</div></div>
+          <StatusPanel state={health.state} message={health.message} onCheck={health.check} />
         </section>
       </main>
-      <footer className="site-footer page-width"><span>CPA USAGE RANKING</span><p>让使用被看见，让数据有意义。</p><span className="footer-state">FOUNDATION PREVIEW</span></footer>
+      <footer className="site-footer page-width"><span>CPA Usage Ranking</span><p>等待真实数据，不使用示例统计。</p></footer>
     </div>
   )
 }

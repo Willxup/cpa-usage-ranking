@@ -12,6 +12,7 @@
     "test": "vitest run",
     "check": "npm run typecheck && npm run lint && npm test",
     "browser:install": "playwright install --only-shell chromium",
+    "icons:generate": "node scripts/generate-icons.mjs",
     "test:browser": "playwright test --config test/playwright.config.ts"
   },
   "dependencies": {

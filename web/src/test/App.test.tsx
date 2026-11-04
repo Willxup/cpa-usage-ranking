@@ -7,11 +7,20 @@ describe('application shell', () => {
   it('has readable landmarks and identifies unfinished business', () => {
     render(<App />)
     expect(screen.getByRole('main')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('让每一份用量')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('AI 用量排行榜')
     expect(screen.getByRole('heading', { name: '等待第一份真实数据' })).toBeVisible()
     expect(screen.getByText(/当前尚未开放上报与排名/)).toBeVisible()
     expect(screen.getByText('尚未就绪')).toBeVisible()
     expect(screen.getByRole('link', { name: 'CPA Usage Ranking 首页' })).toHaveAttribute('href', '#overview')
+  })
+
+  it('keeps metrics unknown and unimplemented filters disabled', () => {
+    render(<App />)
+    expect(screen.getAllByText('—')).toHaveLength(3)
+    expect(screen.getByRole('textbox', { name: '搜索参与者（尚未开放）' })).toBeDisabled()
+    expect(screen.getByRole('combobox', { name: '模型筛选（尚未开放）' })).toBeDisabled()
+    for (const name of ['今日', '本周', '本月']) expect(screen.getByRole('button', { name })).toBeDisabled()
+    expect(screen.getByText('暂无分布比例')).toBeVisible()
   })
 
   it('links navigation to real content without placeholder business routes', () => {
@@ -22,7 +31,7 @@ describe('application shell', () => {
       expect(hash).toMatch(/^#.+/)
       expect(document.getElementById(hash.slice(1))).not.toBeNull()
     }
-    expect(screen.getByRole('link', { name: '跳到主要内容' })).toHaveAttribute('href', '#main')
+    expect(screen.queryByRole('link', { name: '跳到主要内容' })).not.toBeInTheDocument()
   })
 
   it('connects the visible check button to the health contract without claiming readiness', async () => {
