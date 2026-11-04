@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-独立的通用用量排名服务。目前已具备 SQLite 连接初始化基础，尚无业务表，注册、上报和榜单仍未实现。
+独立的通用用量排名服务。目前已具备 SQLite 连接和事务迁移基础，尚无业务表，注册、上报和榜单仍未实现。
 
 ## 开发
 
@@ -19,7 +19,7 @@ go run ./cmd/ranking
 
 ## 存储基础
 
-启动时在监听 HTTP 之前打开 `data/ranking.db`，可通过 `RANKING_SQLITE_PATH` 覆盖。自动创建缺失的父目录，启用 WAL、FULL 同步和外键；连接失败直接退出，不自动修复或回退。关停先排空 HTTP，再关闭有界读写连接池，业务就绪仍返回 503。具体约定见 [SQLite 存储说明](docs/storage.md)。
+启动时在监听 HTTP 之前打开 `data/ranking.db`，可通过 `RANKING_SQLITE_PATH` 覆盖。自动创建缺失的父目录和迁移版本表，启用 WAL、FULL 同步和外键。每个迁移版本的变更与成功记录在同一事务中提交，失败回滚该版本，已完成版本不重复执行；当前仅创建 `schema_migrations`，不预建业务表。连接或迁移失败直接退出，不自动修复或回退。关停先排空 HTTP，再关闭有界读写连接池，业务就绪仍返回 503。具体约定见 [SQLite 存储说明](docs/storage.md)。
 
 ## 前端开发
 
