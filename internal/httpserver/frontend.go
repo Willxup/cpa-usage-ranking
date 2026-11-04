@@ -74,7 +74,9 @@ func (f *Frontend) serve(c *gin.Context) {
 		return
 	}
 	c.Header("Cache-Control", "no-cache")
-	if strings.HasPrefix(name, "assets/") && fingerprintedAsset.MatchString(info.Name()) {
+	// Only Vite's top-level generated assets use fingerprint caching. Public
+	// subdirectories contain stable filenames (for example brand/icon-512.png).
+	if strings.HasPrefix(name, "assets/") && strings.Count(name, "/") == 1 && fingerprintedAsset.MatchString(info.Name()) {
 		c.Header("Cache-Control", "public, max-age=31536000, immutable")
 	}
 	http.ServeContent(c.Writer, c.Request, info.Name(), info.ModTime(), file)

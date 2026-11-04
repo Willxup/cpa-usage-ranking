@@ -108,8 +108,9 @@ incomplete build, startup fails instead of silently serving a broken site.
 Only `/`, `/index.html`, `/favicon.svg` and actual files below `/assets/` are
 served. There is no arbitrary SPA fallback or directory listing. Missing files,
 unknown APIs and unknown pages remain 404. Traversal and symlink escapes are
-rejected. HTML and non-fingerprinted files revalidate; fingerprinted build
-assets can be cached for a year. Do not modify assets in place while serving;
+rejected. HTML, non-fingerprinted files and stable files in public asset
+subdirectories revalidate; top-level fingerprinted build assets can be cached
+for a year. Do not modify assets in place while serving;
 stop the process, replace the build, then restart.
 
 ## HTTP foundation

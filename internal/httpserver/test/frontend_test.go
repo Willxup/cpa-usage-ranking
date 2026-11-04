@@ -14,15 +14,16 @@ import (
 func frontendFixture(t *testing.T) (string, http.Handler) {
 	t.Helper()
 	directory := t.TempDir()
-	if err := os.Mkdir(filepath.Join(directory, "assets"), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Join(directory, "assets", "brand"), 0700); err != nil {
 		t.Fatal(err)
 	}
 	for name, body := range map[string]string{
-		"index.html":               "<!doctype html><html><body>ranking shell</body></html>",
-		"favicon.svg":              "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>",
-		"assets/index-Abcd1234.js": "console.log('real asset')",
-		"assets/plain.css":         "body { color: white; }",
-		"assets/.secret":           "do not expose",
+		"index.html":                        "<!doctype html><html><body>ranking shell</body></html>",
+		"favicon.svg":                       "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>",
+		"assets/index-Abcd1234.js":          "console.log('real asset')",
+		"assets/plain.css":                  "body { color: white; }",
+		"assets/.secret":                    "do not expose",
+		"assets/brand/project-icon-512.png": "stable icon export",
 	} {
 		if err := os.WriteFile(filepath.Join(directory, name), []byte(body), 0600); err != nil {
 			t.Fatal(err)
@@ -50,6 +51,7 @@ func TestFrontendServing(t *testing.T) {
 		{"/favicon.svg", "<svg", "no-cache"},
 		{"/assets/index-Abcd1234.js", "real asset", "public, max-age=31536000, immutable"},
 		{"/assets/plain.css", "color: white", "no-cache"},
+		{"/assets/brand/project-icon-512.png", "stable icon export", "no-cache"},
 	} {
 		t.Run(tc.path, func(t *testing.T) {
 			response := httptest.NewRecorder()
