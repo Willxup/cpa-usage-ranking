@@ -38,6 +38,19 @@ npm --prefix web run build
 
 前端测试及初始化放在 `web/src/**/test/`。由于 lint 解析器支持的 TypeScript 上限低于 6.1，暂使用 6.0。其传递依赖 `minimatch` 单独锁定到 11.0.1，修复 GHSA-g3hv-75wg-m249；上游允许安全版本后应移除该 override。
 
+## 全栈验证
+
+安装 Go、Node/npm 和 Make 后：
+
+```sh
+make deps       # Go 模块及 npm 锁定依赖
+make verify     # 格式、vet、Go 测试、前端类型/lint/测试，以及双端构建
+make test-race  # Go 并发检查
+make run        # 构建后由 Go 在 8080 端口提供页面
+```
+
+`BIN_DIR` 默认 `bin`，`GO_TEST_FLAGS` 默认 `-p 2`，均可覆盖。构建不依赖本地秘密或内部规划文件。前端产物在 `web/dist/assets/third-party-notices.txt` 中包含 React Bits 来源及完整许可，部署时保留该文件。
+
 ## 正式前端托管
 
 ```sh

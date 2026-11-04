@@ -62,6 +62,22 @@ Frontend tests and setup live under `web/src/**/test/`. TypeScript stays on
 `minimatch` is overridden to 11.0.1 to address GHSA-g3hv-75wg-m249; remove the
 override when its upstream dependency range includes a fixed release.
 
+## Full-stack verification
+
+With Go, Node/npm and Make installed:
+
+```sh
+make deps       # Go modules and frozen npm lockfile
+make verify     # formatting, vet, Go tests, web type/lint/tests, both builds
+make test-race  # Go concurrency checks
+make run        # build and serve the frontend with Go on port 8080
+```
+
+`BIN_DIR` defaults to `bin`; `GO_TEST_FLAGS` defaults to `-p 2` and is overridable.
+Builds need no local secrets or planning files. The frontend build includes
+React Bits attribution and its complete license at
+`web/dist/assets/third-party-notices.txt`. Keep that file when deploying.
+
 ## Production frontend serving
 
 ```sh

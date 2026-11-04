@@ -1,9 +1,17 @@
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { readFileSync } from 'node:fs'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), {
+    name: 'application-source-notices',
+    generateBundle() {
+      const notices = readFileSync(new URL('../THIRD_PARTY_NOTICES.md', import.meta.url), 'utf8')
+      const license = readFileSync(new URL('../third_party/react-bits/LICENSE.md', import.meta.url), 'utf8')
+      this.emitFile({ type: 'asset', fileName: 'assets/third-party-notices.txt', source: `${notices}\n\n${license}` })
+    },
+  }],
   server: {
     host: '127.0.0.1',
     strictPort: true,
