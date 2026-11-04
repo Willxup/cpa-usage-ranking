@@ -29,6 +29,15 @@ func run(logger *slog.Logger) error {
 		return err
 	}
 	gin.SetMode(gin.ReleaseMode)
+	router := httpserver.NewRouter(logger)
+	if cfg.WebDir != "" {
+		frontend, err := httpserver.OpenFrontend(cfg.WebDir)
+		if err != nil {
+			return err
+		}
+		defer frontend.Close()
+		frontend.Mount(router)
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	listener, err := net.Listen("tcp", cfg.HTTPAddr)
@@ -36,5 +45,5 @@ func run(logger *slog.Logger) error {
 		return fmt.Errorf("listen HTTP: %w", err)
 	}
 	logger.Info("http listener opened", "address", listener.Addr().String())
-	return httpserver.Serve(ctx, listener, httpserver.NewRouter(logger), cfg.ShutdownTimeout)
+	return httpserver.Serve(ctx, listener, router, cfg.ShutdownTimeout)
 }

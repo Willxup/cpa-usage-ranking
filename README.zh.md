@@ -38,6 +38,19 @@ npm --prefix web run build
 
 前端测试及初始化放在 `web/src/**/test/`。由于 lint 解析器支持的 TypeScript 上限低于 6.1，暂使用 6.0。其传递依赖 `minimatch` 单独锁定到 11.0.1，修复 GHSA-g3hv-75wg-m249；上游允许安全版本后应移除该 override。
 
+## 正式前端托管
+
+```sh
+npm --prefix web ci
+npm --prefix web run build
+go build -o bin/ranking ./cmd/ranking
+RANKING_WEB_DIR=web/dist ./bin/ranking
+```
+
+Go 同域提供构建后的页面和 API。部署二进制、`web/dist/` 及第三方声明/许可文件，线上不需要 Node 服务。`RANKING_WEB_DIR` 的相对路径以进程工作目录为基准；未设置时仅启用后端路由，设置后若缺少完整入口文件则启动失败。
+
+仅提供 `/`、`/index.html`、`/favicon.svg` 和 `/assets/` 下实际存在的文件，不做任意 SPA 页面回退或目录列表。缺失资源、未知 API 和未知页面保持 404；拒绝目录穿越及越界软链接。HTML 和非指纹文件需要重新验证，带构建指纹的资源可缓存一年。运行期间不要原地修改资源，应停止进程、更换构建后重启。
+
 ## HTTP 基础
 
 - `GET /healthz`：200 与 `{"status":"ok"}` 仅表示进程存活。
@@ -52,5 +65,6 @@ npm --prefix web run build
 | --- | --- | --- |
 | `RANKING_HTTP_ADDR` | `127.0.0.1:8080` | 监听地址，数值端口 0 表示选择空闲端口 |
 | `RANKING_SHUTDOWN_TIMEOUT` | `10s` | 正数形式的优雅关停等待时间 |
+| `RANKING_WEB_DIR` | 未设置 | 可选的前端构建目录；未设置时仅启用后端 |
 
 显式空值或非法配置会校验失败。不自动加载配置文件，不提交凭据或本地 `.env` 文件。

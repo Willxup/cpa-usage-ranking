@@ -14,6 +14,7 @@ import (
 type Config struct {
 	HTTPAddr        string
 	ShutdownTimeout time.Duration
+	WebDir          string
 }
 
 // Load reads environment variables. Explicitly empty values are invalid.
@@ -40,6 +41,12 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("RANKING_SHUTDOWN_TIMEOUT must be a positive duration")
 		}
 		cfg.ShutdownTimeout = duration
+	}
+	if value, ok := os.LookupEnv("RANKING_WEB_DIR"); ok {
+		cfg.WebDir = strings.TrimSpace(value)
+		if cfg.WebDir == "" {
+			return Config{}, fmt.Errorf("RANKING_WEB_DIR must be a non-empty directory path when set")
+		}
 	}
 	return cfg, nil
 }

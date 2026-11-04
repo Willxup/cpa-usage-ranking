@@ -62,6 +62,28 @@ Frontend tests and setup live under `web/src/**/test/`. TypeScript stays on
 `minimatch` is overridden to 11.0.1 to address GHSA-g3hv-75wg-m249; remove the
 override when its upstream dependency range includes a fixed release.
 
+## Production frontend serving
+
+```sh
+npm --prefix web ci
+npm --prefix web run build
+go build -o bin/ranking ./cmd/ranking
+RANKING_WEB_DIR=web/dist ./bin/ranking
+```
+
+Go serves the built application and API on the same origin. Deploy the binary,
+`web/dist/` and the third-party notices/licenses together; Node is needed only
+for building. `RANKING_WEB_DIR` is relative to the process working directory
+unless absolute. If unset, only backend routes are enabled. If set to an
+incomplete build, startup fails instead of silently serving a broken site.
+
+Only `/`, `/index.html`, `/favicon.svg` and actual files below `/assets/` are
+served. There is no arbitrary SPA fallback or directory listing. Missing files,
+unknown APIs and unknown pages remain 404. Traversal and symlink escapes are
+rejected. HTML and non-fingerprinted files revalidate; fingerprinted build
+assets can be cached for a year. Do not modify assets in place while serving;
+stop the process, replace the build, then restart.
+
 ## HTTP foundation
 
 - `GET /healthz`: 200 with `{"status":"ok"}` means the process is alive.
@@ -76,6 +98,7 @@ override when its upstream dependency range includes a fixed release.
 | --- | --- | --- |
 | `RANKING_HTTP_ADDR` | `127.0.0.1:8080` | Listen address; numeric port 0 selects a free port |
 | `RANKING_SHUTDOWN_TIMEOUT` | `10s` | Positive grace period for shutdown |
+| `RANKING_WEB_DIR` | unset | Optional built frontend directory; unset means backend-only |
 
 Explicitly empty or invalid settings fail validation. No configuration files
 are loaded automatically. Do not commit credentials or local `.env` files.
