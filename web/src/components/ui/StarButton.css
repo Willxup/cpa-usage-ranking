@@ -1,0 +1,48 @@
+/* React Bits CSS StarBorder adaptation; see THIRD_PARTY_NOTICES.md. */
+.star-button {
+  position: relative;
+  display: inline-flex;
+  overflow: hidden;
+  padding: 1px;
+  border: 1px solid rgb(145 243 210 / 22%);
+  border-radius: 12px;
+  background: rgb(145 243 210 / 8%);
+  color: var(--ink);
+  isolation: isolate;
+  text-decoration: none;
+  transition: border-color 180ms, box-shadow 180ms;
+}
+.star-button:hover:not(:disabled) { border-color: var(--accent); box-shadow: 0 0 30px rgb(145 243 210 / 13%); }
+.star-button:disabled { opacity: 0.5; }
+.star-button__content {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 12px 22px;
+  border-radius: 10px;
+  background: linear-gradient(130deg, #123128, #122328);
+  font-size: 14px;
+  font-weight: 600;
+}
+.star-button__trail {
+  position: absolute;
+  z-index: 0;
+  width: 300%;
+  height: 50%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent), transparent 12%);
+  pointer-events: none;
+}
+.star-button__trail--bottom { bottom: -10px; right: -250%; animation: star-bottom 6s linear infinite alternate; }
+.star-button__trail--top { top: -10px; left: -250%; animation: star-top 6s linear infinite alternate; }
+.star-button:disabled .star-button__trail { animation-play-state: paused; opacity: 0; }
+@keyframes star-bottom { from { transform: translateX(0); opacity: 1; } to { transform: translateX(-100%); opacity: 0; } }
+@keyframes star-top { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .star-button { transition: none; }
+  .star-button__trail { animation: none; opacity: 0; }
+}

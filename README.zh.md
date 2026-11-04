@@ -19,7 +19,7 @@ go run ./cmd/ranking
 
 ## 前端开发
 
-需要 Node.js 24.15+（24.x）和 npm。运行时仅依赖 React 与 React DOM，当前没有业务功能。Tailwind 仅参与构建，统一色彩、字体和焦点样式在 `web/src/styles/tokens.css`；不请求外部字体或图标服务。
+需要 Node.js 24.15+（24.x）和 npm。运行时仅依赖 React 与 React DOM，当前没有业务功能。Tailwind 仅参与构建，统一色彩、字体和焦点样式在 `web/src/styles/tokens.css`；不请求外部字体或图标服务。当前选用的 React Bits 控件仅使用 CSS，不新增动效运行时；固定来源、改动和 MIT + Commons Clause 授权见[第三方源码说明](THIRD_PARTY_NOTICES.md)。
 
 ```sh
 npm --prefix web ci

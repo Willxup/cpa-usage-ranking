@@ -27,6 +27,9 @@ Requires Node.js 24.15+ (24.x) and npm. Runtime dependencies are only React and
 React DOM; the application does not have business features yet. Tailwind runs
 at build time. Shared colors, typography and focus styling live in
 `web/src/styles/tokens.css`; no external font or icon services are required.
+The selected React Bits control uses CSS only and adds no animation runtime.
+See [third-party source notices](THIRD_PARTY_NOTICES.md) for its pinned source,
+local adaptations and MIT + Commons Clause license.
 
 ```sh
 npm --prefix web ci
