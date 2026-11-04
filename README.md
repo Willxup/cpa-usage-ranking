@@ -31,6 +31,11 @@ The selected React Bits control uses CSS only and adds no animation runtime.
 See [third-party source notices](THIRD_PARTY_NOTICES.md) for its pinned source,
 local adaptations and MIT + Commons Clause license.
 
+The responsive preview has in-page navigation, an explicit empty-data view and
+a service-status panel with unchecked/loading/success/error states. It does
+not simulate standings or usage totals. The status button remains disabled
+until a real check handler is connected.
+
 ```sh
 npm --prefix web ci
 npm --prefix web run dev

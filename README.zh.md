@@ -30,6 +30,8 @@ npm --prefix web test
 npm --prefix web run build
 ```
 
+响应式预览包含页内导航、明确的空数据展示，以及未检测/加载/成功/失败状态组件；不伪造名次或用量统计。检测按钮在真实处理函数接入前保持禁用。
+
 前端测试及初始化放在 `web/src/**/test/`。由于 lint 解析器支持的 TypeScript 上限低于 6.1，暂使用 6.0。其传递依赖 `minimatch` 单独锁定到 11.0.1，修复 GHSA-g3hv-75wg-m249；上游允许安全版本后应移除该 override。
 
 ## HTTP 基础
