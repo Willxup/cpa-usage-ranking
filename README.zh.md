@@ -30,7 +30,9 @@ npm --prefix web test
 npm --prefix web run build
 ```
 
-响应式预览包含页内导航、明确的空数据展示，以及未检测/加载/成功/失败状态组件；不伪造名次或用量统计。检测按钮在真实处理函数接入前保持禁用。
+响应式预览包含页内导航、明确的空数据展示，以及未检测/加载/成功/失败状态组件；不伪造名次或用量统计。检测按钮按需调用真实的 `GET /healthz`、校验 JSON 协议，8 秒超时，支持重试，组件卸载时取消请求；不自动轮询。检测成功不代表排名业务就绪。
+
+本地开发时，分别在两个终端执行 `go run ./cmd/ranking` 与 `npm --prefix web run dev`。Vite 绑定回环地址，将健康检查代理到 `http://127.0.0.1:8080`，可通过 `RANKING_DEV_PROXY_TARGET` 修改开发代理目标；无需放宽 CORS 或部署生产 Node 服务。
 
 前端测试及初始化放在 `web/src/**/test/`。由于 lint 解析器支持的 TypeScript 上限低于 6.1，暂使用 6.0。其传递依赖 `minimatch` 单独锁定到 11.0.1，修复 GHSA-g3hv-75wg-m249；上游允许安全版本后应移除该 override。
 

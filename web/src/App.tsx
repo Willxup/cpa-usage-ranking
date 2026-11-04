@@ -1,8 +1,10 @@
 import { ArrowIcon, BrandMark } from './components/Brand'
 import { StatusPanel } from './components/StatusPanel'
+import { useHealth } from './hooks/useHealth'
 import './styles/app.css'
 
 export default function App() {
+  const health = useHealth()
   return (
     <div className="app-shell">
       <div className="ambient-field" aria-hidden="true" />
@@ -37,7 +39,7 @@ export default function App() {
             <div className="empty-copy"><h2 id="empty-heading">等待第一份真实数据</h2><p>这里将呈现真实的用量与排名。<br />当前尚未开放上报与排名，不显示模拟名次或虚构统计。</p></div>
             <div className="empty-footer"><span className="small-dot" />真实数据优先<span className="empty-footer-line" /><span>清晰，而不喧闹</span></div>
           </section>
-          <StatusPanel state="idle" />
+          <StatusPanel state={health.state} message={health.message} onCheck={health.check} />
         </div>
 
         <section id="foundation" className="foundation" aria-labelledby="foundation-heading">
