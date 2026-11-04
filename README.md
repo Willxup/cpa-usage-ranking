@@ -3,11 +3,12 @@
 [简体中文](README.zh.md)
 
 An independent usage-ranking service. The foundation is under construction;
-registration, reporting, storage and leaderboards are not implemented yet.
+registration, reporting and leaderboards are not implemented yet. SQLite
+connection initialization is available, but no business tables exist.
 
 ## Development
 
-Requires Go 1.26.10 or newer.
+Requires Go 1.26.10 or newer, CGO enabled and a C compiler (such as GCC).
 
 ```sh
 go test ./...
@@ -20,6 +21,15 @@ A shutdown timeout closes remaining connections and exits unsuccessfully.
 Startup and shutdown events are logged as JSON to stderr.
 
 Tests live in each module's `test/` directory, not beside production files.
+
+## Storage foundation
+
+Startup opens `data/ranking.db` (override `RANKING_SQLITE_PATH`) before accepting
+HTTP requests. It creates missing parent directories and enables WAL, FULL
+synchronization and foreign keys. Database failures stop startup; they do not
+trigger automatic repair or fallback. Shutdown drains HTTP before closing the
+bounded write/read connection pools. See [SQLite storage](docs/storage.md).
+Business readiness remains 503.
 
 ## Frontend development
 
@@ -92,7 +102,9 @@ layouts, real health requests, keyboard/touch access, reduced motion, retry
 and 404 boundaries, then stops the process. It refuses to reuse an existing
 service. Override `RANKING_TEST_PORT` if occupied. Results default to
 `web/test/results/`; `PLAYWRIGHT_OUTPUT_DIR` and `PLAYWRIGHT_BROWSERS_PATH` can
-relocate artifacts and browser downloads. A minimal Linux host may first need
+relocate artifacts and browser downloads. Browser checks use a separate SQLite
+file under a `databases/<port>/` sibling of the results directory, never the
+application's default database. A minimal Linux host may first need
 Playwright's Chromium system dependencies installed by its administrator.
 These smoke checks do not establish 100,000-client capacity.
 
@@ -133,7 +145,8 @@ stop the process, replace the build, then restart.
 | --- | --- | --- |
 | `RANKING_HTTP_ADDR` | `127.0.0.1:8080` | Listen address; numeric port 0 selects a free port |
 | `RANKING_SHUTDOWN_TIMEOUT` | `10s` | Positive grace period for shutdown |
-| `RANKING_WEB_DIR` | unset | Optional built frontend directory; unset means backend-only |
+| `RANKING_WEB_DIR` | unset | Optional built frontend directory; unset means no frontend routes |
+| `RANKING_SQLITE_PATH` | `data/ranking.db` | SQLite file path, relative to the working directory unless absolute |
 
 Explicitly empty or invalid settings fail validation. No configuration files
 are loaded automatically. Do not commit credentials or local `.env` files.

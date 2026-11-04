@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -11,6 +12,7 @@ import (
 
 	"cpa-usage-ranking/internal/config"
 	"cpa-usage-ranking/internal/httpserver"
+	"cpa-usage-ranking/internal/storage"
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,7 +25,7 @@ func main() {
 	logger.Info("service stopped")
 }
 
-func run(logger *slog.Logger) error {
+func run(logger *slog.Logger) (err error) {
 	cfg, err := config.Load()
 	if err != nil {
 		return err
@@ -40,6 +42,13 @@ func run(logger *slog.Logger) error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	db, err := storage.Open(ctx, cfg.SQLitePath)
+	if err != nil {
+		return err
+	}
+	// Serve 返回前已停止接入并排空请求，再释放数据库连接。
+	defer func() { err = errors.Join(err, db.Close()) }()
+	logger.Info("sqlite connections opened")
 	listener, err := net.Listen("tcp", cfg.HTTPAddr)
 	if err != nil {
 		return fmt.Errorf("listen HTTP: %w", err)

@@ -15,11 +15,12 @@ type Config struct {
 	HTTPAddr        string
 	ShutdownTimeout time.Duration
 	WebDir          string
+	SQLitePath      string
 }
 
 // Load reads environment variables. Explicitly empty values are invalid.
 func Load() (Config, error) {
-	cfg := Config{HTTPAddr: "127.0.0.1:8080", ShutdownTimeout: 10 * time.Second}
+	cfg := Config{HTTPAddr: "127.0.0.1:8080", ShutdownTimeout: 10 * time.Second, SQLitePath: "data/ranking.db"}
 	if value, ok := os.LookupEnv("RANKING_HTTP_ADDR"); ok {
 		cfg.HTTPAddr = strings.TrimSpace(value)
 	}
@@ -46,6 +47,12 @@ func Load() (Config, error) {
 		cfg.WebDir = strings.TrimSpace(value)
 		if cfg.WebDir == "" {
 			return Config{}, fmt.Errorf("RANKING_WEB_DIR must be a non-empty directory path when set")
+		}
+	}
+	if value, ok := os.LookupEnv("RANKING_SQLITE_PATH"); ok {
+		cfg.SQLitePath = strings.TrimSpace(value)
+		if cfg.SQLitePath == "" {
+			return Config{}, fmt.Errorf("RANKING_SQLITE_PATH must be a non-empty file path")
 		}
 	}
 	return cfg, nil

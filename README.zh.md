@@ -2,11 +2,11 @@
 
 [English](README.md)
 
-独立的通用用量排名服务。目前正在搭建基础框架，尚未实现注册、上报、存储或榜单。
+独立的通用用量排名服务。目前已具备 SQLite 连接初始化基础，尚无业务表，注册、上报和榜单仍未实现。
 
 ## 开发
 
-需要 Go 1.26.10 或更新版本。
+需要 Go 1.26.10 或更新版本、启用 CGO，以及 C 编译器（如 GCC）。
 
 ```sh
 go test ./...
@@ -16,6 +16,10 @@ go run ./cmd/ranking
 默认监听 `http://127.0.0.1:8080`。SIGINT/SIGTERM 停止新接入，并在配置的宽限期内等待进行中的请求完成；关停超时会关闭剩余连接并以失败状态退出。启动和关停事件以 JSON 写入 stderr。
 
 测试统一放在对应模块的 `test/` 目录，不与生产文件混放。
+
+## 存储基础
+
+启动时在监听 HTTP 之前打开 `data/ranking.db`，可通过 `RANKING_SQLITE_PATH` 覆盖。自动创建缺失的父目录，启用 WAL、FULL 同步和外键；连接失败直接退出，不自动修复或回退。关停先排空 HTTP，再关闭有界读写连接池，业务就绪仍返回 503。具体约定见 [SQLite 存储说明](docs/storage.md)。
 
 ## 前端开发
 
@@ -55,7 +59,7 @@ make run        # 构建后由 Go 在 8080 端口提供页面
 
 `BIN_DIR` 默认 `bin`，`GO_TEST_FLAGS` 默认 `-p 2`，均可覆盖。构建不依赖本地秘密或内部规划文件。前端产物在 `web/dist/assets/third-party-notices.txt` 中包含 React Bits 来源及完整许可，部署时保留该文件。
 
-浏览器测试及配置位于 `web/test/`。`make test-browser` 构建并启动独立 Go 进程，使用回环端口 4187，验证桌面/手机布局、真实健康请求、键盘/触控、减少动效、失败重试及 404 边界，然后停止进程；不会接管已有服务。端口占用时可覆盖 `RANKING_TEST_PORT`。产物默认在 `web/test/results/`，可用 `PLAYWRIGHT_OUTPUT_DIR`、`PLAYWRIGHT_BROWSERS_PATH` 调整产物及浏览器下载位置。精简 Linux 环境可能需要管理员先补齐 Playwright 的 Chromium 系统依赖。这些冒烟测试不代表已经验证十万客户端容量。
+浏览器测试及配置位于 `web/test/`。`make test-browser` 构建并启动独立 Go 进程，使用回环端口 4187，验证桌面/手机布局、真实健康请求、键盘/触控、减少动效、失败重试及 404 边界，然后停止进程；不会接管已有服务。端口占用时可覆盖 `RANKING_TEST_PORT`。产物默认在 `web/test/results/`，可用 `PLAYWRIGHT_OUTPUT_DIR`、`PLAYWRIGHT_BROWSERS_PATH` 调整产物及浏览器下载位置。浏览器检查使用结果目录旁 `databases/<port>/` 中的独立测试库，不访问应用默认数据库。精简 Linux 环境可能需要管理员先补齐 Playwright 的 Chromium 系统依赖。这些冒烟测试不代表已经验证十万客户端容量。
 
 ## 正式前端托管
 
@@ -84,6 +88,7 @@ Go 同域提供构建后的页面和 API。部署二进制、`web/dist/` 及第�
 | --- | --- | --- |
 | `RANKING_HTTP_ADDR` | `127.0.0.1:8080` | 监听地址，数值端口 0 表示选择空闲端口 |
 | `RANKING_SHUTDOWN_TIMEOUT` | `10s` | 正数形式的优雅关停等待时间 |
-| `RANKING_WEB_DIR` | 未设置 | 可选的前端构建目录；未设置时仅启用后端 |
+| `RANKING_WEB_DIR` | 未设置 | 可选的前端构建目录；未设置时不提供前端路由 |
+| `RANKING_SQLITE_PATH` | `data/ranking.db` | SQLite 文件路径，相对路径以进程工作目录为基准 |
 
 显式空值或非法配置会校验失败。不自动加载配置文件，不提交凭据或本地 `.env` 文件。

@@ -16,5 +16,6 @@ node_modules/
 /coverage/
 /web/coverage/
 /web/test/results/
+/web/test/databases/
 /web/test/report/
 *.log
