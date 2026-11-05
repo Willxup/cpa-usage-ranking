@@ -48,8 +48,7 @@ func run(logger *slog.Logger) (err error) {
 	}
 	// Serve 返回前已停止接入并排空请求，再释放数据库连接。
 	defer func() { err = errors.Join(err, db.Close()) }()
-	// 本阶段只建立版本记录；业务表结构确认后再加入对应迁移。
-	if err := storage.Migrate(ctx, db.Writer, nil); err != nil {
+	if err := storage.MigrateSchema(ctx, db.Writer); err != nil {
 		return err
 	}
 	logger.Info("sqlite initialized")

@@ -1,9 +1,10 @@
 # SQLite storage
 
-The service opens its database and prepares migration tracking before listening
-for HTTP requests. Currently only `schema_migrations` exists; there are no
-business tables. Opening a database does **not** make `/readyz`
-return success; the ranking service is not implemented yet.
+The service opens its database and applies schema migrations before listening
+for HTTP requests. Schema version 1 creates `clients` for
+[client identity/profile persistence](client-storage.md); startup creates no
+participant records. Opening a database does **not** make `/readyz` return
+success; the ranking service is not implemented yet.
 
 ## Build and file location
 
@@ -60,9 +61,11 @@ returns an error. Tests live under `internal/storage/test/` and use real files.
 
 `storage.Migrate(ctx, db.Writer, migrations)` accepts an explicit ordered slice
 of `Migration{Version, Apply}`. `Version` must be a positive, increasing integer;
-`Apply` receives the context and a `*sql.Tx`. The current application passes an
-empty slice: startup creates only the version ledger, not placeholder business
-tables.
+`Apply` receives the context and a `*sql.Tx`. The application calls
+`storage.MigrateSchema(ctx, db.Writer)` to apply the explicit built-in list in
+`internal/storage/schema.go`. Version 1 creates `clients`; an existing database
+with only the empty migration ledger upgrades through the same path. The
+migration does not silently adopt an untracked table with the same name.
 
 For each version, the runner starts an IMMEDIATE transaction, checks the ledger,
 runs unapplied work, records the version and commits. The record is never

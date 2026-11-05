@@ -4,8 +4,8 @@
 
 An independent usage-ranking service. The foundation is under construction;
 registration, reporting and leaderboards are not implemented yet. SQLite
-connections and transactional migration tracking are available, but no business
-tables exist.
+connections, transactional migrations and client identity/profile persistence
+are available. There is no registration or authentication endpoint yet.
 
 ## Development
 
@@ -29,10 +29,11 @@ Startup opens `data/ranking.db` (override `RANKING_SQLITE_PATH`) before acceptin
 HTTP requests. It creates missing parent directories, prepares the migration
 ledger and enables WAL, FULL synchronization and foreign keys. Each declared
 migration and its version record commit atomically; already-applied versions
-are skipped. Currently only `schema_migrations` is created. Database failures stop startup; they do not
+are skipped. Schema version 1 creates `clients` for identity/profile persistence;
+startup does not seed participants. Database failures stop startup; they do not
 trigger automatic repair or fallback. Shutdown drains HTTP before closing the
-bounded write/read connection pools. See [SQLite storage](docs/storage.md).
-Business readiness remains 503.
+bounded write/read connection pools. See [SQLite storage](docs/storage.md) and
+[client storage](docs/client-storage.md). Business readiness remains 503.
 
 ## Frontend development
 
