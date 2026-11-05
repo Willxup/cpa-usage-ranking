@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"cpa-usage-ranking/internal/avatars"
 	"cpa-usage-ranking/internal/config"
 	"cpa-usage-ranking/internal/httpserver"
 	"cpa-usage-ranking/internal/storage"
@@ -32,6 +33,14 @@ func run(logger *slog.Logger) (err error) {
 	}
 	gin.SetMode(gin.ReleaseMode)
 	router := httpserver.NewRouter(logger)
+	avatarFiles := avatars.BuiltinFS()
+	catalog, err := avatars.Load(avatarFiles)
+	if err != nil {
+		return err
+	}
+	if err := httpserver.MountAvatars(router, catalog, avatarFiles); err != nil {
+		return err
+	}
 	if cfg.WebDir != "" {
 		frontend, err := httpserver.OpenFrontend(cfg.WebDir)
 		if err != nil {

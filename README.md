@@ -37,9 +37,10 @@ bounded write/read connection pools. See [SQLite storage](docs/storage.md) and
 
 Public display-name normalization and validation are available as an internal
 helper, not yet an HTTP endpoint. See [display-name rules](docs/display-names.md).
-The [static avatar catalog loader](docs/avatar-catalog.md) validates local IDs,
-default selection and resource presence; no production catalog/assets or avatar
-routes are supplied yet.
+The [static avatar catalog](docs/avatar-catalog.md) validates IDs, defaults and
+resources. The binary embeds 66 approved WebP avatars (default ID 1), served at
+`/avatars/catalog.json` and `/avatars/images/001.webp` through `066.webp`.
+These routes work without a frontend directory.
 
 ## Frontend development
 

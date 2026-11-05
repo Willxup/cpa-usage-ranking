@@ -1,4 +1,4 @@
-// Package avatars 加载服务端维护的静态头像目录，不生成、上传或分发图片。
+// Package avatars 加载服务端维护的静态头像目录与嵌入资源，不生成或上传图片。
 package avatars
 
 import (

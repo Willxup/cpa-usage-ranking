@@ -1,10 +1,32 @@
 # Static avatar catalog loader
 
 `internal/avatars` loads a server-maintained, extensible catalog from an
-`io/fs.FS`. It does **not** serve images or add HTTP routes, database tables,
-uploads, remote URLs, image decoding or generation. No production catalog or
-default avatar is supplied, and startup does not load a catalog yet. The small
-SVG catalog under `internal/avatars/test/testdata/` is a test fixture only.
+`io/fs.FS`. Startup loads the embedded production catalog, then serves it and
+its approved images independently of the frontend. There are no uploads,
+remote URLs, avatar database tables or image-generation dependencies. The small
+SVG catalog under `internal/avatars/test/testdata/` remains a test fixture only.
+
+## Production assets and HTTP
+
+The binary embeds `internal/avatars/assets/catalog.json` and `images/*.webp`.
+The initial catalog has stable IDs 1–66 mapped to `images/001.webp`–`066.webp`,
+with default ID 1. These are 128×128 WebP files reused with the project owner's
+approval. See [asset provenance](../internal/avatars/assets/PROVENANCE.md);
+no MIT/CC0 or other stock-image license is asserted.
+
+- `GET`/`HEAD /avatars/catalog.json`: JSON in the format below, `Cache-Control:
+  no-cache` and a content-derived ETag. Resolve each relative `path` against
+  `/avatars/` (for example `/avatars/images/001.webp`).
+- `GET`/`HEAD /avatars/images/001.webp`: WebP; `public, max-age=3600,
+  must-revalidate`, ETag and conditional 304 responses. Stable filenames are
+  **not** immutable.
+- Only listed assets and the catalog are exposed. Directories, source records,
+  missing resources and traversal paths return JSON 404, never a directory
+  listing or SPA page. `/assets/` remains the frontend's separate namespace.
+
+No external resource directory, old repository or planning files are needed at
+runtime. Adding assets requires updating the production catalog and rebuilding.
+There is no avatar selection UI or management API.
 
 ## Directory format
 
@@ -34,7 +56,7 @@ images/
   integer, not an array index or `uint8`. IDs need not be consecutive; 66 and
   255 are **not** limits.
 - `default_avatar_id` is required and must refer to a listed avatar. It need
-  not be the first or smallest ID. There is no guessed or built-in default.
+  not be the first or smallest ID. The loader does not guess a default.
 - `path` is a slash-separated file path relative to the **supplied filesystem
   root**, not a URL. Absolute paths, `.`/`..` components, empty components,
   backslashes, colons, query strings and fragments are rejected, not cleaned.
@@ -65,14 +87,14 @@ identity and lookup always use the explicit ID.
 
 The caller owns the filesystem boundary/lifetime. Use an embedded filesystem
 (or `fs.Sub` of one) or an `os.Root.FS()` constrained to the intended asset root.
-`os.DirFS` alone does **not** prevent symlink escapes. Future static serving must
-use the same constrained root and define its URL prefix/cache policy; a local
+`os.DirFS` alone does **not** prevent symlink escapes. Static serving uses
+the same constrained root and an explicit resource allowlist; a local
 `path` is not an authorization to serve arbitrary filesystem locations. Treat
 the catalog and files as a release unit, not resources to mutate while serving.
 
 The client repository remains independent of this loader and expects validated
-IDs. Registration, omitted-selection handling, public catalog/resource routes
-and the initial approved assets are not implemented here. Tests in
-`internal/avatars/test/` use real files and cover sparse/large IDs, extension,
-default membership, duplicates, invalid paths, missing resources and copy-safe
-listing without local planning files.
+IDs. Registration and omitted-selection handling are separate from loading.
+Tests in `internal/avatars/test/` cover sparse/large IDs, extension, default
+membership, duplicates, invalid paths, missing resources and copy-safe listing.
+HTTP tests cover serving/cache/path boundaries; `web/test/avatars.spec.ts`
+decodes all 66 images against the real production binary in Chromium.
