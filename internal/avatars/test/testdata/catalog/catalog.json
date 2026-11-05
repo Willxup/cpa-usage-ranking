@@ -1,0 +1,7 @@
+{
+  "default_avatar_id": 1099511627776,
+  "avatars": [
+    { "avatar_id": 67, "path": "images/circle.svg" },
+    { "avatar_id": 1099511627776, "path": "images/square.svg" }
+  ]
+}

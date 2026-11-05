@@ -37,6 +37,9 @@ bounded write/read connection pools. See [SQLite storage](docs/storage.md) and
 
 Public display-name normalization and validation are available as an internal
 helper, not yet an HTTP endpoint. See [display-name rules](docs/display-names.md).
+The [static avatar catalog loader](docs/avatar-catalog.md) validates local IDs,
+default selection and resource presence; no production catalog/assets or avatar
+routes are supplied yet.
 
 ## Frontend development
 

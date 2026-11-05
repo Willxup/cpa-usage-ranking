@@ -25,7 +25,8 @@ and the two-valued disabled flag. Name normalization/validation and catalog
 membership checking are **not implemented here**; callers must supply validated
 profile values when those services are connected. The repository neither
 normalizes names nor guesses an avatar default. The separate
-[display-name helper](display-names.md) provides name normalization/validation.
+[display-name helper](display-names.md) provides name normalization/validation;
+the [avatar catalog loader](avatar-catalog.md) provides ID membership lookup.
 
 ## Repository operations
 
