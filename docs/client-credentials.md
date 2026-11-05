@@ -1,0 +1,31 @@
+# Client-owned credentials
+
+A client generates **32 bytes from a cryptographically secure random source**,
+encodes them as unpadded base64url (RFC 4648 URL alphabet `A–Z a–z 0–9 - _`),
+and durably saves the secret **before its first registration attempt**. The
+canonical encoding is exactly 43 ASCII characters, without whitespace or `=`.
+The server validates format, not the client's entropy source; character-distribution
+heuristics cannot prove randomness.
+
+Send exactly one `Authorization: Bearer <secret>` header over **HTTPS**.
+The scheme is case-insensitive; one space separates it from the secret.
+Do not put the secret in URLs, JSON bodies, display names or logs. Configure
+reverse proxies and access/error logging to exclude Authorization headers and
+request bodies. HTTP on loopback is suitable only for local verification or a
+trusted TLS-terminating proxy; public deployment requires HTTPS.
+
+`internal/auth.HashCredential` decodes the canonical text, computes SHA-256
+**over the original 32 bytes** (not the 43 encoded characters), and returns the
+32-byte digest used by the client repository. `BearerHash` requires a single
+unambiguous Authorization header and returns only that digest. Invalid-input
+errors are generic and contain no credential text. The database stores a unique
+32-byte BLOB digest; clients and API responses do not carry that digest.
+
+This is a high-entropy machine credential, not a human password. The service
+does not generate or return secrets, add a password KDF, issue sessions, send
+OTP, rotate credentials or recover a lost secret. Clients must preserve their
+secret and reuse it for safe retries; keeping only `client_id` is insufficient.
+There is no client SDK or Keeper integration in this service.
+
+Credential parsing/hashing is available internally. Registration and HTTP
+identity enforcement are documented separately as they become available.

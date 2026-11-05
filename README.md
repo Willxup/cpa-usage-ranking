@@ -41,6 +41,9 @@ The [static avatar catalog](docs/avatar-catalog.md) validates IDs, defaults and
 resources. The binary embeds 66 approved WebP avatars (default ID 1), served at
 `/avatars/catalog.json` and `/avatars/images/001.webp` through `066.webp`.
 These routes work without a frontend directory.
+[Client credential parsing/hashing](docs/client-credentials.md) accepts a
+client-persisted 32-byte CSPRNG secret as canonical unpadded base64url Bearer
+text; the server stores only its SHA-256 digest. No secrets are issued.
 
 ## Frontend development
 

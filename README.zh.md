@@ -22,6 +22,7 @@ go run ./cmd/ranking
 启动时在监听 HTTP 之前打开 `data/ranking.db`，可通过 `RANKING_SQLITE_PATH` 覆盖。自动创建缺失的父目录和迁移版本表，启用 WAL、FULL 同步和外键。每个迁移版本的变更与成功记录在同一事务中提交，失败回滚该版本，已完成版本不重复执行；当前版本 1 建立 `clients` 身份与资料表，不填充模拟参与者。连接或迁移失败直接退出，不自动修复或回退。关停先排空 HTTP，再关闭有界读写连接池，业务就绪仍返回 503。具体约定见 [SQLite 存储说明](docs/storage.md)和[客户端存储说明](docs/client-storage.md)。
 
 公开昵称的归一化与校验已提供内部函数，尚未接入 HTTP 接口，具体见[昵称规则](docs/display-names.md)。[静态头像目录](docs/avatar-catalog.md)校验编号、默认项和资源；二进制嵌入获准复用的 66 张 WebP（默认编号 1），通过 `/avatars/catalog.json` 和 `/avatars/images/001.webp` 至 `066.webp` 分发，不依赖前端目录。
+[凭据解析与摘要](docs/client-credentials.md)接受客户端预先保存的 32 字节 CSPRNG 秘密，使用规范无填充 base64url Bearer 编码；服务端仅存 SHA-256 摘要，不签发秘密。
 
 ## 前端开发
 
