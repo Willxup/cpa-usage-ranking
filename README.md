@@ -49,6 +49,9 @@ identities and returns existing identities on safe retries without changing
 profiles; registration HTTP is not exposed yet. Internal credential-bound
 [authentication middleware](docs/client-credentials.md#internal-identity-enforcement)
 is available for subsequent business routes, with no demonstration API.
+[Registration request admission](docs/registration-admission.md) provides bounded
+per-source/global gates and startup parameters; it does not limit health or
+static routes. Registration remains unexposed until all safeguards are connected.
 
 ## Frontend development
 

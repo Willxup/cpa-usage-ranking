@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"cpa-usage-ranking/internal/registration"
 )
 
 // Config contains only settings used by the current service.
@@ -18,11 +20,12 @@ type Config struct {
 	SQLitePath           string
 	TrustedProxies       []string
 	RegistrationIPv6By64 bool
+	RegistrationRequests registration.RequestLimits
 }
 
 // Load reads environment variables. Explicitly empty values are invalid.
 func Load() (Config, error) {
-	cfg := Config{HTTPAddr: "127.0.0.1:8080", ShutdownTimeout: 10 * time.Second, SQLitePath: "data/ranking.db", RegistrationIPv6By64: true}
+	cfg := Config{HTTPAddr: "127.0.0.1:8080", ShutdownTimeout: 10 * time.Second, SQLitePath: "data/ranking.db", RegistrationIPv6By64: true, RegistrationRequests: registration.DefaultRequestLimits()}
 	if value, ok := os.LookupEnv("RANKING_HTTP_ADDR"); ok {
 		cfg.HTTPAddr = strings.TrimSpace(value)
 	}
@@ -75,5 +78,42 @@ func Load() (Config, error) {
 		}
 		cfg.RegistrationIPv6By64 = parsed
 	}
+	for _, setting := range []struct {
+		key    string
+		target *int
+	}{
+		{"RANKING_REGISTRATION_SOURCE_REQUESTS", &cfg.RegistrationRequests.SourceRequests},
+		{"RANKING_REGISTRATION_GLOBAL_REQUESTS", &cfg.RegistrationRequests.GlobalRequests},
+		{"RANKING_REGISTRATION_REQUEST_MAX_SOURCES", &cfg.RegistrationRequests.MaxSources},
+	} {
+		if err := positiveInt(setting.key, setting.target); err != nil {
+			return Config{}, err
+		}
+	}
+	if err := positiveDuration("RANKING_REGISTRATION_REQUEST_WINDOW", &cfg.RegistrationRequests.Window); err != nil {
+		return Config{}, err
+	}
 	return cfg, nil
+}
+
+func positiveInt(key string, target *int) error {
+	if value, ok := os.LookupEnv(key); ok {
+		parsed, err := strconv.Atoi(strings.TrimSpace(value))
+		if err != nil || parsed <= 0 {
+			return fmt.Errorf("%s must be a positive integer", key)
+		}
+		*target = parsed
+	}
+	return nil
+}
+
+func positiveDuration(key string, target *time.Duration) error {
+	if value, ok := os.LookupEnv(key); ok {
+		parsed, err := time.ParseDuration(strings.TrimSpace(value))
+		if err != nil || parsed <= 0 {
+			return fmt.Errorf("%s must be a positive duration", key)
+		}
+		*target = parsed
+	}
+	return nil
 }
