@@ -12,15 +12,17 @@ import (
 
 // Config contains only settings used by the current service.
 type Config struct {
-	HTTPAddr        string
-	ShutdownTimeout time.Duration
-	WebDir          string
-	SQLitePath      string
+	HTTPAddr             string
+	ShutdownTimeout      time.Duration
+	WebDir               string
+	SQLitePath           string
+	TrustedProxies       []string
+	RegistrationIPv6By64 bool
 }
 
 // Load reads environment variables. Explicitly empty values are invalid.
 func Load() (Config, error) {
-	cfg := Config{HTTPAddr: "127.0.0.1:8080", ShutdownTimeout: 10 * time.Second, SQLitePath: "data/ranking.db"}
+	cfg := Config{HTTPAddr: "127.0.0.1:8080", ShutdownTimeout: 10 * time.Second, SQLitePath: "data/ranking.db", RegistrationIPv6By64: true}
 	if value, ok := os.LookupEnv("RANKING_HTTP_ADDR"); ok {
 		cfg.HTTPAddr = strings.TrimSpace(value)
 	}
@@ -54,6 +56,24 @@ func Load() (Config, error) {
 		if cfg.SQLitePath == "" {
 			return Config{}, fmt.Errorf("RANKING_SQLITE_PATH must be a non-empty file path")
 		}
+	}
+	if value, ok := os.LookupEnv("RANKING_TRUSTED_PROXIES"); ok {
+		for _, entry := range strings.Split(value, ",") {
+			entry = strings.TrimSpace(entry)
+			if net.ParseIP(entry) == nil {
+				if _, _, err := net.ParseCIDR(entry); err != nil {
+					return Config{}, fmt.Errorf("RANKING_TRUSTED_PROXIES must contain comma-separated IP addresses or CIDRs")
+				}
+			}
+			cfg.TrustedProxies = append(cfg.TrustedProxies, entry)
+		}
+	}
+	if value, ok := os.LookupEnv("RANKING_REGISTRATION_IPV6_64"); ok {
+		parsed, err := strconv.ParseBool(strings.TrimSpace(value))
+		if err != nil {
+			return Config{}, fmt.Errorf("RANKING_REGISTRATION_IPV6_64 must be a boolean")
+		}
+		cfg.RegistrationIPv6By64 = parsed
 	}
 	return cfg, nil
 }

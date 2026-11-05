@@ -84,7 +84,7 @@ Go 同域提供构建后的页面和 API。部署二进制、`web/dist/` 及第�
 - `GET /readyz`：业务尚未实现时返回 503，不假报就绪。
 - 未知路由和不支持的方法返回 JSON 错误（404/405）。
 - 异常响应不暴露细节，日志不记录请求正文、请求头或 panic 值。
-- 默认不信任客户端提供的转发 IP 头。
+- 默认不信任客户端提供的转发 IP 头；显式代理配置见[注册来源说明](docs/registration-sources.md)。
 
 ## 配置
 
@@ -94,5 +94,7 @@ Go 同域提供构建后的页面和 API。部署二进制、`web/dist/` 及第�
 | `RANKING_SHUTDOWN_TIMEOUT` | `10s` | 正数形式的优雅关停等待时间 |
 | `RANKING_WEB_DIR` | 未设置 | 可选的前端构建目录；未设置时不提供前端路由 |
 | `RANKING_SQLITE_PATH` | `data/ranking.db` | SQLite 文件路径，相对路径以进程工作目录为基准 |
+| `RANKING_TRUSTED_PROXIES` | 未设置（无） | 逗号分隔的可信代理 IP/CIDR |
+| `RANKING_REGISTRATION_IPV6_64` | `true` | 原生 IPv6 注册来源按 /64 分组 |
 
 显式空值或非法配置会校验失败。不自动加载配置文件，不提交凭据或本地 `.env` 文件。

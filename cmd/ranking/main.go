@@ -33,6 +33,9 @@ func run(logger *slog.Logger) (err error) {
 	}
 	gin.SetMode(gin.ReleaseMode)
 	router := httpserver.NewRouter(logger)
+	if err := router.SetTrustedProxies(cfg.TrustedProxies); err != nil {
+		return fmt.Errorf("configure trusted proxies: %w", err)
+	}
 	avatarFiles := avatars.BuiltinFS()
 	catalog, err := avatars.Load(avatarFiles)
 	if err != nil {

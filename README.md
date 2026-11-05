@@ -156,7 +156,8 @@ stop the process, replace the build, then restart.
 - `GET /readyz`: 503 while business services are not implemented.
 - Unknown routes and unsupported methods return JSON errors (404/405).
 - Panic responses are generic; request bodies, headers and panic values are not logged.
-- Forwarded client-IP headers are not trusted by default.
+- Forwarded client-IP headers are not trusted by default. See
+  [registration sources](docs/registration-sources.md) for explicit proxy trust.
 
 ## Configuration
 
@@ -166,6 +167,8 @@ stop the process, replace the build, then restart.
 | `RANKING_SHUTDOWN_TIMEOUT` | `10s` | Positive grace period for shutdown |
 | `RANKING_WEB_DIR` | unset | Optional built frontend directory; unset means no frontend routes |
 | `RANKING_SQLITE_PATH` | `data/ranking.db` | SQLite file path, relative to the working directory unless absolute |
+| `RANKING_TRUSTED_PROXIES` | unset (none) | Comma-separated trusted proxy IPs/CIDRs |
+| `RANKING_REGISTRATION_IPV6_64` | `true` | Group native IPv6 registration sources by /64 |
 
 Explicitly empty or invalid settings fail validation. No configuration files
 are loaded automatically. Do not commit credentials or local `.env` files.
