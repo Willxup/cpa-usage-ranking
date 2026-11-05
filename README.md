@@ -44,6 +44,9 @@ These routes work without a frontend directory.
 [Client credential parsing/hashing](docs/client-credentials.md) accepts a
 client-persisted 32-byte CSPRNG secret as canonical unpadded base64url Bearer
 text; the server stores only its SHA-256 digest. No secrets are issued.
+The internal [registration service](docs/registration.md) creates validated
+identities and returns existing identities on safe retries without changing
+profiles; registration HTTP is not exposed yet.
 
 ## Frontend development
 
