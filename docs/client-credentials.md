@@ -27,5 +27,22 @@ OTP, rotate credentials or recover a lost secret. Clients must preserve their
 secret and reuse it for safe retries; keeping only `client_id` is insufficient.
 There is no client SDK or Keeper integration in this service.
 
-Credential parsing/hashing is available internally. Registration and HTTP
-identity enforcement are documented separately as they become available.
+## Internal identity enforcement
+
+`auth.NewAuthenticator(repo).Authenticate(ctx, headers)` hashes the Bearer
+credential and loads its unique client. Missing, malformed and unknown secrets
+fail; disabled clients return a distinct rejection. Database errors are not
+treated as authentication success.
+
+`httpserver.ClientAuthentication` is Gin middleware for subsequent business
+routes. `AuthenticatedClient` reads the middleware-established client; handlers
+must use its ID, never a body/query/path `client_id` as authorization. Rejections
+are safe JSON: 401 `invalid_credential` (with `WWW-Authenticate: Bearer`),
+403 `client_disabled`, or generic 500 for storage failures. This is not a session
+system and adds no `/me`, login, administration, reporting or profile-edit API.
+Tests use a test-only write route with real SQLite to prove that another
+client's request-supplied ID cannot select the mutation target.
+
+Authentication describes state when checked. A future queued report writer
+must recheck disabled status inside its write transaction; no queue is created
+at this stage. The registration creation switch is separate from authentication.

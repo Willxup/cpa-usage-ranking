@@ -46,7 +46,9 @@ client-persisted 32-byte CSPRNG secret as canonical unpadded base64url Bearer
 text; the server stores only its SHA-256 digest. No secrets are issued.
 The internal [registration service](docs/registration.md) creates validated
 identities and returns existing identities on safe retries without changing
-profiles; registration HTTP is not exposed yet.
+profiles; registration HTTP is not exposed yet. Internal credential-bound
+[authentication middleware](docs/client-credentials.md#internal-identity-enforcement)
+is available for subsequent business routes, with no demonstration API.
 
 ## Frontend development
 
