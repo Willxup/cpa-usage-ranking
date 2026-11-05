@@ -24,7 +24,8 @@ The database enforces credential uniqueness and shape, positive avatar IDs,
 and the two-valued disabled flag. Name normalization/validation and catalog
 membership checking are **not implemented here**; callers must supply validated
 profile values when those services are connected. The repository neither
-normalizes names nor guesses an avatar default.
+normalizes names nor guesses an avatar default. The separate
+[display-name helper](display-names.md) provides name normalization/validation.
 
 ## Repository operations
 

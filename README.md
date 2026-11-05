@@ -35,6 +35,9 @@ trigger automatic repair or fallback. Shutdown drains HTTP before closing the
 bounded write/read connection pools. See [SQLite storage](docs/storage.md) and
 [client storage](docs/client-storage.md). Business readiness remains 503.
 
+Public display-name normalization and validation are available as an internal
+helper, not yet an HTTP endpoint. See [display-name rules](docs/display-names.md).
+
 ## Frontend development
 
 Requires Node.js 24.15+ (24.x) and npm. Runtime dependencies are only React and
