@@ -11,7 +11,7 @@ import (
 
 func clearEnvironment(t *testing.T) {
 	t.Helper()
-	for _, key := range []string{"RANKING_HTTP_ADDR", "RANKING_SHUTDOWN_TIMEOUT", "RANKING_WEB_DIR", "RANKING_SQLITE_PATH", "RANKING_TRUSTED_PROXIES", "RANKING_REGISTRATION_IPV6_64", "RANKING_REGISTRATION_SOURCE_REQUESTS", "RANKING_REGISTRATION_GLOBAL_REQUESTS", "RANKING_REGISTRATION_REQUEST_MAX_SOURCES", "RANKING_REGISTRATION_REQUEST_WINDOW", "RANKING_REGISTRATION_HOURLY_CREATIONS", "RANKING_REGISTRATION_DAILY_CREATIONS", "RANKING_REGISTRATION_CREATION_MAX_SOURCES", "RANKING_REGISTRATION_ENABLED", "RANKING_REGISTRATION_MAX_BODY_BYTES"} {
+	for _, key := range []string{"RANKING_HTTP_ADDR", "RANKING_SHUTDOWN_TIMEOUT", "RANKING_WEB_DIR", "RANKING_SQLITE_PATH", "RANKING_MODELS_PATH", "RANKING_TRUSTED_PROXIES", "RANKING_REGISTRATION_IPV6_64", "RANKING_REGISTRATION_SOURCE_REQUESTS", "RANKING_REGISTRATION_GLOBAL_REQUESTS", "RANKING_REGISTRATION_REQUEST_MAX_SOURCES", "RANKING_REGISTRATION_REQUEST_WINDOW", "RANKING_REGISTRATION_HOURLY_CREATIONS", "RANKING_REGISTRATION_DAILY_CREATIONS", "RANKING_REGISTRATION_CREATION_MAX_SOURCES", "RANKING_REGISTRATION_ENABLED", "RANKING_REGISTRATION_MAX_BODY_BYTES"} {
 		t.Setenv(key, "")
 		if err := os.Unsetenv(key); err != nil {
 			t.Fatal(err)
@@ -25,7 +25,7 @@ func TestDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.HTTPAddr != "127.0.0.1:8080" || cfg.ShutdownTimeout != 10*time.Second || cfg.WebDir != "" || cfg.SQLitePath != "data/ranking.db" || len(cfg.TrustedProxies) != 0 || !cfg.RegistrationIPv6By64 {
+	if cfg.HTTPAddr != "127.0.0.1:8080" || cfg.ShutdownTimeout != 10*time.Second || cfg.WebDir != "" || cfg.SQLitePath != "data/ranking.db" || cfg.ModelsPath != "config/models.json" || len(cfg.TrustedProxies) != 0 || !cfg.RegistrationIPv6By64 {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
 }
@@ -38,10 +38,11 @@ func TestOverrides(t *testing.T) {
 			t.Setenv("RANKING_SHUTDOWN_TIMEOUT", " 250ms ")
 			t.Setenv("RANKING_WEB_DIR", " web/dist ")
 			t.Setenv("RANKING_SQLITE_PATH", " custom/ranking.db ")
+			t.Setenv("RANKING_MODELS_PATH", " custom/models.json ")
 			t.Setenv("RANKING_TRUSTED_PROXIES", " 127.0.0.1,10.0.0.0/8,::1 ")
 			t.Setenv("RANKING_REGISTRATION_IPV6_64", "false")
 			cfg, err := config.Load()
-			if err != nil || cfg.HTTPAddr != addr || cfg.ShutdownTimeout != 250*time.Millisecond || cfg.WebDir != "web/dist" || cfg.SQLitePath != "custom/ranking.db" || strings.Join(cfg.TrustedProxies, ",") != "127.0.0.1,10.0.0.0/8,::1" || cfg.RegistrationIPv6By64 {
+			if err != nil || cfg.HTTPAddr != addr || cfg.ShutdownTimeout != 250*time.Millisecond || cfg.WebDir != "web/dist" || cfg.SQLitePath != "custom/ranking.db" || cfg.ModelsPath != "custom/models.json" || strings.Join(cfg.TrustedProxies, ",") != "127.0.0.1,10.0.0.0/8,::1" || cfg.RegistrationIPv6By64 {
 				t.Fatalf("configuration = %+v, error = %v", cfg, err)
 			}
 		})
@@ -54,6 +55,7 @@ func TestInvalidValues(t *testing.T) {
 		"RANKING_SHUTDOWN_TIMEOUT":                  {"", "0s", "-1s", "10", "forever", "999999999999999999999h"},
 		"RANKING_WEB_DIR":                           {"", "   "},
 		"RANKING_SQLITE_PATH":                       {"", "   "},
+		"RANKING_MODELS_PATH":                       {"", "   "},
 		"RANKING_TRUSTED_PROXIES":                   {"", " ", "localhost", "127.0.0.1,", "10.0.0.0/33", "https://proxy"},
 		"RANKING_REGISTRATION_IPV6_64":              {"", "yes", "2"},
 		"RANKING_REGISTRATION_SOURCE_REQUESTS":      {"", "0", "-1", "1.5", "999999999999999999999"},

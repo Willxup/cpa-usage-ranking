@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-独立的通用用量排名服务。目前已具备受保护注册、内部凭据鉴权、静态头像、SQLite 事务迁移与身份/资料存储。上报和榜单仍未实现，业务就绪保持 503；没有网站账号 UI。
+独立的通用用量排名服务。目前已具备受保护注册、内部凭据鉴权、静态头像、SQLite 事务迁移与身份/资料存储。启动时校验[模型目录](docs/model-catalog.md)，本次交付未重新核实其参考价格。上报和榜单仍未实现，业务就绪保持 503；没有网站账号 UI。
 
 ## 开发
 
@@ -74,7 +74,7 @@ go build -o bin/ranking ./cmd/ranking
 RANKING_WEB_DIR=web/dist ./bin/ranking
 ```
 
-Go 同域提供构建后的页面和 API。部署二进制、`web/dist/` 及第三方声明/许可文件，线上不需要 Node 服务。`RANKING_WEB_DIR` 的相对路径以进程工作目录为基准；未设置时仅启用后端路由，设置后若缺少完整入口文件则启动失败。
+Go 同域提供构建后的页面和 API。部署二进制、`config/models.json`、`web/dist/` 及第三方声明/许可文件，线上不需要 Node 服务。`RANKING_WEB_DIR` 的相对路径以进程工作目录为基准；未设置时仅启用后端路由，设置后若缺少完整入口文件则启动失败。
 
 仅提供 `/`、`/index.html`、`/favicon.svg` 和 `/assets/` 下实际存在的文件，不做任意 SPA 页面回退或目录列表。缺失资源、未知 API 和未知页面保持 404；拒绝目录穿越及越界软链接。HTML、非指纹文件及公共资源子目录中的稳定文件名需要重新验证，顶层带构建指纹的资源可缓存一年。运行期间不要原地修改资源，应停止进程、更换构建后重启。
 
@@ -96,7 +96,8 @@ Go 同域提供构建后的页面和 API。部署二进制、`web/dist/` 及第�
 | `RANKING_SHUTDOWN_TIMEOUT` | `10s` | 正数形式的优雅关停等待时间 |
 | `RANKING_WEB_DIR` | 未设置 | 可选的前端构建目录；未设置时不提供前端路由 |
 | `RANKING_SQLITE_PATH` | `data/ranking.db` | SQLite 文件路径，相对路径以进程工作目录为基准 |
+| `RANKING_MODELS_PATH` | `config/models.json` | 模型目录文件，相对路径以进程工作目录为基准 |
 | `RANKING_TRUSTED_PROXIES` | 未设置（无） | 逗号分隔的可信代理 IP/CIDR |
 | `RANKING_REGISTRATION_IPV6_64` | `true` | 原生 IPv6 注册来源按 /64 分组 |
 
-注册限额、请求体边界和新建开关见[注册 API 配置](docs/registration-api.md#startup-configuration)。显式空值或非法配置会校验失败。不自动加载配置文件，不提交凭据或本地 `.env` 文件。
+注册限额、请求体边界和新建开关见[注册 API 配置](docs/registration-api.md#startup-configuration)。显式空值或非法配置会校验失败。模型目录为启动必需；环境变量不从 `.env` 文件自动加载，不提交凭据或本地 `.env` 文件。

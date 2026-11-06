@@ -1,0 +1,3818 @@
+{
+  "as_of": "2026-11-07",
+  "model_name_sources": [
+    {
+      "url": "https://models.dev/api.json",
+      "sha256": "6343fbc5de9eae5da66747d99a84983932ac8fee5506ba544d7c05e0cd25f366"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/BerriAI/litellm/dadc6b655b8907df999dca53feed7715c4d077c4/model_prices_and_context_window.json",
+      "sha256": "4b3c50f47fcf25e043a7f5d0efbeefd2a00152166610852b07ae92ab69b77ebc"
+    }
+  ],
+  "price_policy": "Only first-party vendor prices; null means unknown. Historical model rates may come from official historical publications. USD per million tokens.",
+  "review_changes": [
+    "gpt-5.6-luna: excluded stale tier prices",
+    "gpt-5.6-sol: excluded stale tier prices",
+    "gpt-5.6-terra: excluded stale tier prices",
+    "MiniMax-M3: effective official prices, not crossed-out list prices",
+    "Merged current deepseek-flash route into deepseek-v4.1-flash using official model-version table; excluded older V4 Flash snapshots under the final active-only scope.",
+    "2026-11-07: apply explicit active-only scope; remove obsolete standard records and unsupported date aliases; remove archived research entries from deliverable provenance; add current Doubao 2.1 Lite and current Pro snapshot."
+  ],
+  "counts": {
+    "models": 105,
+    "aliases": 96,
+    "models_with_official_prices": 89,
+    "models_with_all_prices_unknown": 16,
+    "non_null_price_fields": 377,
+    "groups": {
+      "anthropic-google": 25,
+      "other": 56,
+      "extra": 9,
+      "openai": 15
+    }
+  },
+  "validation": {
+    "duplicate_names": 0,
+    "cross_model_case_collisions": 0,
+    "invalid_price_fields": 0,
+    "non_null_price_without_official_url": 0,
+    "prefix_alias_examples": "passed",
+    "active_scope_applied": true,
+    "obsolete_model_negative_checks": "passed",
+    "removed_alias_negative_checks": "passed",
+    "current_doubao_snapshot_checks": "passed"
+  },
+  "models": {
+    "claude-fable-5": {
+      "price_source_key": "official:https://platform.claude.com/docs/en/about-claude/pricing",
+      "source_keys": [
+        "claude-fable-5"
+      ],
+      "official_url": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "official_id_urls": [
+        "https://platform.claude.com/docs/en/about-claude/model-deprecations"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "10",
+          "output": "50",
+          "cache_read": "1",
+          "cache_write": "12.5"
+        }
+      },
+      "detail": null,
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "10",
+          "output": "50",
+          "cache_read": "1",
+          "cache_write": "12.5"
+        }
+      }
+    },
+    "claude-fable-5-1": {
+      "price_source_key": "official:https://platform.claude.com/docs/en/about-claude/pricing",
+      "source_keys": [
+        "claude-fable-5-1"
+      ],
+      "official_url": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "official_id_urls": [
+        "https://platform.claude.com/docs/en/about-claude/model-deprecations"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "10",
+          "output": "50",
+          "cache_read": "0.25",
+          "cache_write": "12.5"
+        }
+      },
+      "detail": null,
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "10",
+          "output": "50",
+          "cache_read": "0.25",
+          "cache_write": "12.5"
+        }
+      }
+    },
+    "claude-haiku-4-5": {
+      "price_source_key": "official:https://platform.claude.com/docs/en/about-claude/pricing",
+      "source_keys": [
+        "claude-haiku-4-5",
+        "claude-haiku-4-5-20251001"
+      ],
+      "official_url": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "official_id_urls": [
+        "https://platform.claude.com/docs/en/about-claude/model-deprecations"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "1",
+          "output": "5",
+          "cache_read": "0.1",
+          "cache_write": "1.25"
+        }
+      },
+      "detail": null,
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "1",
+          "output": "5",
+          "cache_read": "0.1",
+          "cache_write": "1.25"
+        }
+      }
+    },
+    "claude-haiku-5-5": {
+      "price_source_key": "official:https://platform.claude.com/docs/en/about-claude/pricing",
+      "source_keys": [
+        "claude-haiku-5-5"
+      ],
+      "official_url": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "official_id_urls": [
+        "https://platform.claude.com/docs/en/about-claude/model-deprecations"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "0.1",
+          "output": "0.5",
+          "cache_read": "0.01",
+          "cache_write": "0.125"
+        }
+      },
+      "detail": null,
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "0.1",
+          "output": "0.5",
+          "cache_read": "0.01",
+          "cache_write": "0.125"
+        }
+      }
+    },
+    "claude-opus-4-5": {
+      "price_source_key": "official:https://platform.claude.com/docs/en/about-claude/pricing",
+      "source_keys": [
+        "claude-opus-4-5",
+        "claude-opus-4-5-20251101"
+      ],
+      "official_url": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "official_id_urls": [
+        "https://platform.claude.com/docs/en/about-claude/model-deprecations"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "5",
+          "output": "25",
+          "cache_read": "0.5",
+          "cache_write": "6.25"
+        }
+      },
+      "detail": null,
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "5",
+          "output": "25",
+          "cache_read": "0.5",
+          "cache_write": "6.25"
+        }
+      }
+    },
+    "claude-opus-4-6": {
+      "price_source_key": "official:https://platform.claude.com/docs/en/about-claude/pricing",
+      "source_keys": [
+        "claude-opus-4-6",
+        "claude-opus-4-6-20260205"
+      ],
+      "official_url": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "official_id_urls": [
+        "https://platform.claude.com/docs/en/about-claude/model-deprecations"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "5",
+          "output": "25",
+          "cache_read": "0.5",
+          "cache_write": "6.25"
+        }
+      },
+      "detail": null,
+      "alias_source_note": "LiteLLM compatibility spelling(s): claude-opus-4-6-20260205; these spellings are not verified as Anthropic API IDs.",
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "5",
+          "output": "25",
+          "cache_read": "0.5",
+          "cache_write": "6.25"
+        }
+      }
+    },
+    "claude-opus-4-7": {
+      "price_source_key": "official:https://platform.claude.com/docs/en/about-claude/pricing",
+      "source_keys": [
+        "claude-opus-4-7",
+        "claude-opus-4-7-20260416"
+      ],
+      "official_url": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "official_id_urls": [
+        "https://platform.claude.com/docs/en/about-claude/model-deprecations"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "5",
+          "output": "25",
+          "cache_read": "0.5",
+          "cache_write": "6.25"
+        }
+      },
+      "detail": null,
+      "alias_source_note": "LiteLLM compatibility spelling(s): claude-opus-4-7-20260416; these spellings are not verified as Anthropic API IDs.",
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "5",
+          "output": "25",
+          "cache_read": "0.5",
+          "cache_write": "6.25"
+        }
+      }
+    },
+    "claude-opus-4-8": {
+      "price_source_key": "official:https://platform.claude.com/docs/en/about-claude/pricing",
+      "source_keys": [
+        "claude-opus-4-8"
+      ],
+      "official_url": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "official_id_urls": [
+        "https://platform.claude.com/docs/en/about-claude/model-deprecations"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "5",
+          "output": "25",
+          "cache_read": "0.5",
+          "cache_write": "6.25"
+        }
+      },
+      "detail": null,
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "5",
+          "output": "25",
+          "cache_read": "0.5",
+          "cache_write": "6.25"
+        }
+      }
+    },
+    "claude-opus-5": {
+      "price_source_key": "official:https://platform.claude.com/docs/en/about-claude/pricing",
+      "source_keys": [
+        "claude-opus-5"
+      ],
+      "official_url": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "official_id_urls": [
+        "https://platform.claude.com/docs/en/about-claude/model-deprecations"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "5",
+          "output": "25",
+          "cache_read": "0.5",
+          "cache_write": "6.25"
+        }
+      },
+      "detail": null,
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "5",
+          "output": "25",
+          "cache_read": "0.5",
+          "cache_write": "6.25"
+        }
+      }
+    },
+    "claude-opus-5-5": {
+      "price_source_key": "official:https://platform.claude.com/docs/en/about-claude/pricing",
+      "source_keys": [
+        "claude-opus-5-5"
+      ],
+      "official_url": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "official_id_urls": [
+        "https://platform.claude.com/docs/en/about-claude/model-deprecations"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "4",
+          "output": "20",
+          "cache_read": "0.2",
+          "cache_write": "5"
+        }
+      },
+      "detail": null,
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "4",
+          "output": "20",
+          "cache_read": "0.2",
+          "cache_write": "5"
+        }
+      }
+    },
+    "claude-sonnet-4-6": {
+      "price_source_key": "official:https://platform.claude.com/docs/en/about-claude/pricing",
+      "source_keys": [
+        "claude-sonnet-4-6"
+      ],
+      "official_url": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "official_id_urls": [
+        "https://platform.claude.com/docs/en/about-claude/model-deprecations"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "3",
+          "output": "15",
+          "cache_read": "0.3",
+          "cache_write": "3.75"
+        }
+      },
+      "detail": null,
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "3",
+          "output": "15",
+          "cache_read": "0.3",
+          "cache_write": "3.75"
+        }
+      }
+    },
+    "claude-sonnet-5": {
+      "price_source_key": "official:https://platform.claude.com/docs/en/about-claude/pricing",
+      "source_keys": [
+        "claude-sonnet-5"
+      ],
+      "official_url": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "official_id_urls": [
+        "https://platform.claude.com/docs/en/about-claude/model-deprecations"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "2",
+          "output": "10",
+          "cache_read": "0.2",
+          "cache_write": "2.5"
+        }
+      },
+      "detail": null,
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "2",
+          "output": "10",
+          "cache_read": "0.2",
+          "cache_write": "2.5"
+        }
+      }
+    },
+    "claude-sonnet-5-5": {
+      "price_source_key": "official:https://platform.claude.com/docs/en/about-claude/pricing",
+      "source_keys": [
+        "claude-sonnet-5-5"
+      ],
+      "official_url": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "official_id_urls": [
+        "https://platform.claude.com/docs/en/about-claude/model-deprecations"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "2",
+          "output": "10",
+          "cache_read": "0.1",
+          "cache_write": "2.5"
+        }
+      },
+      "detail": null,
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "2",
+          "output": "10",
+          "cache_read": "0.1",
+          "cache_write": "2.5"
+        }
+      }
+    },
+    "codestral": {
+      "price_source_key": "official:https://docs.mistral.ai/inference/pricing#codestral",
+      "official_url": "https://docs.mistral.ai/inference/pricing",
+      "official_values": {
+        "input": "0.3",
+        "output": "0.9",
+        "cache_read": "0.03",
+        "cache_write": null
+      },
+      "price_condition": "Standard pay-as-you-go, USD per 1M tokens",
+      "source_keys": [
+        "litellm:mistral/codestral-latest",
+        "litellm:mistral/codestral-2508"
+      ],
+      "logical_canonical_basis": "Derived logical name retains version and size; real identifiers are retained as aliases.",
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": "0.3",
+          "output": "0.9",
+          "cache_read": "0.03",
+          "cache_write": null
+        }
+      }
+    },
+    "command-a-plus": {
+      "price_source_key": null,
+      "source_keys": [
+        "command-a-plus-05-2026"
+      ],
+      "provider": "cohere_chat",
+      "note": "Cohere date suffix normalized; source zero placeholders treated unknown",
+      "official_url": null,
+      "price_status": "official_token_rate_not_verified",
+      "source_group": "extra",
+      "accepted_prices": {
+        "default": {
+          "input": null,
+          "output": null,
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "deepseek-v4-pro": {
+      "price_source_key": "official:https://api-docs.deepseek.com/quick_start/pricing/#deepseek-v4-pro",
+      "official_url": "https://api-docs.deepseek.com/quick_start/pricing/",
+      "official_values": {
+        "input": "1.32",
+        "output": "3.96",
+        "cache_read": "0.044",
+        "cache_write": null
+      },
+      "price_condition": "Peak schedule; off-peak rates are 50% of these rates; deepseek-v4-flash and vision-exp are legacy names routed to current V4.1 Flash",
+      "source_keys": [
+        "litellm:deepseek/deepseek-v4-pro",
+        "litellm:deepinfra/deepseek-ai/DeepSeek-V4-Pro-0813"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "DeepSeek-V4-Pro": "litellm:inferenceapis/deepseek-ai/DeepSeek-V4-Pro",
+        "deepseek-v4-pro-0813": "litellm:fireworks_ai/accounts/fireworks/models/deepseek-v4-pro-0813"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "1.32",
+          "output": "3.96",
+          "cache_read": "0.044",
+          "cache_write": null
+        }
+      }
+    },
+    "deepseek-v4.1-flash": {
+      "price_source_key": "official:https://api-docs.deepseek.com/quick_start/pricing/#deepseek-v4.1-flash",
+      "official_url": "https://api-docs.deepseek.com/quick_start/pricing/",
+      "official_values": {
+        "input": "0.3",
+        "output": "1.2",
+        "cache_read": "0.006",
+        "cache_write": null
+      },
+      "price_condition": "Peak schedule; off-peak rates are 50% of these rates; deepseek-v4-flash and vision-exp are legacy names routed to current V4.1 Flash",
+      "source_keys": [
+        "litellm:deepinfra/deepseek-ai/DeepSeek-V4.1-Flash",
+        "litellm:deepinfra/deepseek-ai/DeepSeek-V4.1-Flash-1017",
+        "litellm:mistral/deepseek-v4-1-flash-1017",
+        "litellm:deepseek/deepseek-flash",
+        "litellm:streamlake/deepseek-v4.1-flash-260910"
+      ],
+      "logical_canonical_basis": "Derived logical name retains version and size; real identifiers are retained as aliases.",
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "user_requested_alias": "deepseek-v4.1-flash-1017 is the user-requested lowercase spelling of source DeepSeek-V4.1-Flash-1017.",
+      "observed_case_aliases": {
+        "DeepSeek-V4.1-Flash": "litellm:sail/deepseek-ai/DeepSeek-V4.1-Flash",
+        "DeepSeek-V4.1-flash": "litellm:scx-ai/DeepSeek-V4.1-flash"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "0.3",
+          "output": "1.2",
+          "cache_read": "0.006",
+          "cache_write": null
+        }
+      },
+      "merged_current_route": {
+        "price_source_key": "official:https://api-docs.deepseek.com/quick_start/pricing/#deepseek-flash",
+        "official_url": "https://api-docs.deepseek.com/quick_start/pricing/",
+        "official_values": {
+          "input": "0.3",
+          "output": "1.2",
+          "cache_read": "0.006",
+          "cache_write": null
+        },
+        "price_condition": "Peak schedule; off-peak rates are 50% of these rates; deepseek-v4-flash and vision-exp are legacy names routed to current V4.1 Flash",
+        "source_keys": [
+          "litellm:deepseek/deepseek-flash"
+        ],
+        "price_source_path": "Official pricing table in USD per million tokens",
+        "source_group": "other",
+        "accepted_prices": {
+          "default": {
+            "input": "0.3",
+            "output": "1.2",
+            "cache_read": "0.006",
+            "cache_write": null
+          }
+        }
+      },
+      "route_mapping_source": "https://api-docs.deepseek.com/quick_start/pricing/"
+    },
+    "doubao-seed-2-0-mini": {
+      "source_keys": [
+        "models.dev:volcengine/doubao-seed-2-0-mini-260428"
+      ],
+      "official_url": null,
+      "price_source_key": null,
+      "price_status": "official_USD_token_rate_not_verified",
+      "model_provider_doc": "https://www.volcengine.com/docs/82379/1330310",
+      "logical_canonical": true,
+      "source_group": "extra",
+      "accepted_prices": {
+        "default": {
+          "input": null,
+          "output": null,
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "doubao-seed-2-1-pro": {
+      "source_keys": [
+        "models.dev:volcengine/doubao-seed-2-1-pro-260628"
+      ],
+      "official_url": null,
+      "price_source_key": null,
+      "price_status": "official_USD_token_rate_not_verified",
+      "model_provider_doc": "https://www.volcengine.com/docs/82379/1330310",
+      "logical_canonical": true,
+      "source_group": "extra",
+      "accepted_prices": {
+        "default": {
+          "input": null,
+          "output": null,
+          "cache_read": null,
+          "cache_write": null
+        }
+      },
+      "current_snapshot_source": "https://docs.volcengine.com/docs/82379/1330310?lang=en"
+    },
+    "doubao-seed-evolving": {
+      "source_keys": [
+        "models.dev:volcengine/doubao-seed-evolving"
+      ],
+      "official_url": null,
+      "price_source_key": null,
+      "price_status": "official_USD_token_rate_not_verified",
+      "model_provider_doc": "https://www.volcengine.com/docs/82379/1330310",
+      "logical_canonical": false,
+      "source_group": "extra",
+      "accepted_prices": {
+        "default": {
+          "input": null,
+          "output": null,
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "gemini-3-flash-preview": {
+      "price_source_key": "official:https://ai.google.dev/gemini-api/docs/pricing",
+      "source_keys": [
+        "gemini/gemini-3-flash-preview"
+      ],
+      "official_url": "https://ai.google.dev/gemini-api/docs/pricing",
+      "official_id_urls": [
+        "https://ai.google.dev/gemini-api/docs/deprecations"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "0.5",
+          "output": "3",
+          "cache_read": "0.05",
+          "cache_write": null
+        },
+        "flex": {
+          "input": "0.25",
+          "output": "1.5",
+          "cache_read": "0.05",
+          "cache_write": null
+        },
+        "priority": {
+          "input": "0.9",
+          "output": "5.4",
+          "cache_read": "0.09",
+          "cache_write": null
+        }
+      },
+      "detail": null,
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "0.5",
+          "output": "3",
+          "cache_read": "0.05",
+          "cache_write": null
+        },
+        "flex": {
+          "input": "0.25",
+          "output": "1.5",
+          "cache_read": "0.05",
+          "cache_write": null
+        },
+        "priority": {
+          "input": "0.9",
+          "output": "5.4",
+          "cache_read": "0.09",
+          "cache_write": null
+        }
+      }
+    },
+    "gemini-3.1-flash-lite": {
+      "price_source_key": "official:https://ai.google.dev/gemini-api/docs/pricing",
+      "source_keys": [
+        "gemini/gemini-3.1-flash-lite"
+      ],
+      "official_url": "https://ai.google.dev/gemini-api/docs/pricing",
+      "official_id_urls": [
+        "https://ai.google.dev/gemini-api/docs/deprecations"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "0.25",
+          "output": "1.5",
+          "cache_read": "0.025",
+          "cache_write": null
+        },
+        "flex": {
+          "input": "0.125",
+          "output": "0.75",
+          "cache_read": "0.0125",
+          "cache_write": null
+        },
+        "priority": {
+          "input": "0.45",
+          "output": "2.7",
+          "cache_read": "0.045",
+          "cache_write": null
+        }
+      },
+      "detail": null,
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "0.25",
+          "output": "1.5",
+          "cache_read": "0.025",
+          "cache_write": null
+        },
+        "flex": {
+          "input": "0.125",
+          "output": "0.75",
+          "cache_read": "0.0125",
+          "cache_write": null
+        },
+        "priority": {
+          "input": "0.45",
+          "output": "2.7",
+          "cache_read": "0.045",
+          "cache_write": null
+        }
+      }
+    },
+    "gemini-3.1-pro-preview": {
+      "price_source_key": "official:https://ai.google.dev/gemini-api/docs/pricing",
+      "source_keys": [
+        "gemini/gemini-3.1-pro-preview"
+      ],
+      "official_url": "https://ai.google.dev/gemini-api/docs/pricing",
+      "official_id_urls": [
+        "https://ai.google.dev/gemini-api/docs/deprecations"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "2",
+          "output": "12",
+          "cache_read": "0.2",
+          "cache_write": null
+        },
+        "flex": {
+          "input": "1",
+          "output": "6",
+          "cache_read": "0.2",
+          "cache_write": null
+        },
+        "priority": {
+          "input": "3.6",
+          "output": "21.6",
+          "cache_read": "0.36",
+          "cache_write": null
+        }
+      },
+      "detail": "≤200k input-token prompt tier; official page names both endpoints.",
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "2",
+          "output": "12",
+          "cache_read": "0.2",
+          "cache_write": null
+        },
+        "flex": {
+          "input": "1",
+          "output": "6",
+          "cache_read": "0.2",
+          "cache_write": null
+        },
+        "priority": {
+          "input": "3.6",
+          "output": "21.6",
+          "cache_read": "0.36",
+          "cache_write": null
+        }
+      }
+    },
+    "gemini-3.1-pro-preview-customtools": {
+      "price_source_key": "official:https://ai.google.dev/gemini-api/docs/pricing",
+      "source_keys": [
+        "gemini/gemini-3.1-pro-preview-customtools"
+      ],
+      "official_url": "https://ai.google.dev/gemini-api/docs/pricing",
+      "official_id_urls": [
+        "https://ai.google.dev/gemini-api/docs/deprecations"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "2",
+          "output": "12",
+          "cache_read": "0.2",
+          "cache_write": null
+        },
+        "flex": {
+          "input": "1",
+          "output": "6",
+          "cache_read": "0.2",
+          "cache_write": null
+        },
+        "priority": {
+          "input": "3.6",
+          "output": "21.6",
+          "cache_read": "0.36",
+          "cache_write": null
+        }
+      },
+      "detail": "≤200k input-token prompt tier; official page names both endpoints.",
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "2",
+          "output": "12",
+          "cache_read": "0.2",
+          "cache_write": null
+        },
+        "flex": {
+          "input": "1",
+          "output": "6",
+          "cache_read": "0.2",
+          "cache_write": null
+        },
+        "priority": {
+          "input": "3.6",
+          "output": "21.6",
+          "cache_read": "0.36",
+          "cache_write": null
+        }
+      }
+    },
+    "gemini-3.5-flash": {
+      "price_source_key": "official:https://ai.google.dev/gemini-api/docs/pricing",
+      "source_keys": [
+        "gemini/gemini-3.5-flash"
+      ],
+      "official_url": "https://ai.google.dev/gemini-api/docs/pricing",
+      "official_id_urls": [
+        "https://ai.google.dev/gemini-api/docs/deprecations"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "1.5",
+          "output": "9",
+          "cache_read": "0.15",
+          "cache_write": null
+        },
+        "flex": {
+          "input": "0.75",
+          "output": "4.5",
+          "cache_read": "0.08",
+          "cache_write": null
+        },
+        "priority": {
+          "input": "2.7",
+          "output": "16.2",
+          "cache_read": "0.27",
+          "cache_write": null
+        }
+      },
+      "detail": null,
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "1.5",
+          "output": "9",
+          "cache_read": "0.15",
+          "cache_write": null
+        },
+        "flex": {
+          "input": "0.75",
+          "output": "4.5",
+          "cache_read": "0.08",
+          "cache_write": null
+        },
+        "priority": {
+          "input": "2.7",
+          "output": "16.2",
+          "cache_read": "0.27",
+          "cache_write": null
+        }
+      }
+    },
+    "gemini-3.5-flash-lite": {
+      "price_source_key": "official:https://ai.google.dev/gemini-api/docs/pricing",
+      "source_keys": [
+        "gemini/gemini-3.5-flash-lite"
+      ],
+      "official_url": "https://ai.google.dev/gemini-api/docs/pricing",
+      "official_id_urls": [
+        "https://ai.google.dev/gemini-api/docs/deprecations"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "0.3",
+          "output": "2.5",
+          "cache_read": "0.03",
+          "cache_write": null
+        },
+        "flex": {
+          "input": "0.15",
+          "output": "1.25",
+          "cache_read": "0.02",
+          "cache_write": null
+        },
+        "priority": {
+          "input": "0.54",
+          "output": "4.5",
+          "cache_read": "0.05",
+          "cache_write": null
+        }
+      },
+      "detail": null,
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "0.3",
+          "output": "2.5",
+          "cache_read": "0.03",
+          "cache_write": null
+        },
+        "flex": {
+          "input": "0.15",
+          "output": "1.25",
+          "cache_read": "0.02",
+          "cache_write": null
+        },
+        "priority": {
+          "input": "0.54",
+          "output": "4.5",
+          "cache_read": "0.05",
+          "cache_write": null
+        }
+      }
+    },
+    "gemini-3.6-flash": {
+      "price_source_key": "official:https://ai.google.dev/gemini-api/docs/pricing",
+      "source_keys": [
+        "gemini/gemini-3.6-flash"
+      ],
+      "official_url": "https://ai.google.dev/gemini-api/docs/pricing",
+      "official_id_urls": [
+        "https://ai.google.dev/gemini-api/docs/deprecations"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "0.75",
+          "output": "3.75",
+          "cache_read": "0.075",
+          "cache_write": null
+        },
+        "flex": {
+          "input": "0.375",
+          "output": "1.875",
+          "cache_read": "0.0375",
+          "cache_write": null
+        },
+        "priority": {
+          "input": "1.35",
+          "output": "6.75",
+          "cache_read": "0.135",
+          "cache_write": null
+        }
+      },
+      "detail": "Introductory rates through 2026-12-31; see notes.",
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "0.75",
+          "output": "3.75",
+          "cache_read": "0.075",
+          "cache_write": null
+        },
+        "flex": {
+          "input": "0.375",
+          "output": "1.875",
+          "cache_read": "0.0375",
+          "cache_write": null
+        },
+        "priority": {
+          "input": "1.35",
+          "output": "6.75",
+          "cache_read": "0.135",
+          "cache_write": null
+        }
+      }
+    },
+    "gemini-3.7-flash": {
+      "price_source_key": "official:https://ai.google.dev/gemini-api/docs/pricing",
+      "source_keys": [
+        "gemini/gemini-3.7-flash"
+      ],
+      "official_url": "https://ai.google.dev/gemini-api/docs/pricing",
+      "official_id_urls": [
+        "https://ai.google.dev/gemini-api/docs/deprecations"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "0.75",
+          "output": "3.75",
+          "cache_read": "0.075",
+          "cache_write": null
+        },
+        "flex": {
+          "input": "0.375",
+          "output": "1.875",
+          "cache_read": "0.0375",
+          "cache_write": null
+        },
+        "priority": {
+          "input": "1.35",
+          "output": "6.75",
+          "cache_read": "0.135",
+          "cache_write": null
+        }
+      },
+      "detail": "Introductory rates through 2026-12-31; see notes.",
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "0.75",
+          "output": "3.75",
+          "cache_read": "0.075",
+          "cache_write": null
+        },
+        "flex": {
+          "input": "0.375",
+          "output": "1.875",
+          "cache_read": "0.0375",
+          "cache_write": null
+        },
+        "priority": {
+          "input": "1.35",
+          "output": "6.75",
+          "cache_read": "0.135",
+          "cache_write": null
+        }
+      }
+    },
+    "gemini-3.8-flash": {
+      "price_source_key": "official:https://ai.google.dev/gemini-api/docs/pricing",
+      "source_keys": [
+        "gemini/gemini-3.8-flash"
+      ],
+      "official_url": "https://ai.google.dev/gemini-api/docs/pricing",
+      "official_id_urls": [
+        "https://ai.google.dev/gemini-api/docs/deprecations"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "0.75",
+          "output": "3.75",
+          "cache_read": "0.075",
+          "cache_write": null
+        },
+        "flex": {
+          "input": "0.375",
+          "output": "1.875",
+          "cache_read": "0.0375",
+          "cache_write": null
+        },
+        "priority": {
+          "input": "1.35",
+          "output": "6.75",
+          "cache_read": "0.135",
+          "cache_write": null
+        }
+      },
+      "detail": "Introductory rates through 2026-12-31; see notes.",
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "0.75",
+          "output": "3.75",
+          "cache_read": "0.075",
+          "cache_write": null
+        },
+        "flex": {
+          "input": "0.375",
+          "output": "1.875",
+          "cache_read": "0.0375",
+          "cache_write": null
+        },
+        "priority": {
+          "input": "1.35",
+          "output": "6.75",
+          "cache_read": "0.135",
+          "cache_write": null
+        }
+      }
+    },
+    "gemini-4-argon": {
+      "price_source_key": "official:https://ai.google.dev/gemini-api/docs/pricing",
+      "source_keys": [
+        "gemini/gemini-4-argon"
+      ],
+      "official_url": "https://ai.google.dev/gemini-api/docs/pricing",
+      "official_id_urls": [
+        "https://ai.google.dev/gemini-api/docs/models"
+      ],
+      "source_prices": {
+        "default": {
+          "input": "2",
+          "output": "10",
+          "cache_read": "0.1",
+          "cache_write": null
+        },
+        "flex": {
+          "input": "1",
+          "output": "5",
+          "cache_read": "0.05",
+          "cache_write": null
+        },
+        "priority": {
+          "input": "3.6",
+          "output": "18",
+          "cache_read": "0.18",
+          "cache_write": null
+        }
+      },
+      "detail": "Introductory rates through 2026-11-30; implicit caching only.",
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": "2",
+          "output": "10",
+          "cache_read": "0.1",
+          "cache_write": null
+        },
+        "flex": {
+          "input": "1",
+          "output": "5",
+          "cache_read": "0.05",
+          "cache_write": null
+        },
+        "priority": {
+          "input": "3.6",
+          "output": "18",
+          "cache_read": "0.18",
+          "cache_write": null
+        }
+      }
+    },
+    "gemma-4-26b-a4b-it": {
+      "price_source_key": null,
+      "source_keys": [
+        "gemini/gemma-4-26b-a4b-it",
+        "deepinfra/google/gemma-4-26B-A4B-it"
+      ],
+      "official_url": null,
+      "official_id_urls": [
+        "https://ai.google.dev/gemma/docs/core",
+        "https://ai.google.dev/gemma/docs/core/gemma_on_gemini_api",
+        "https://ai.google.dev/gemma/docs/core/model_card_3",
+        "https://ai.google.dev/gemma/docs/core/model_card_2"
+      ],
+      "source_prices": {
+        "default": {
+          "input": null,
+          "output": null,
+          "cache_read": null,
+          "cache_write": null
+        }
+      },
+      "detail": "Open-weight model ID from sources; first-party general paid token rates not established. No nonzero or zero inference price inferred from free tier or third-party hosting.",
+      "source_group": "anthropic-google",
+      "accepted_prices": {
+        "default": {
+          "input": null,
+          "output": null,
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "gemma-4-31b-it": {
+      "price_source_key": null,
+      "source_keys": [
+        "gemini/gemma-4-31b-it",
+        "deepinfra/google/gemma-4-31B-it"
+      ],
+      "official_url": null,
+      "official_id_urls": [
+        "https://ai.google.dev/gemma/docs/core",
+        "https://ai.google.dev/gemma/docs/core/gemma_on_gemini_api",
+        "https://ai.google.dev/gemma/docs/core/model_card_3",
+        "https://ai.google.dev/gemma/docs/core/model_card_2"
+      ],
+      "source_prices": {
+        "default": {
+          "input": null,
+          "output": null,
+          "cache_read": null,
+          "cache_write": null
+        }
+      },
+      "detail": "Open-weight model ID from sources; first-party general paid token rates not established. No nonzero or zero inference price inferred from free tier or third-party hosting.",
+      "source_group": "anthropic-google",
+      "observed_case_aliases": {
+        "Gemma-4-31B-IT": "models.dev:amd/Gemma-4-31B-IT"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": null,
+          "output": null,
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "glm-4.7": {
+      "price_source_key": "official:https://docs.z.ai/guides/overview/pricing#glm-4.7",
+      "official_url": "https://docs.z.ai/guides/overview/pricing",
+      "official_values": {
+        "input": "0.6",
+        "output": "2.2",
+        "cache_read": "0.11",
+        "cache_write": null
+      },
+      "price_condition": "Standard pay-as-you-go, USD per 1M tokens",
+      "source_keys": [
+        "litellm:zai/glm-4.7",
+        "models.dev:zai/glm-4.7",
+        "litellm:glm-4-7-251222"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "GLM-4.7": "litellm:baseten/zai-org/GLM-4.7"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "0.6",
+          "output": "2.2",
+          "cache_read": "0.11",
+          "cache_write": null
+        }
+      }
+    },
+    "glm-4.7-flash": {
+      "price_source_key": "official:https://docs.z.ai/guides/overview/pricing#glm-4.7-flash",
+      "official_url": "https://docs.z.ai/guides/overview/pricing",
+      "official_values": {
+        "input": "0",
+        "output": "0",
+        "cache_read": "0",
+        "cache_write": null
+      },
+      "price_condition": "Standard pay-as-you-go, USD per 1M tokens",
+      "source_keys": [
+        "litellm:zai/glm-4.7-flash",
+        "models.dev:zai/glm-4.7-flash"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "GLM-4.7-Flash": "litellm:deepinfra/zai-org/GLM-4.7-Flash"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "0",
+          "output": "0",
+          "cache_read": "0",
+          "cache_write": null
+        }
+      }
+    },
+    "glm-5": {
+      "price_source_key": "official:https://docs.z.ai/guides/overview/pricing#glm-5",
+      "official_url": "https://docs.z.ai/guides/overview/pricing",
+      "official_values": {
+        "input": "1",
+        "output": "3.2",
+        "cache_read": "0.2",
+        "cache_write": null
+      },
+      "price_condition": "Standard pay-as-you-go, USD per 1M tokens",
+      "source_keys": [
+        "litellm:zai/glm-5",
+        "models.dev:zai/glm-5"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "GLM-5": "litellm:baseten/zai-org/GLM-5"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "1",
+          "output": "3.2",
+          "cache_read": "0.2",
+          "cache_write": null
+        }
+      }
+    },
+    "glm-5.1": {
+      "price_source_key": "official:https://docs.z.ai/guides/overview/pricing#glm-5.1",
+      "official_url": "https://docs.z.ai/guides/overview/pricing",
+      "official_values": {
+        "input": "1.4",
+        "output": "4.4",
+        "cache_read": "0.26",
+        "cache_write": null
+      },
+      "price_condition": "Standard pay-as-you-go, USD per 1M tokens",
+      "source_keys": [
+        "litellm:zai/glm-5.1",
+        "models.dev:zai/glm-5.1"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "GLM-5.1": "litellm:friendliai/zai-org/GLM-5.1"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "1.4",
+          "output": "4.4",
+          "cache_read": "0.26",
+          "cache_write": null
+        }
+      }
+    },
+    "glm-5.2": {
+      "price_source_key": "official:https://docs.z.ai/guides/overview/pricing#glm-5.2",
+      "official_url": "https://docs.z.ai/guides/overview/pricing",
+      "official_values": {
+        "input": "1.4",
+        "output": "4.4",
+        "cache_read": "0.26",
+        "cache_write": null
+      },
+      "price_condition": "Standard pay-as-you-go, USD per 1M tokens",
+      "source_keys": [
+        "litellm:zai/glm-5.2",
+        "models.dev:zai/glm-5.2"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "GLM-5.2": "litellm:friendliai/zai-org/GLM-5.2"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "1.4",
+          "output": "4.4",
+          "cache_read": "0.26",
+          "cache_write": null
+        }
+      }
+    },
+    "glm-5.3": {
+      "price_source_key": "official:https://docs.z.ai/guides/overview/pricing#glm-5.3",
+      "official_url": "https://docs.z.ai/guides/overview/pricing",
+      "official_values": {
+        "input": "1.4",
+        "output": "4.4",
+        "cache_read": "0.26",
+        "cache_write": null
+      },
+      "price_condition": "Standard pay-as-you-go, USD per 1M tokens",
+      "source_keys": [
+        "litellm:zai/glm-5.3",
+        "models.dev:zai/glm-5.3"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "GLM-5.3": "litellm:sail/zai-org/GLM-5.3"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "1.4",
+          "output": "4.4",
+          "cache_read": "0.26",
+          "cache_write": null
+        }
+      }
+    },
+    "glm-5.3-flash": {
+      "price_source_key": "official:https://docs.z.ai/guides/overview/pricing#glm-5.3-flash",
+      "official_url": "https://docs.z.ai/guides/overview/pricing",
+      "official_values": {
+        "input": "0.15",
+        "output": "0.5",
+        "cache_read": "0.03",
+        "cache_write": null
+      },
+      "price_condition": "Standard pay-as-you-go, USD per 1M tokens",
+      "source_keys": [
+        "litellm:zai/glm-5.3-flash",
+        "models.dev:zai/glm-5.3-flash"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "GLM-5.3-Flash": "litellm:sail/zai-org/GLM-5.3-Flash"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "0.15",
+          "output": "0.5",
+          "cache_read": "0.03",
+          "cache_write": null
+        }
+      }
+    },
+    "glm-5.3-flashx": {
+      "price_source_key": "official:https://docs.z.ai/guides/overview/pricing#glm-5.3-flashx",
+      "official_url": "https://docs.z.ai/guides/overview/pricing",
+      "official_values": {
+        "input": "0.37",
+        "output": "1.25",
+        "cache_read": "0.075",
+        "cache_write": null
+      },
+      "price_condition": "Standard pay-as-you-go, USD per 1M tokens",
+      "source_keys": [
+        "models.dev:zai/glm-5.3-flashx"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": "0.37",
+          "output": "1.25",
+          "cache_read": "0.075",
+          "cache_write": null
+        }
+      }
+    },
+    "gpt-5.2": {
+      "price_source_key": null,
+      "source_keys": [
+        "gpt-5.2",
+        "gpt-5.2-2025-12-11"
+      ],
+      "official_url": "https://developers.openai.com/api/docs/models/gpt-5.2",
+      "official_prices": {
+        "default": {
+          "input": "1.75",
+          "output": "14.00",
+          "cache_read": "0.175",
+          "cache_write": null
+        }
+      },
+      "official_aliases": [],
+      "catalog_source_key": "gpt-5.2",
+      "price_basis": "OpenAI 官方网页，不采用第三方报价",
+      "source_group": "openai",
+      "accepted_prices": {
+        "default": {
+          "input": "1.75",
+          "output": "14.00",
+          "cache_read": "0.175",
+          "cache_write": null
+        }
+      }
+    },
+    "gpt-5.2-pro": {
+      "price_source_key": null,
+      "source_keys": [
+        "gpt-5.2-pro",
+        "gpt-5.2-pro-2025-12-11"
+      ],
+      "official_url": "https://developers.openai.com/api/docs/models/gpt-5.2-pro",
+      "official_prices": {
+        "default": {
+          "input": "21.00",
+          "output": "168.00",
+          "cache_read": null,
+          "cache_write": null
+        }
+      },
+      "official_aliases": [],
+      "catalog_source_key": "gpt-5.2-pro",
+      "price_basis": "OpenAI 官方网页，不采用第三方报价",
+      "source_group": "openai",
+      "accepted_prices": {
+        "default": {
+          "input": "21.00",
+          "output": "168.00",
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "gpt-5.4": {
+      "price_source_key": null,
+      "source_keys": [
+        "gpt-5.4",
+        "gpt-5.4-2026-03-05"
+      ],
+      "official_url": "https://developers.openai.com/api/docs/models/gpt-5.4",
+      "official_prices": {
+        "default": {
+          "input": "2.50",
+          "output": "15.00",
+          "cache_read": "0.25",
+          "cache_write": null
+        }
+      },
+      "official_aliases": [],
+      "catalog_source_key": "gpt-5.4",
+      "price_basis": "OpenAI 官方网页，不采用第三方报价",
+      "source_group": "openai",
+      "accepted_prices": {
+        "default": {
+          "input": "2.50",
+          "output": "15.00",
+          "cache_read": "0.25",
+          "cache_write": null
+        }
+      }
+    },
+    "gpt-5.4-mini": {
+      "price_source_key": null,
+      "source_keys": [
+        "gpt-5.4-mini",
+        "gpt-5.4-mini-2026-03-17"
+      ],
+      "official_url": "https://developers.openai.com/api/docs/models/gpt-5.4-mini",
+      "official_prices": {
+        "default": {
+          "input": "0.75",
+          "output": "4.50",
+          "cache_read": "0.075",
+          "cache_write": null
+        }
+      },
+      "official_aliases": [],
+      "catalog_source_key": "gpt-5.4-mini",
+      "price_basis": "OpenAI 官方网页，不采用第三方报价",
+      "source_group": "openai",
+      "accepted_prices": {
+        "default": {
+          "input": "0.75",
+          "output": "4.50",
+          "cache_read": "0.075",
+          "cache_write": null
+        }
+      }
+    },
+    "gpt-5.4-pro": {
+      "price_source_key": null,
+      "source_keys": [
+        "gpt-5.4-pro",
+        "gpt-5.4-pro-2026-03-05"
+      ],
+      "official_url": "https://developers.openai.com/api/docs/models/gpt-5.4-pro",
+      "official_prices": {
+        "default": {
+          "input": "30.00",
+          "output": "180.00",
+          "cache_read": null,
+          "cache_write": null
+        }
+      },
+      "official_aliases": [],
+      "catalog_source_key": "gpt-5.4-pro",
+      "price_basis": "OpenAI 官方网页，不采用第三方报价",
+      "source_group": "openai",
+      "accepted_prices": {
+        "default": {
+          "input": "30.00",
+          "output": "180.00",
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "gpt-5.5": {
+      "price_source_key": null,
+      "source_keys": [
+        "gpt-5.5",
+        "gpt-5.5-2026-04-23"
+      ],
+      "official_url": "https://developers.openai.com/api/docs/models/gpt-5.5",
+      "official_prices": {
+        "default": {
+          "input": "5.00",
+          "output": "30.00",
+          "cache_read": "0.50",
+          "cache_write": null
+        }
+      },
+      "official_aliases": [],
+      "catalog_source_key": "gpt-5.5",
+      "price_basis": "OpenAI 官方网页，不采用第三方报价",
+      "source_group": "openai",
+      "accepted_prices": {
+        "default": {
+          "input": "5.00",
+          "output": "30.00",
+          "cache_read": "0.50",
+          "cache_write": null
+        }
+      }
+    },
+    "gpt-5.5-pro": {
+      "price_source_key": null,
+      "source_keys": [
+        "gpt-5.5-pro",
+        "gpt-5.5-pro-2026-04-23"
+      ],
+      "official_url": "https://developers.openai.com/api/docs/models/gpt-5.5-pro",
+      "official_prices": {
+        "default": {
+          "input": "30.00",
+          "output": "180.00",
+          "cache_read": null,
+          "cache_write": null
+        }
+      },
+      "official_aliases": [],
+      "catalog_source_key": "gpt-5.5-pro",
+      "price_basis": "OpenAI 官方网页，不采用第三方报价",
+      "source_group": "openai",
+      "accepted_prices": {
+        "default": {
+          "input": "30.00",
+          "output": "180.00",
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "gpt-5.6-luna": {
+      "price_source_key": null,
+      "source_keys": [
+        "gpt-5.6-luna"
+      ],
+      "official_url": "https://developers.openai.com/api/docs/models/gpt-5.6-luna",
+      "cache_write_basis": "官方模型页列示缓存写入价格或为未缓存输入价的 1.25 倍，代表短上下文默认缓存写入",
+      "official_prices": {
+        "default": {
+          "input": "0.20",
+          "output": "1.20",
+          "cache_read": "0.02",
+          "cache_write": "0.25"
+        }
+      },
+      "official_aliases": [],
+      "catalog_source_key": "gpt-5.6-luna",
+      "price_basis": "OpenAI 官方网页，不采用第三方报价",
+      "tier_official_url": "https://developers.openai.com/es-419/api/docs/pricing",
+      "tier_basis": "OpenAI 价格页短上下文 Fast/Priority 和 Flex 行；西班牙语页面为搜索收录快照，后续需复核",
+      "source_group": "openai",
+      "excluded_stale_tiers": {
+        "priority": {
+          "input": "0.4",
+          "output": "2.4",
+          "cache_read": "0.04",
+          "cache_write": "0.5"
+        },
+        "flex": {
+          "input": "0.1",
+          "output": "0.6",
+          "cache_read": "0.01",
+          "cache_write": "0.125"
+        }
+      },
+      "review_note": "Older official search snapshot only; priority/flex excluded.",
+      "accepted_prices": {
+        "default": {
+          "input": "0.20",
+          "output": "1.20",
+          "cache_read": "0.02",
+          "cache_write": "0.25"
+        }
+      }
+    },
+    "gpt-5.6-sol": {
+      "price_source_key": null,
+      "source_keys": [
+        "gpt-5.6",
+        "gpt-5.6-sol"
+      ],
+      "official_url": "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+      "cache_write_basis": "官方模型页列示缓存写入价格或为未缓存输入价的 1.25 倍，代表短上下文默认缓存写入",
+      "official_prices": {
+        "default": {
+          "input": "4.00",
+          "output": "20.00",
+          "cache_read": "0.40",
+          "cache_write": "5.00"
+        }
+      },
+      "official_aliases": [],
+      "official_alias_basis": "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+      "catalog_source_key": "gpt-5.6-sol",
+      "price_basis": "OpenAI 官方网页，不采用第三方报价",
+      "tier_official_url": "https://developers.openai.com/es-419/api/docs/pricing",
+      "tier_basis": "OpenAI 价格页短上下文 Fast/Priority 和 Flex 行；西班牙语页面为搜索收录快照，后续需复核",
+      "source_group": "openai",
+      "excluded_stale_tiers": {
+        "priority": {
+          "input": "8",
+          "output": "40",
+          "cache_read": "0.8",
+          "cache_write": "10"
+        },
+        "flex": {
+          "input": "2",
+          "output": "10",
+          "cache_read": "0.2",
+          "cache_write": "2.5"
+        }
+      },
+      "review_note": "Older official search snapshot only; priority/flex excluded.",
+      "accepted_prices": {
+        "default": {
+          "input": "4.00",
+          "output": "20.00",
+          "cache_read": "0.40",
+          "cache_write": "5.00"
+        }
+      }
+    },
+    "gpt-5.6-terra": {
+      "price_source_key": null,
+      "source_keys": [
+        "gpt-5.6-terra"
+      ],
+      "official_url": "https://developers.openai.com/api/docs/models/gpt-5.6-terra",
+      "cache_write_basis": "官方模型页列示缓存写入价格或为未缓存输入价的 1.25 倍，代表短上下文默认缓存写入",
+      "official_prices": {
+        "default": {
+          "input": "2.00",
+          "output": "12.00",
+          "cache_read": "0.20",
+          "cache_write": "2.50"
+        }
+      },
+      "official_aliases": [],
+      "catalog_source_key": "gpt-5.6-terra",
+      "price_basis": "OpenAI 官方网页，不采用第三方报价",
+      "tier_official_url": "https://developers.openai.com/es-419/api/docs/pricing",
+      "tier_basis": "OpenAI 价格页短上下文 Fast/Priority 和 Flex 行；西班牙语页面为搜索收录快照，后续需复核",
+      "source_group": "openai",
+      "excluded_stale_tiers": {
+        "priority": {
+          "input": "4",
+          "output": "24",
+          "cache_read": "0.4",
+          "cache_write": "5"
+        },
+        "flex": {
+          "input": "1",
+          "output": "6",
+          "cache_read": "0.1",
+          "cache_write": "1.25"
+        }
+      },
+      "review_note": "Older official search snapshot only; priority/flex excluded.",
+      "accepted_prices": {
+        "default": {
+          "input": "2.00",
+          "output": "12.00",
+          "cache_read": "0.20",
+          "cache_write": "2.50"
+        }
+      }
+    },
+    "gpt-6-astra": {
+      "price_source_key": null,
+      "source_keys": [
+        "gpt-6-astra"
+      ],
+      "official_url": "https://developers.openai.com/api/docs/models/gpt-6-astra",
+      "cache_write_basis": "官方模型页列示缓存写入价格或为未缓存输入价的 1.25 倍，代表短上下文默认缓存写入",
+      "tier_official_url": "https://developers.openai.com/api/docs/pricing",
+      "tier_basis": "OpenAI 价格页旗舰模型短上下文 Fast / Flex/Batch 行，priority 对应 Fast",
+      "official_prices": {
+        "default": {
+          "input": "10.00",
+          "output": "50.00",
+          "cache_read": "1.00",
+          "cache_write": "12.50"
+        },
+        "priority": {
+          "input": "20",
+          "output": "100",
+          "cache_read": "2",
+          "cache_write": "25"
+        },
+        "flex": {
+          "input": "5",
+          "output": "25",
+          "cache_read": "0.5",
+          "cache_write": "6.25"
+        }
+      },
+      "official_aliases": [],
+      "catalog_source_key": "gpt-6-astra",
+      "price_basis": "OpenAI 官方网页，不采用第三方报价",
+      "source_group": "openai",
+      "accepted_prices": {
+        "default": {
+          "input": "10.00",
+          "output": "50.00",
+          "cache_read": "1.00",
+          "cache_write": "12.50"
+        },
+        "priority": {
+          "input": "20",
+          "output": "100",
+          "cache_read": "2",
+          "cache_write": "25"
+        },
+        "flex": {
+          "input": "5",
+          "output": "25",
+          "cache_read": "0.5",
+          "cache_write": "6.25"
+        }
+      }
+    },
+    "gpt-6-luna": {
+      "price_source_key": null,
+      "source_keys": [
+        "gpt-6-luna"
+      ],
+      "official_url": "https://developers.openai.com/api/docs/models/gpt-6-luna",
+      "cache_write_basis": "官方模型页列示缓存写入价格或为未缓存输入价的 1.25 倍，代表短上下文默认缓存写入",
+      "tier_official_url": "https://developers.openai.com/api/docs/pricing",
+      "tier_basis": "OpenAI 价格页旗舰模型短上下文 Fast / Flex/Batch 行，priority 对应 Fast",
+      "official_prices": {
+        "default": {
+          "input": "0.10",
+          "output": "0.50",
+          "cache_read": "0.01",
+          "cache_write": "0.125"
+        },
+        "priority": {
+          "input": "0.2",
+          "output": "1",
+          "cache_read": "0.02",
+          "cache_write": "0.25"
+        },
+        "flex": {
+          "input": "0.05",
+          "output": "0.25",
+          "cache_read": "0.005",
+          "cache_write": "0.0625"
+        }
+      },
+      "official_aliases": [],
+      "catalog_source_key": "gpt-6-luna",
+      "price_basis": "OpenAI 官方网页，不采用第三方报价",
+      "source_group": "openai",
+      "accepted_prices": {
+        "default": {
+          "input": "0.10",
+          "output": "0.50",
+          "cache_read": "0.01",
+          "cache_write": "0.125"
+        },
+        "priority": {
+          "input": "0.2",
+          "output": "1",
+          "cache_read": "0.02",
+          "cache_write": "0.25"
+        },
+        "flex": {
+          "input": "0.05",
+          "output": "0.25",
+          "cache_read": "0.005",
+          "cache_write": "0.0625"
+        }
+      }
+    },
+    "gpt-6-sol": {
+      "price_source_key": null,
+      "source_keys": [
+        "gpt-6-sol"
+      ],
+      "official_url": "https://developers.openai.com/api/docs/models/gpt-6-sol",
+      "cache_write_basis": "官方模型页列示缓存写入价格或为未缓存输入价的 1.25 倍，代表短上下文默认缓存写入",
+      "official_prices": {
+        "default": {
+          "input": "2.00",
+          "output": "10.00",
+          "cache_read": "0.20",
+          "cache_write": "2.50"
+        },
+        "priority": {
+          "input": "4",
+          "output": "20",
+          "cache_read": "0.4",
+          "cache_write": "5"
+        },
+        "flex": {
+          "input": "1",
+          "output": "5",
+          "cache_read": "0.1",
+          "cache_write": "1.25"
+        }
+      },
+      "official_aliases": [],
+      "catalog_source_key": "gpt-6-sol",
+      "price_basis": "OpenAI 官方网页，不采用第三方报价",
+      "tier_official_url": "https://developers.openai.com/api/docs/pricing?facet1=crm",
+      "tier_basis": "OpenAI 价格页短上下文 Fast/Priority 和 Flex 行",
+      "source_group": "openai",
+      "accepted_prices": {
+        "default": {
+          "input": "2.00",
+          "output": "10.00",
+          "cache_read": "0.20",
+          "cache_write": "2.50"
+        },
+        "priority": {
+          "input": "4",
+          "output": "20",
+          "cache_read": "0.4",
+          "cache_write": "5"
+        },
+        "flex": {
+          "input": "1",
+          "output": "5",
+          "cache_read": "0.1",
+          "cache_write": "1.25"
+        }
+      }
+    },
+    "gpt-6.1-sol": {
+      "price_source_key": null,
+      "source_keys": [
+        "gpt-6.1-sol"
+      ],
+      "official_url": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+      "cache_write_basis": "官方模型页列示缓存写入价格或为未缓存输入价的 1.25 倍，代表短上下文默认缓存写入",
+      "tier_official_url": "https://developers.openai.com/api/docs/pricing",
+      "tier_basis": "OpenAI 价格页旗舰模型短上下文 Fast / Flex/Batch 行，priority 对应 Fast",
+      "official_prices": {
+        "default": {
+          "input": "2.00",
+          "output": "10.00",
+          "cache_read": "0.10",
+          "cache_write": "2.50"
+        },
+        "priority": {
+          "input": "4",
+          "output": "20",
+          "cache_read": "0.2",
+          "cache_write": "5"
+        },
+        "flex": {
+          "input": "1",
+          "output": "5",
+          "cache_read": "0.05",
+          "cache_write": "1.25"
+        }
+      },
+      "official_aliases": [],
+      "catalog_source_key": "gpt-6.1-sol",
+      "price_basis": "OpenAI 官方网页，不采用第三方报价",
+      "source_group": "openai",
+      "accepted_prices": {
+        "default": {
+          "input": "2.00",
+          "output": "10.00",
+          "cache_read": "0.10",
+          "cache_write": "2.50"
+        },
+        "priority": {
+          "input": "4",
+          "output": "20",
+          "cache_read": "0.2",
+          "cache_write": "5"
+        },
+        "flex": {
+          "input": "1",
+          "output": "5",
+          "cache_read": "0.05",
+          "cache_write": "1.25"
+        }
+      }
+    },
+    "gpt-6.1-terra": {
+      "price_source_key": null,
+      "source_keys": [
+        "gpt-6.1-terra"
+      ],
+      "official_url": "https://developers.openai.com/api/docs/models/gpt-6.1-terra",
+      "cache_write_basis": "官方模型页列示缓存写入价格或为未缓存输入价的 1.25 倍，代表短上下文默认缓存写入",
+      "tier_official_url": "https://developers.openai.com/api/docs/pricing",
+      "tier_basis": "OpenAI 价格页旗舰模型短上下文 Fast / Flex/Batch 行，priority 对应 Fast",
+      "official_prices": {
+        "default": {
+          "input": "1.00",
+          "output": "5.00",
+          "cache_read": "0.05",
+          "cache_write": "1.25"
+        },
+        "priority": {
+          "input": "2",
+          "output": "10",
+          "cache_read": "0.1",
+          "cache_write": "2.5"
+        },
+        "flex": {
+          "input": "0.5",
+          "output": "2.5",
+          "cache_read": "0.025",
+          "cache_write": "0.625"
+        }
+      },
+      "official_aliases": [],
+      "catalog_source_key": "gpt-6.1-terra",
+      "price_basis": "OpenAI 官方网页，不采用第三方报价",
+      "source_group": "openai",
+      "accepted_prices": {
+        "default": {
+          "input": "1.00",
+          "output": "5.00",
+          "cache_read": "0.05",
+          "cache_write": "1.25"
+        },
+        "priority": {
+          "input": "2",
+          "output": "10",
+          "cache_read": "0.1",
+          "cache_write": "2.5"
+        },
+        "flex": {
+          "input": "0.5",
+          "output": "2.5",
+          "cache_read": "0.025",
+          "cache_write": "0.625"
+        }
+      }
+    },
+    "grok-4.20-multi-agent": {
+      "price_source_key": "official:https://docs.x.ai/developers/pricing#grok-4.20-multi-agent",
+      "official_url": "https://docs.x.ai/developers/pricing",
+      "official_values": {
+        "input": "1.25",
+        "output": "2.5",
+        "cache_read": "0.2",
+        "cache_write": null
+      },
+      "price_condition": "Global standard rate for prompt < 200K tokens; 200K and above higher; US regional endpoint 1.1x",
+      "source_keys": [
+        "litellm:xai/grok-4.20-multi-agent",
+        "litellm:xai/grok-4.20-multi-agent-0309",
+        "litellm:xai/grok-4.20-multi-agent-latest"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": "1.25",
+          "output": "2.5",
+          "cache_read": "0.2",
+          "cache_write": null
+        }
+      }
+    },
+    "grok-4.20-non-reasoning": {
+      "price_source_key": "official:https://docs.x.ai/developers/pricing#grok-4.20-non-reasoning",
+      "official_url": "https://docs.x.ai/developers/pricing",
+      "official_values": {
+        "input": "1.25",
+        "output": "2.5",
+        "cache_read": "0.2",
+        "cache_write": null
+      },
+      "price_condition": "Global standard rate for prompt < 200K tokens; 200K and above higher; US regional endpoint 1.1x",
+      "source_keys": [
+        "litellm:xai/grok-4.20-non-reasoning",
+        "litellm:xai/grok-4.20-0309-non-reasoning",
+        "litellm:xai/grok-4.20-non-reasoning-latest"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": "1.25",
+          "output": "2.5",
+          "cache_read": "0.2",
+          "cache_write": null
+        }
+      }
+    },
+    "grok-4.20-reasoning": {
+      "price_source_key": "official:https://docs.x.ai/developers/pricing#grok-4.20-reasoning",
+      "official_url": "https://docs.x.ai/developers/pricing",
+      "official_values": {
+        "input": "1.25",
+        "output": "2.5",
+        "cache_read": "0.2",
+        "cache_write": null
+      },
+      "price_condition": "Global standard rate for prompt < 200K tokens; 200K and above higher; US regional endpoint 1.1x",
+      "source_keys": [
+        "litellm:xai/grok-4.20-reasoning",
+        "litellm:xai/grok-4.20-0309-reasoning",
+        "litellm:xai/grok-4.20-reasoning-latest"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": "1.25",
+          "output": "2.5",
+          "cache_read": "0.2",
+          "cache_write": null
+        }
+      }
+    },
+    "grok-4.3": {
+      "price_source_key": "official:https://docs.x.ai/developers/pricing#grok-4.3",
+      "official_url": "https://docs.x.ai/developers/pricing",
+      "official_values": {
+        "input": "1.25",
+        "output": "2.5",
+        "cache_read": "0.2",
+        "cache_write": null
+      },
+      "price_condition": "Global standard rate for prompt < 200K tokens; 200K and above higher; US regional endpoint 1.1x",
+      "source_keys": [
+        "litellm:xai/grok-4.3",
+        "litellm:xai/grok-4.3-latest"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": "1.25",
+          "output": "2.5",
+          "cache_read": "0.2",
+          "cache_write": null
+        }
+      }
+    },
+    "grok-4.5": {
+      "price_source_key": "official:https://docs.x.ai/developers/pricing#grok-4.5",
+      "official_url": "https://docs.x.ai/developers/pricing",
+      "official_values": {
+        "input": "2",
+        "output": "6",
+        "cache_read": "0.3",
+        "cache_write": null
+      },
+      "price_condition": "Global standard rate for prompt < 200K tokens; 200K and above higher; US regional endpoint 1.1x",
+      "source_keys": [
+        "litellm:xai/grok-4.5",
+        "litellm:xai/grok-4.5-latest"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": "2",
+          "output": "6",
+          "cache_read": "0.3",
+          "cache_write": null
+        }
+      }
+    },
+    "grok-4.6": {
+      "price_source_key": "official:https://docs.x.ai/developers/pricing#grok-4.6",
+      "official_url": "https://docs.x.ai/developers/pricing",
+      "official_values": {
+        "input": "2",
+        "output": "6",
+        "cache_read": "0.5",
+        "cache_write": null
+      },
+      "price_condition": "Global standard rate for prompt < 200K tokens; 200K and above higher; US regional endpoint 1.1x",
+      "source_keys": [
+        "litellm:xai/grok-4.6"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": "2",
+          "output": "6",
+          "cache_read": "0.5",
+          "cache_write": null
+        }
+      }
+    },
+    "grok-4.7": {
+      "price_source_key": "official:https://docs.x.ai/developers/pricing#grok-4.7",
+      "official_url": "https://docs.x.ai/developers/pricing",
+      "official_values": {
+        "input": "2",
+        "output": "6",
+        "cache_read": "0.5",
+        "cache_write": null
+      },
+      "price_condition": "Global standard rate for prompt < 200K tokens; 200K and above higher; US regional endpoint 1.1x",
+      "source_keys": [
+        "litellm:xai/grok-4.7"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": "2",
+          "output": "6",
+          "cache_read": "0.5",
+          "cache_write": null
+        }
+      }
+    },
+    "kimi-k2.6": {
+      "price_source_key": "official:https://platform.kimi.ai/#kimi-k2.6",
+      "official_url": "https://platform.kimi.ai/",
+      "official_values": {
+        "input": "0.95",
+        "output": "4",
+        "cache_read": "0.16",
+        "cache_write": null
+      },
+      "price_condition": "Standard pay-as-you-go, USD per 1M tokens",
+      "source_keys": [
+        "litellm:moonshot/kimi-k2.6",
+        "models.dev:moonshotai/kimi-k2.6"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "Kimi-K2.6": "litellm:sail/moonshotai/Kimi-K2.6"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "0.95",
+          "output": "4",
+          "cache_read": "0.16",
+          "cache_write": null
+        }
+      }
+    },
+    "kimi-k2.7-code": {
+      "price_source_key": "official:https://platform.kimi.ai/#kimi-k2.7-code",
+      "official_url": "https://platform.kimi.ai/",
+      "official_values": {
+        "input": "0.95",
+        "output": "4",
+        "cache_read": "0.19",
+        "cache_write": null
+      },
+      "price_condition": "Standard pay-as-you-go, USD per 1M tokens",
+      "source_keys": [
+        "litellm:moonshot/kimi-k2.7-code",
+        "models.dev:moonshotai/kimi-k2.7-code"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "Kimi-K2.7-Code": "litellm:inferenceapis/moonshotai/Kimi-K2.7-Code"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "0.95",
+          "output": "4",
+          "cache_read": "0.19",
+          "cache_write": null
+        }
+      }
+    },
+    "kimi-k2.7-code-highspeed": {
+      "price_source_key": null,
+      "official_url": null,
+      "official_values": {},
+      "price_condition": null,
+      "source_keys": [
+        "models.dev:moonshotai/kimi-k2.7-code-highspeed"
+      ],
+      "source_group": "other",
+      "observed_case_aliases": {
+        "Kimi-K2.7-Code-Highspeed": "models.dev:commandcode/moonshotai/Kimi-K2.7-Code-Highspeed"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": null,
+          "output": null,
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "kimi-k3": {
+      "price_source_key": "official:https://platform.kimi.ai/#kimi-k3",
+      "official_url": "https://platform.kimi.ai/",
+      "official_values": {
+        "input": "3",
+        "output": "15",
+        "cache_read": "0.3",
+        "cache_write": "3"
+      },
+      "price_condition": "Standard pay-as-you-go, USD per 1M tokens",
+      "source_keys": [
+        "litellm:moonshot/kimi-k3",
+        "models.dev:moonshotai/kimi-k3"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "Kimi-K3": "litellm:sail/moonshotai/Kimi-K3"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "3",
+          "output": "15",
+          "cache_read": "0.3",
+          "cache_write": "3"
+        }
+      }
+    },
+    "kimi-k3.1-pro": {
+      "price_source_key": "official:https://platform.kimi.ai/#kimi-k3.1-pro",
+      "official_url": "https://platform.kimi.ai/",
+      "official_values": {
+        "input": "2",
+        "output": "10",
+        "cache_read": "0.2",
+        "cache_write": "2"
+      },
+      "price_condition": "Standard pay-as-you-go, USD per 1M tokens",
+      "source_keys": [
+        "litellm:moonshot/kimi-k3.1-pro",
+        "models.dev:moonshotai/kimi-k3.1-pro"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "Kimi-K3.1-Pro": "litellm:nebius/moonshotai/Kimi-K3.1-Pro"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "2",
+          "output": "10",
+          "cache_read": "0.2",
+          "cache_write": "2"
+        }
+      }
+    },
+    "kimi-k3.1-pro-highspeed": {
+      "price_source_key": "official:https://platform.kimi.ai/#kimi-k3.1-pro-highspeed",
+      "official_url": "https://platform.kimi.ai/",
+      "official_values": {
+        "input": "4",
+        "output": "20",
+        "cache_read": "0.2",
+        "cache_write": "4"
+      },
+      "price_condition": "Standard pay-as-you-go, USD per 1M tokens",
+      "source_keys": [
+        "models.dev:moonshotai/kimi-k3.1-pro-highspeed"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": "4",
+          "output": "20",
+          "cache_read": "0.2",
+          "cache_write": "4"
+        }
+      }
+    },
+    "Llama-4-Maverick-17B-128E-Instruct": {
+      "price_source_key": null,
+      "official_url": null,
+      "official_values": {},
+      "price_condition": null,
+      "source_keys": [
+        "litellm:sambanova/Llama-4-Maverick-17B-128E-Instruct"
+      ],
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": null,
+          "output": null,
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "Llama-4-Maverick-17B-128E-Instruct-FP8": {
+      "price_source_key": null,
+      "official_url": null,
+      "official_values": {},
+      "price_condition": null,
+      "source_keys": [
+        "litellm:meta_llama/Llama-4-Maverick-17B-128E-Instruct-FP8"
+      ],
+      "source_group": "other",
+      "observed_case_aliases": {
+        "llama-4-maverick-17b-128e-instruct-fp8": "litellm:lambda_ai/llama-4-maverick-17b-128e-instruct-fp8"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": null,
+          "output": null,
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "Llama-4-Scout-17B-16E-Instruct": {
+      "price_source_key": null,
+      "official_url": null,
+      "official_values": {},
+      "price_condition": null,
+      "source_keys": [
+        "litellm:deepinfra/meta-llama/Llama-4-Scout-17B-16E-Instruct"
+      ],
+      "source_group": "other",
+      "observed_case_aliases": {
+        "llama-4-scout-17b-16e-instruct": "litellm:cloudflare/@cf/meta/llama-4-scout-17b-16e-instruct"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": null,
+          "output": null,
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "Llama-4-Scout-17B-16E-Instruct-FP8": {
+      "price_source_key": null,
+      "official_url": null,
+      "official_values": {},
+      "price_condition": null,
+      "source_keys": [
+        "litellm:meta_llama/Llama-4-Scout-17B-16E-Instruct-FP8"
+      ],
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": null,
+          "output": null,
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "mimo-v2.6-flash": {
+      "source_keys": [
+        "models.dev:xiaomi/mimo-v2.6-flash"
+      ],
+      "official_url": null,
+      "price_source_key": null,
+      "price_status": "official_USD_token_rate_not_verified",
+      "model_provider_doc": "https://platform.xiaomimimo.com/#/docs",
+      "logical_canonical": false,
+      "source_group": "extra",
+      "observed_case_aliases": {
+        "MiMo-V2.6-Flash": "litellm:gmi/XiaomiMiMo/MiMo-V2.6-Flash"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": null,
+          "output": null,
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "mimo-v2.6-pro": {
+      "source_keys": [
+        "models.dev:xiaomi/mimo-v2.6-pro"
+      ],
+      "official_url": null,
+      "price_source_key": null,
+      "price_status": "official_USD_token_rate_not_verified",
+      "model_provider_doc": "https://platform.xiaomimimo.com/#/docs",
+      "logical_canonical": false,
+      "source_group": "extra",
+      "observed_case_aliases": {
+        "MiMo-V2.6-Pro": "litellm:gmi/XiaomiMiMo/MiMo-V2.6-Pro"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": null,
+          "output": null,
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "MiniMax-M3": {
+      "price_source_key": "official:https://platform.minimax.io/docs/pricing/overview#MiniMax-M3",
+      "official_url": "https://platform.minimax.io/docs/pricing/overview",
+      "official_values": {
+        "input": "0.3",
+        "output": "1.2",
+        "cache_read": "0.06",
+        "cache_write": null
+      },
+      "price_condition": "Official effective permanent-50%-off prices for <=512K input; >512K rates double.",
+      "source_keys": [
+        "litellm:minimax/MiniMax-M3",
+        "models.dev:minimax/MiniMax-M3"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "official_tiers": {
+        "default": {
+          "input": "0.3",
+          "output": "1.2",
+          "cache_read": "0.06",
+          "cache_write": null
+        },
+        "priority": {
+          "input": "0.45",
+          "output": "1.8",
+          "cache_read": "0.09",
+          "cache_write": null
+        }
+      },
+      "observed_case_aliases": {
+        "minimax-m3": "litellm:fireworks_ai/accounts/fireworks/models/minimax-m3"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "0.3",
+          "output": "1.2",
+          "cache_read": "0.06",
+          "cache_write": null
+        },
+        "priority": {
+          "input": "0.45",
+          "output": "1.8",
+          "cache_read": "0.09",
+          "cache_write": null
+        }
+      }
+    },
+    "MiniMax-M3.1-Flash": {
+      "price_source_key": "official:https://platform.minimax.io/docs/pricing/overview#MiniMax-M3.1-Flash",
+      "official_url": "https://platform.minimax.io/docs/pricing/overview",
+      "official_values": {
+        "input": "0.15",
+        "output": "0.6",
+        "cache_read": "0.015",
+        "cache_write": null
+      },
+      "price_condition": "Standard pay-as-you-go",
+      "source_keys": [
+        "models.dev:minimax/MiniMax-M3.1-Flash"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "minimax-m3.1-flash": "litellm:opencode_go/minimax-m3.1-flash"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "0.15",
+          "output": "0.6",
+          "cache_read": "0.015",
+          "cache_write": null
+        }
+      }
+    },
+    "ministral-3-14b": {
+      "price_source_key": "official:https://docs.mistral.ai/inference/pricing#ministral-3-14b",
+      "official_url": "https://docs.mistral.ai/inference/pricing",
+      "official_values": {
+        "input": "0.2",
+        "output": "0.2",
+        "cache_read": "0.02",
+        "cache_write": null
+      },
+      "price_condition": "Standard pay-as-you-go, USD per 1M tokens",
+      "source_keys": [
+        "litellm:mistral/ministral-14b-latest",
+        "litellm:mistral/ministral-14b-2512",
+        "litellm:mistral/ministral-3-14b-2512"
+      ],
+      "logical_canonical_basis": "Derived logical name retains version and size; real identifiers are retained as aliases.",
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": "0.2",
+          "output": "0.2",
+          "cache_read": "0.02",
+          "cache_write": null
+        }
+      }
+    },
+    "ministral-3-3b": {
+      "price_source_key": "official:https://docs.mistral.ai/inference/pricing#ministral-3-3b",
+      "official_url": "https://docs.mistral.ai/inference/pricing",
+      "official_values": {
+        "input": "0.1",
+        "output": "0.1",
+        "cache_read": "0.01",
+        "cache_write": null
+      },
+      "price_condition": "Standard pay-as-you-go, USD per 1M tokens",
+      "source_keys": [
+        "litellm:mistral/ministral-3b-latest",
+        "litellm:mistral/ministral-3b-2512",
+        "litellm:mistral/ministral-3-3b-2512"
+      ],
+      "logical_canonical_basis": "Derived logical name retains version and size; real identifiers are retained as aliases.",
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": "0.1",
+          "output": "0.1",
+          "cache_read": "0.01",
+          "cache_write": null
+        }
+      }
+    },
+    "ministral-3-8b": {
+      "price_source_key": "official:https://docs.mistral.ai/inference/pricing#ministral-3-8b",
+      "official_url": "https://docs.mistral.ai/inference/pricing",
+      "official_values": {
+        "input": "0.15",
+        "output": "0.15",
+        "cache_read": "0.015",
+        "cache_write": null
+      },
+      "price_condition": "Standard pay-as-you-go, USD per 1M tokens",
+      "source_keys": [
+        "litellm:mistral/ministral-8b-latest",
+        "litellm:mistral/ministral-8b-2512",
+        "litellm:mistral/ministral-3-8b-2512"
+      ],
+      "logical_canonical_basis": "Derived logical name retains version and size; real identifiers are retained as aliases.",
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": "0.15",
+          "output": "0.15",
+          "cache_read": "0.015",
+          "cache_write": null
+        }
+      }
+    },
+    "mistral-large-4": {
+      "price_source_key": "official:https://docs.mistral.ai/inference/pricing#mistral-large-4",
+      "official_url": "https://docs.mistral.ai/inference/pricing",
+      "official_values": {
+        "input": "0.7",
+        "output": "2.1",
+        "cache_read": "0.07",
+        "cache_write": null
+      },
+      "price_condition": "Standard pay-as-you-go, USD per 1M tokens",
+      "source_keys": [
+        "litellm:mistral/mistral-large-4",
+        "litellm:mistral/mistral-large-4-0"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "logical_canonical_basis": "4 and 4-0 are the same model version; 4-0-8 remains independent.",
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": "0.7",
+          "output": "2.1",
+          "cache_read": "0.07",
+          "cache_write": null
+        }
+      }
+    },
+    "mistral-small-4": {
+      "price_source_key": "official:https://docs.mistral.ai/inference/pricing#mistral-small-4",
+      "official_url": "https://docs.mistral.ai/inference/pricing",
+      "official_values": {
+        "input": "0.15",
+        "output": "0.6",
+        "cache_read": "0.015",
+        "cache_write": null
+      },
+      "price_condition": "Standard pay-as-you-go, USD per 1M tokens",
+      "source_keys": [
+        "litellm:mistral/mistral-small-latest",
+        "litellm:mistral/mistral-small-2603"
+      ],
+      "logical_canonical_basis": "Derived logical name retains version and size; real identifiers are retained as aliases.",
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": "0.15",
+          "output": "0.6",
+          "cache_read": "0.015",
+          "cache_write": null
+        }
+      }
+    },
+    "qwen-flash": {
+      "price_source_key": "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen-flash",
+      "official_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+      "official_values": {
+        "input": "0.05",
+        "output": "0.4",
+        "cache_read": null,
+        "cache_write": null
+      },
+      "price_condition": "Singapore International, prompt <= 256K",
+      "source_keys": [
+        "litellm:dashscope/qwen-flash",
+        "litellm:dashscope/qwen-flash-2025-07-28",
+        "models.dev:alibaba/qwen-flash"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": "0.05",
+          "output": "0.4",
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "qwen-max": {
+      "price_source_key": "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen-max",
+      "official_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+      "official_values": {
+        "input": "1.6",
+        "output": "6.4",
+        "cache_read": null,
+        "cache_write": null
+      },
+      "price_condition": "Singapore International",
+      "source_keys": [
+        "litellm:dashscope/qwen-max",
+        "models.dev:alibaba/qwen-max"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": "1.6",
+          "output": "6.4",
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "qwen-plus": {
+      "price_source_key": "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen-plus",
+      "official_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+      "official_values": {
+        "input": "0.4",
+        "output": "1.2",
+        "cache_read": null,
+        "cache_write": null
+      },
+      "price_condition": "Singapore International, prompt <= 256K, non-thinking output; thinking output is $4/M",
+      "source_keys": [
+        "litellm:dashscope/qwen-plus",
+        "litellm:dashscope/qwen-plus-2025-01-25",
+        "litellm:dashscope/qwen-plus-2025-04-28",
+        "litellm:dashscope/qwen-plus-2025-07-14",
+        "litellm:dashscope/qwen-plus-2025-07-28",
+        "litellm:dashscope/qwen-plus-2025-09-11",
+        "litellm:dashscope/qwen-plus-latest",
+        "models.dev:alibaba/qwen-plus",
+        "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen-plus-2025-12-01"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": "0.4",
+          "output": "1.2",
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "qwen3-coder-flash": {
+      "price_source_key": "official:https://docs.modelstudio.console.alibabacloud.com/en/model-studio/qwen3-coder-flash#qwen3-coder-flash",
+      "official_url": "https://docs.modelstudio.console.alibabacloud.com/en/model-studio/qwen3-coder-flash",
+      "official_values": {
+        "input": "0.3",
+        "output": "1.5",
+        "cache_read": "0.03",
+        "cache_write": "0.375"
+      },
+      "price_condition": "Singapore International, prompt <= 32K, explicit cache; dated snapshot may not support cache",
+      "source_keys": [
+        "litellm:dashscope/qwen3-coder-flash",
+        "litellm:dashscope/qwen3-coder-flash-2025-07-28",
+        "models.dev:alibaba/qwen3-coder-flash"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": "0.3",
+          "output": "1.5",
+          "cache_read": "0.03",
+          "cache_write": "0.375"
+        }
+      }
+    },
+    "qwen3-vl-plus": {
+      "price_source_key": "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3-vl-plus",
+      "official_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+      "official_values": {
+        "input": "0.2",
+        "output": "1.6",
+        "cache_read": null,
+        "cache_write": null
+      },
+      "price_condition": "Hong Kong scope, prompt <= 32K",
+      "source_keys": [
+        "litellm:dashscope/qwen3-vl-plus",
+        "models.dev:alibaba/qwen3-vl-plus"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": "0.2",
+          "output": "1.6",
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "qwen3.5-122b-a10b": {
+      "price_source_key": "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.5-122b-a10b",
+      "official_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+      "official_values": {
+        "input": "0.4",
+        "output": "3.2",
+        "cache_read": null,
+        "cache_write": null
+      },
+      "price_condition": "Singapore International, prompt <= 256K, standard text price",
+      "source_keys": [
+        "models.dev:alibaba/qwen3.5-122b-a10b",
+        "litellm:deepinfra/Qwen/Qwen3.5-122B-A10B"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "Qwen3.5-122B-A10B": "litellm:deepinfra/Qwen/Qwen3.5-122B-A10B"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "0.4",
+          "output": "3.2",
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "qwen3.5-27b": {
+      "price_source_key": "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.5-27b",
+      "official_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+      "official_values": {
+        "input": "0.3",
+        "output": "2.4",
+        "cache_read": null,
+        "cache_write": null
+      },
+      "price_condition": "Singapore International, prompt <= 256K, standard text price",
+      "source_keys": [
+        "models.dev:alibaba/qwen3.5-27b",
+        "litellm:deepinfra/Qwen/Qwen3.5-27B"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "Qwen3.5-27B": "litellm:deepinfra/Qwen/Qwen3.5-27B"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "0.3",
+          "output": "2.4",
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "qwen3.5-35b-a3b": {
+      "price_source_key": "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.5-35b-a3b",
+      "official_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+      "official_values": {
+        "input": "0.25",
+        "output": "2",
+        "cache_read": null,
+        "cache_write": null
+      },
+      "price_condition": "Singapore International, prompt <= 256K, standard text price",
+      "source_keys": [
+        "models.dev:alibaba/qwen3.5-35b-a3b",
+        "litellm:deepinfra/Qwen/Qwen3.5-35B-A3B"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "Qwen3.5-35B-A3B": "litellm:wandb/Qwen/Qwen3.5-35B-A3B"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "0.25",
+          "output": "2",
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "qwen3.5-397b-a17b": {
+      "price_source_key": "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.5-397b-a17b",
+      "official_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+      "official_values": {
+        "input": "0.6",
+        "output": "3.6",
+        "cache_read": null,
+        "cache_write": null
+      },
+      "price_condition": "Singapore International, prompt <= 256K, standard text price",
+      "source_keys": [
+        "models.dev:alibaba/qwen3.5-397b-a17b",
+        "litellm:deepinfra/Qwen/Qwen3.5-397B-A17B"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "Qwen3.5-397B-A17B": "litellm:nebius/Qwen/Qwen3.5-397B-A17B"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "0.6",
+          "output": "3.6",
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "qwen3.5-flash": {
+      "price_source_key": "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.5-flash",
+      "official_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+      "official_values": {
+        "input": "0.1",
+        "output": "0.4",
+        "cache_read": null,
+        "cache_write": null
+      },
+      "price_condition": "Singapore International, 0-1M prompt tokens",
+      "source_keys": [
+        "models.dev:alibaba/qwen3.5-flash",
+        "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.5-flash-2026-02-23"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": "0.1",
+          "output": "0.4",
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "qwen3.5-plus": {
+      "price_source_key": "official:https://www.alibabacloud.com/help/en/model-studio/qwen3-5-plus#qwen3.5-plus",
+      "official_url": "https://www.alibabacloud.com/help/en/model-studio/qwen3-5-plus",
+      "official_values": {
+        "input": "0.4",
+        "output": "2.4",
+        "cache_read": "0.04",
+        "cache_write": "0.5"
+      },
+      "price_condition": "Singapore International, prompt <= 256K; explicit cache prices",
+      "source_keys": [
+        "litellm:dashscope/qwen3.5-plus",
+        "models.dev:alibaba/qwen3.5-plus",
+        "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.5-plus-2026-02-15",
+        "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.5-plus-2026-04-20"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "Qwen3.5-Plus": "models.dev:meganova/Qwen/Qwen3.5-Plus"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "0.4",
+          "output": "2.4",
+          "cache_read": "0.04",
+          "cache_write": "0.5"
+        }
+      }
+    },
+    "qwen3.6-27b": {
+      "price_source_key": "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.6-27b",
+      "official_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+      "official_values": {
+        "input": "0.6",
+        "output": "3.6",
+        "cache_read": null,
+        "cache_write": null
+      },
+      "price_condition": "Singapore International, prompt <= 256K, standard text price",
+      "source_keys": [
+        "models.dev:alibaba/qwen3.6-27b",
+        "litellm:deepinfra/Qwen/Qwen3.6-27B"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "Qwen3.6-27B": "litellm:wandb/Qwen/Qwen3.6-27B"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "0.6",
+          "output": "3.6",
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "qwen3.6-35b-a3b": {
+      "price_source_key": "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.6-35b-a3b",
+      "official_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+      "official_values": {
+        "input": "0.375",
+        "output": "2.25",
+        "cache_read": null,
+        "cache_write": null
+      },
+      "price_condition": "Singapore International, prompt <= 256K",
+      "source_keys": [
+        "models.dev:alibaba/qwen3.6-35b-a3b",
+        "litellm:deepinfra/Qwen/Qwen3.6-35B-A3B"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "Qwen3.6-35B-A3B": "litellm:sail/Qwen/Qwen3.6-35B-A3B"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "0.375",
+          "output": "2.25",
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "qwen3.6-flash": {
+      "price_source_key": "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.6-flash",
+      "official_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+      "official_values": {
+        "input": "0.25",
+        "output": "1.5",
+        "cache_read": null,
+        "cache_write": null
+      },
+      "price_condition": "Singapore International, prompt <= 256K",
+      "source_keys": [
+        "models.dev:alibaba/qwen3.6-flash",
+        "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.6-flash-2026-04-16"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "Qwen3.6-Flash": "models.dev:moark/Qwen3.6-Flash"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "0.25",
+          "output": "1.5",
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "qwen3.6-plus": {
+      "price_source_key": "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.6-plus",
+      "official_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+      "official_values": {
+        "input": "0.5",
+        "output": "3",
+        "cache_read": null,
+        "cache_write": null
+      },
+      "price_condition": "Singapore International, prompt <= 256K",
+      "source_keys": [
+        "models.dev:alibaba/qwen3.6-plus",
+        "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.6-plus-2026-04-02"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "Qwen3.6-Plus": "litellm:together_ai/Qwen/Qwen3.6-Plus",
+        "Qwen3.6-Plus-2026-04-02": "litellm:gmi/Qwen/Qwen3.6-Plus-2026-04-02"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "0.5",
+          "output": "3",
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "qwen3.7-flash": {
+      "price_source_key": "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.7-flash",
+      "official_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+      "official_values": {
+        "input": "0.03",
+        "output": "0.13",
+        "cache_read": null,
+        "cache_write": null
+      },
+      "price_condition": "Singapore International, prompt <= 32K",
+      "source_keys": [
+        "models.dev:alibaba/qwen3.7-flash",
+        "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.7-flash-2026-07-15"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "accepted_prices": {
+        "default": {
+          "input": "0.03",
+          "output": "0.13",
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "qwen3.7-max": {
+      "price_source_key": "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.7-max",
+      "official_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+      "official_values": {
+        "input": "2.5",
+        "output": "7.5",
+        "cache_read": null,
+        "cache_write": null
+      },
+      "price_condition": "Singapore International, 0-1M prompt tokens",
+      "source_keys": [
+        "litellm:dashscope/qwen3.7-max",
+        "models.dev:alibaba/qwen3.7-max",
+        "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.7-max-2026-05-20",
+        "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.7-max-2026-06-08"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "Qwen3.7-Max": "litellm:together_ai/Qwen/Qwen3.7-Max"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "2.5",
+          "output": "7.5",
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "qwen3.7-plus": {
+      "price_source_key": "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.7-plus",
+      "official_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+      "official_values": {
+        "input": "0.4",
+        "output": "1.6",
+        "cache_read": null,
+        "cache_write": null
+      },
+      "price_condition": "Singapore International, prompt <= 256K, non-thinking/thinking; list price before temporary promotion",
+      "source_keys": [
+        "litellm:dashscope/qwen3.7-plus",
+        "models.dev:alibaba/qwen3.7-plus",
+        "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.7-plus-2026-05-26"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "Qwen3.7-Plus": "litellm:together_ai/Qwen/Qwen3.7-Plus"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "0.4",
+          "output": "1.6",
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "qwen3.8-flash": {
+      "price_source_key": "official:https://docs.modelstudio.console.alibabacloud.com/en/model-studio/qwen3-8-flash#qwen3.8-flash",
+      "official_url": "https://docs.modelstudio.console.alibabacloud.com/en/model-studio/qwen3-8-flash",
+      "official_values": {
+        "input": "0.15",
+        "output": "0.47",
+        "cache_read": "0.016",
+        "cache_write": "0.2"
+      },
+      "price_condition": "Singapore International, explicit cache",
+      "source_keys": [
+        "litellm:dashscope/qwen3.8-flash",
+        "models.dev:alibaba/qwen3.8-flash"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "Qwen3.8-Flash": "litellm:inferenceapis/Qwen/Qwen3.8-Flash"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "0.15",
+          "output": "0.47",
+          "cache_read": "0.016",
+          "cache_write": "0.2"
+        }
+      }
+    },
+    "qwen3.8-max": {
+      "price_source_key": "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.8-max",
+      "official_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+      "official_values": {
+        "input": "2",
+        "output": "6",
+        "cache_read": null,
+        "cache_write": null
+      },
+      "price_condition": "Singapore International, 0-1M prompt tokens",
+      "source_keys": [
+        "litellm:dashscope/qwen3.8-max",
+        "models.dev:alibaba/qwen3.8-max",
+        "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.8-max-0902"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "Qwen3.8-Max": "litellm:scx-ai/Qwen3.8-Max",
+        "Qwen3.8-Max-0902": "litellm:gmi/Qwen/Qwen3.8-Max-0902"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "2",
+          "output": "6",
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "qwen3.8-omni-flash": {
+      "price_source_key": "official:https://www.alibabacloud.com/help/en/model-studio/model-pricing#qwen3.8-omni-flash",
+      "official_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+      "official_values": {
+        "input": "0.15",
+        "output": "0.47",
+        "cache_read": "0.016",
+        "cache_write": null
+      },
+      "price_condition": "Singapore International, text input/output only",
+      "source_keys": [
+        "litellm:dashscope/qwen3.8-omni-flash",
+        "models.dev:alibaba/qwen3.8-omni-flash"
+      ],
+      "price_source_path": "Official pricing table in USD per million tokens",
+      "source_group": "other",
+      "observed_case_aliases": {
+        "Qwen3.8-Omni-Flash": "models.dev:commandcode/Qwen/Qwen3.8-Omni-Flash"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": "0.15",
+          "output": "0.47",
+          "cache_read": "0.016",
+          "cache_write": null
+        }
+      }
+    },
+    "step-3.7-flash": {
+      "source_keys": [
+        "models.dev:stepfun/step-3.7-flash"
+      ],
+      "official_url": null,
+      "price_source_key": null,
+      "price_status": "official_USD_token_rate_not_verified",
+      "model_provider_doc": "https://platform.stepfun.com/docs/zh/overview/concept",
+      "logical_canonical": false,
+      "source_group": "extra",
+      "observed_case_aliases": {
+        "Step-3.7-Flash": "litellm:deepinfra/stepfun-ai/Step-3.7-Flash"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": null,
+          "output": null,
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "step-5-preview": {
+      "source_keys": [
+        "models.dev:stepfun/step-5-preview"
+      ],
+      "official_url": null,
+      "price_source_key": null,
+      "price_status": "official_USD_token_rate_not_verified",
+      "model_provider_doc": "https://platform.stepfun.com/docs/zh/overview/concept",
+      "logical_canonical": false,
+      "source_group": "extra",
+      "observed_case_aliases": {
+        "Step-5-Preview": "litellm:gmi/stepfun-ai/Step-5-Preview"
+      },
+      "accepted_prices": {
+        "default": {
+          "input": null,
+          "output": null,
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    },
+    "doubao-seed-2-1-lite": {
+      "source_group": "extra",
+      "source_keys": [
+        "official:doubao-seed-2-1-lite-260915"
+      ],
+      "official_model_url": "https://docs.volcengine.com/docs/82379/1330310?lang=en",
+      "official_url": null,
+      "price_status": "USD_rate_not_verified; official CNY prices are not converted",
+      "accepted_prices": {
+        "default": {
+          "input": null,
+          "output": null,
+          "cache_read": null,
+          "cache_write": null
+        }
+      }
+    }
+  },
+  "scope": "Only selected mainstream currently supported models; exclude retired, deprecated, existing-user-only and obsolete historical compatibility entries. Omission does not assert universal shutdown.",
+  "models_file_sha256": "bc65f5c2bda77e214833e429fedfa69ee5244e453e95f20841532ad9f29b132f",
+  "lifecycle_review": {
+    "as_of": "2026-11-07",
+    "policy": "Only selected mainstream currently supported models; exclude retired, deprecated, existing-user-only and obsolete historical compatibility entries. Omission does not assert universal shutdown.",
+    "removed_standard_records": 92,
+    "removed_aliases": [
+      "claude-opus-4-6-20260205",
+      "claude-opus-4-7-20260416",
+      "deepseek-v4.1-flash-260910",
+      "ministral-3-14b-2512",
+      "ministral-3-3b-2512",
+      "ministral-3-8b-2512",
+      "qwen-plus-2025-01-25",
+      "qwen-plus-2025-04-28",
+      "qwen-plus-2025-07-14",
+      "qwen-plus-2025-07-28",
+      "qwen-plus-2025-09-11"
+    ],
+    "groups": {
+      "openai": [
+        {
+          "models": [
+            "gpt-6-astra",
+            "gpt-6-luna",
+            "gpt-6-sol",
+            "gpt-6.1-sol",
+            "gpt-6.1-terra",
+            "gpt-5.6-sol",
+            "gpt-5.6-terra",
+            "gpt-5.6-luna",
+            "gpt-5.5",
+            "gpt-5.5-pro",
+            "gpt-5.4",
+            "gpt-5.4-mini",
+            "gpt-5.4-pro"
+          ],
+          "decision": "keep",
+          "status": "现役",
+          "url": "https://developers.openai.com/api/docs/models/all",
+          "basis": "OpenAI 在当前旗舰或更多模型目录中列出这些通用模型。"
+        },
+        {
+          "models": [
+            "gpt-5.2",
+            "gpt-5.2-pro"
+          ],
+          "decision": "keep",
+          "status": "现役但为上一代",
+          "url": "https://developers.openai.com/api/docs/models/all",
+          "basis": "官方当前目录仍列为上一代旗舰和 Pro；GPT-5.2 也在官方 Work/Codex 当前费率表。",
+          "additional_url": "https://help.openai.com/en/articles/20001415"
+        },
+        {
+          "models": [
+            "gpt-5.3-codex",
+            "gpt-5.4-nano"
+          ],
+          "decision": "remove",
+          "status": "已弃用但尚未关闭",
+          "shutdown_date": "2027-04-01",
+          "url": "https://developers.openai.com/api/docs/deprecations",
+          "basis": "官方已宣布弃用，计划于 2027-04-01 关闭；目前仍可调用，GPT-5.3-Codex 仍用于官方 Code Review，但不符合本次仅保留未弃用主流型号的精简口径。",
+          "additional_url": "https://help.openai.com/en/articles/20001415"
+        },
+        {
+          "models": [
+            "gpt-5.3-codex-spark"
+          ],
+          "decision": "remove",
+          "status": "限定研究预览",
+          "url": "https://openai.com/index/introducing-gpt-5-3-codex-spark/",
+          "basis": "产品真实存在，但官方介绍称 API 仅面向少量设计合作伙伴，公开 API 价格尚未核验；为收窄到主流现役而排除，不声称该模型已经停用。"
+        },
+        {
+          "models": [
+            "gpt-4.1",
+            "gpt-4.1-mini",
+            "gpt-4o",
+            "gpt-4o-mini"
+          ],
+          "decision": "remove",
+          "status": "弃用，计划 2027-01-14 关闭",
+          "url": "https://developers.openai.com/api/docs/deprecations",
+          "basis": "虽然尚未关闭，但属于用户明确不保留的 GPT-4 历史代际。"
+        },
+        {
+          "models": [
+            "gpt-5",
+            "gpt-5-mini",
+            "gpt-5-nano",
+            "gpt-5-pro",
+            "o3",
+            "o3-pro"
+          ],
+          "decision": "remove",
+          "status": "弃用，计划 2026-12-11 关闭",
+          "url": "https://developers.openai.com/api/docs/deprecations",
+          "basis": "旧代通用与 o 系列型号，根据收窄要求移除。"
+        },
+        {
+          "models": [
+            "gpt-5.1"
+          ],
+          "decision": "remove",
+          "status": "弃用，计划 2027-04-01 关闭",
+          "url": "https://developers.openai.com/api/docs/deprecations",
+          "basis": "仍能使用，但为更早代通用型号；用户要求收窄。"
+        },
+        {
+          "models": [
+            "gpt-4.1-nano",
+            "o3-mini",
+            "o4-mini",
+            "gpt-5-chat-latest",
+            "gpt-5-codex",
+            "gpt-5.1-chat-latest",
+            "gpt-5.1-codex",
+            "gpt-5.1-codex-max",
+            "gpt-5.1-codex-mini",
+            "gpt-5.2-chat-latest",
+            "gpt-5.2-codex",
+            "gpt-5.3-chat-latest"
+          ],
+          "decision": "remove",
+          "status": "已关闭",
+          "url": "https://developers.openai.com/api/docs/deprecations",
+          "basis": "官方列示各自于 2026 年 7 月、8 月或 10 月已关闭。"
+        },
+        {
+          "aliases": [
+            "gpt-4.1-nano-2025-04-14",
+            "gpt-4o-2024-05-13",
+            "o3-mini-2025-01-31",
+            "o4-mini-2025-04-16"
+          ],
+          "decision": "remove_aliases",
+          "status": "已于 2026-10-23 关闭",
+          "url": "https://developers.openai.com/api/docs/deprecations",
+          "basis": "这些别名所属标准型号本次也被移除，因此删除对应整条记录时无需另行处理；保留的标准型号中没有已确认关闭的现有别名。"
+        },
+        {
+          "models": [
+            "gpt-5.6-sol"
+          ],
+          "aliases": [
+            "gpt-5.6"
+          ],
+          "decision": "keep_alias",
+          "status": "现役",
+          "url": "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+          "basis": "OpenAI 官方明确 gpt-5.6 路由到 gpt-5.6-sol。"
+        }
+      ],
+      "anthropic-google": [
+        {
+          "models": [
+            "claude-fable-5",
+            "claude-fable-5-1",
+            "claude-haiku-4-5",
+            "claude-haiku-5-5",
+            "claude-opus-4-5",
+            "claude-opus-4-6",
+            "claude-opus-4-7",
+            "claude-opus-4-8",
+            "claude-opus-5",
+            "claude-opus-5-5",
+            "claude-sonnet-4-6",
+            "claude-sonnet-5",
+            "claude-sonnet-5-5"
+          ],
+          "status": "active",
+          "urls": [
+            "https://platform.claude.com/docs/en/about-claude/model-deprecations"
+          ],
+          "note": "截至 2026-11-07 Anthropic 生命周期页将所列模型标记为 Active。Opus 4.5 和 Haiku 4.5 的官方模型 ID 分别为 claude-opus-4-5-20251101 和 claude-haiku-4-5-20251001；无日期名称为现有目录的标准名。Haiku 4.5 的 not before 日期虽已过，但官方状态仍是 Active，不据此推定退役。"
+        },
+        {
+          "models": [
+            "claude-opus-4",
+            "claude-opus-4-1",
+            "claude-sonnet-4"
+          ],
+          "status": "retired",
+          "urls": [
+            "https://platform.claude.com/docs/en/about-claude/model-deprecations"
+          ],
+          "note": "Opus 4、Sonnet 4 于 2026-06-15 退役；Opus 4.1 于 2026-08-05 退役。其日期 ID 列于 remove_aliases，删除相应标准模型行也会同时去掉无日期兼容别名。"
+        },
+        {
+          "models": [
+            "claude-sonnet-4-5"
+          ],
+          "status": "deprecated_not_yet_retired_excluded_by_scope",
+          "urls": [
+            "https://platform.claude.com/docs/en/about-claude/model-deprecations",
+            "https://platform.claude.com/docs/en/models/overview"
+          ],
+          "note": "官方状态 Deprecated，仍可用（旧客户访问）且计划 2026-11-30 退役；按本版保守范围排除，不应称现已退役。与此模型同列的 claude-sonnet-4-5-20250929 随模型整行移除。"
+        },
+        {
+          "models": [
+            "claude-opus-4-6",
+            "claude-opus-4-7"
+          ],
+          "aliases": [
+            "claude-opus-4-6-20260205",
+            "claude-opus-4-7-20260416"
+          ],
+          "status": "third_party_compatibility_alias_not_verified_as_anthropic_api_id",
+          "urls": [
+            "https://platform.claude.com/docs/en/about-claude/models/model-ids-and-versions"
+          ],
+          "note": "官方说明 Claude 4.6 及以后采用无日期固定 ID；两个带日期写法仅有 LiteLLM 兼容名称依据。本轮最终审查按现役目录范围移除，不声称它们是已经退役的官方 API ID。"
+        },
+        {
+          "models": [
+            "gemini-3.5-flash",
+            "gemini-3.5-flash-lite",
+            "gemini-3.6-flash",
+            "gemini-3.7-flash",
+            "gemini-3.8-flash",
+            "gemini-3-flash-preview",
+            "gemini-3.1-pro-preview"
+          ],
+          "status": "supported_no_shutdown_date_announced",
+          "urls": [
+            "https://ai.google.dev/gemini-api/docs/deprecations?authuser=6",
+            "https://ai.google.dev/gemini-api/docs/interactions-overview?authuser=1"
+          ],
+          "note": "Google 官方列出这些模型，生命周期表未公布关停日期。Preview 是现用预览端点，保留 preview 语义，不合并为稳定模型。"
+        },
+        {
+          "models": [
+            "gemini-3.1-pro-preview-customtools"
+          ],
+          "status": "supported_preview_endpoint",
+          "urls": [
+            "https://ai.google.dev/gemini-api/docs/models/gemini-3.1-pro-preview?authuser=7&hl=en"
+          ],
+          "note": "官方提供单独的 customtools 预览端点，用于自定义工具和 bash 工作流，与基础 preview 分列。"
+        },
+        {
+          "models": [
+            "gemini-3.1-flash-lite"
+          ],
+          "status": "active_stable_with_future_earliest_shutdown",
+          "urls": [
+            "https://ai.google.dev/gemini-api/docs/deprecations?authuser=6",
+            "https://ai.google.dev/gemini-api/docs/models?authuser=110",
+            "https://github.com/google-gemini/gemini-skills/blob/main/skills/gemini-api-dev/references/migration.md"
+          ],
+          "note": "Google 模型页列为 stable；官方迁移资料列为 active legacy；生命周期表列出最早关停日期 2027-05-07，非目前已关停。它不是已停用的 gemini-3.1-flash-lite-preview。"
+        },
+        {
+          "models": [
+            "gemini-4-argon"
+          ],
+          "status": "supported_paid",
+          "urls": [
+            "https://ai.google.dev/gemini-api/docs/pricing?frmapp=yes"
+          ],
+          "note": "Google Gemini Developer API 官方定价页列出当前付费端点；不在免费层。"
+        },
+        {
+          "models": [
+            "gemini-2.5-pro",
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite"
+          ],
+          "status": "restricted_existing_users_excluded_by_scope",
+          "urls": [
+            "https://ai.google.dev/gemini-api/docs/deprecations?hl=en",
+            "https://discuss.ai.google.dev/t/gemini-2-5-flash-visible-via-models-get-and-advertises-generatecontent-but-generatecontent-returns-404-model-or-resource/182253",
+            "https://discuss.ai.google.dev/t/gemini-2-5-flash-lite-counttokens-returns-404-while-models-get-and-another-model-s-counttokens-succeed/188394"
+          ],
+          "note": "Google 官方开发者论坛答复说明 2.5 受过往使用记录限制，尚未 deprecated 且继续服务；按本版不收仅旧用户可用型号的范围排除，不应说已退役。生命周期页面显示未宣布关停。"
+        },
+        {
+          "models": [
+            "gemma-4-26b-a4b-it",
+            "gemma-4-31b-it"
+          ],
+          "status": "supported",
+          "urls": [
+            "https://ai.google.dev/gemma/docs/core/gemma_on_gemini_api"
+          ],
+          "note": "Google Gemini API 的 Gemma 官方支持列表列出这两个文本输出模型。"
+        },
+        {
+          "models": [
+            "gemma-3-27b-it"
+          ],
+          "status": "excluded_by_scope_not_globally_retired",
+          "urls": [
+            "https://ai.google.dev/gemma/docs/core/gemma_on_gemini_api",
+            "https://ai.google.dev/gemma/docs/get_started",
+            "https://docs.aws.amazon.com/en_en/bedrock/latest/userguide/model-lifecycle-legacy.html"
+          ],
+          "note": "当前 Gemini API 的 Gemma 支持列表只列出两款 Gemma 4；Gemma 3 的开放权重仍可自部署、AWS Bedrock 已列为 legacy，不能因此断言模型整体已退役。按本版仅收当前核心 Gemma 4 范围排除。"
+        },
+        {
+          "models": [
+            "gemini-flash-latest",
+            "gemini-flash-lite-latest",
+            "gemini-pro-latest"
+          ],
+          "status": "supported_moving_alias_not_distinct_model",
+          "urls": [
+            "https://ai.google.dev/api/interactions-api?authuser=5&hl=en",
+            "https://ai.google.dev/gemini-api/docs/models?authuser=002"
+          ],
+          "note": "Google API 当前列出三个 latest；官方说明其为可热切换的动态指针而非固定模型，无法稳定映射到某一个型号或单一价格。keep 按固定模型范围不包含它们；如果目录也要覆盖动态接口，可另行保留三条并保留未知价格，不要合并到固定型号。"
+        }
+      ],
+      "other": [
+        {
+          "vendor": "DeepSeek",
+          "urls": [
+            "https://api-docs.deepseek.com/quick_start/pricing/"
+          ],
+          "decision": "Official current endpoint/model versions are deepseek-flash (V4.1 Flash 1017) and deepseek-v4-pro. V4 Flash legacy route and older weight families are outside current scope; old aliases are not reintroduced. The 260910 V4.1 snapshot is not the currently advertised 1017 version. Preserve the current 1017 and V4-Pro-0813 snapshot aliases.",
+          "keep": [
+            "deepseek-v4.1-flash",
+            "deepseek-v4-pro"
+          ]
+        },
+        {
+          "vendor": "Qwen",
+          "urls": [
+            "https://docs.modelstudio.console.alibabacloud.com/en/model-studio/model-list-text-generation",
+            "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+            "https://docs.modelstudio.console.alibabacloud.com/en/model-studio/context-cache"
+          ],
+          "decision": "Keep the active dynamic Qwen entry points plus mainstream 3.5–3.8 family and current coder/visual model. Keep snapshot aliases explicitly listed in the present official pricing tables, but remove older pre-current qwen-plus dates even where listed for legacy service. qwen3-coder-plus/its 2025-07-22 snapshot are absent from the current model and current pricing lists and models.dev marks it deprecated, despite older indexed docs mentioning it; omit conservatively. Omission is not evidence of shutdown for every third-party deployment.",
+          "keep": [
+            "qwen-flash",
+            "qwen-max",
+            "qwen-plus",
+            "qwen3-coder-flash",
+            "qwen3-vl-plus",
+            "qwen3.5-122b-a10b",
+            "qwen3.5-27b",
+            "qwen3.5-35b-a3b",
+            "qwen3.5-397b-a17b",
+            "qwen3.5-flash",
+            "qwen3.5-plus",
+            "qwen3.6-27b",
+            "qwen3.6-35b-a3b",
+            "qwen3.6-flash",
+            "qwen3.6-plus",
+            "qwen3.7-flash",
+            "qwen3.7-max",
+            "qwen3.7-plus",
+            "qwen3.8-flash",
+            "qwen3.8-max",
+            "qwen3.8-omni-flash"
+          ]
+        },
+        {
+          "vendor": "Moonshot Kimi",
+          "urls": [
+            "https://platform.kimi.ai/",
+            "https://www.alibabacloud.com/help/en/model-studio/kimi-k2-5"
+          ],
+          "decision": "Current global provider catalog lists the K2.6/K2.7/K3/K3.1 entries and official landing page promotes K3/K3.1; keep these core lines and priced highspeed variants. K2.5 remains deployed through Alibaba Model Studio, but is outside the newer mainstream scope; do not claim a universal retirement.",
+          "keep": [
+            "kimi-k2.6",
+            "kimi-k2.7-code",
+            "kimi-k2.7-code-highspeed",
+            "kimi-k3",
+            "kimi-k3.1-pro",
+            "kimi-k3.1-pro-highspeed"
+          ]
+        },
+        {
+          "vendor": "Z.ai GLM",
+          "urls": [
+            "https://docs.z.ai/guides/overview/pricing"
+          ],
+          "decision": "Official live text pricing lists GLM 5/5.1/5.2/5.3 and the 5.3 Flash and FlashX variants. Keep 4.7 and its free Flash as still prominent in current text/API plans; drop earlier GLM 4.5/4.6 families and lesser variants to honor requested scope, not because their API prices prove retirement.",
+          "keep": [
+            "glm-4.7",
+            "glm-4.7-flash",
+            "glm-5",
+            "glm-5.1",
+            "glm-5.2",
+            "glm-5.3",
+            "glm-5.3-flash",
+            "glm-5.3-flashx"
+          ]
+        },
+        {
+          "vendor": "MiniMax",
+          "urls": [
+            "https://platform.minimax.io/docs/pricing/overview",
+            "https://docs.modelstudio.console.alibabacloud.com/en/model-studio/model-list-text-generation"
+          ],
+          "decision": "Official pricing today advertises M3 and M3.1 Flash; models.dev MiniMax marks M2.5/M2.7 deprecated. M2.5 remains on Alibaba Model Studio, but third-party deployment alone does not warrant inclusion in the requested current core; do not claim global shutdown.",
+          "keep": [
+            "MiniMax-M3",
+            "MiniMax-M3.1-Flash"
+          ]
+        },
+        {
+          "vendor": "xAI Grok",
+          "urls": [
+            "https://docs.x.ai/developers/pricing"
+          ],
+          "decision": "Official current text-API pricing explicitly lists 4.20 reasoning/non-reasoning/multi-agent, 4.3, 4.5, 4.6 and 4.7, including 0309 model IDs. Drop Grok Build 0.1 as non-core although the source still lists it.",
+          "keep": [
+            "grok-4.20-multi-agent",
+            "grok-4.20-non-reasoning",
+            "grok-4.20-reasoning",
+            "grok-4.3",
+            "grok-4.5",
+            "grok-4.6",
+            "grok-4.7"
+          ]
+        },
+        {
+          "vendor": "Mistral",
+          "urls": [
+            "https://docs.mistral.ai/models",
+            "https://docs.mistral.ai/inference/pricing",
+            "https://docs.mistral.ai/resources/changelogs"
+          ],
+          "decision": "Current official generalist/code catalog lists Large 4, Small 4, Ministral 3 3B/8B/14B and Codestral 25.08. Large 3 and Medium 3.5 are explicitly deprecated on official cards with a 2026-10-31 retirement date. Do not keep large-latest/medium-latest as standalone legacy entries without current owner routing evidence. Ministral official current names are ministral-{3b,8b,14b}-2512; remove aggregator-only -3-{size}-2512 aliases lacking official current ID confirmation. Do not conflate 4-0-8 with official 4 endpoint or assert it retired.",
+          "keep": [
+            "codestral",
+            "ministral-3-14b",
+            "ministral-3-3b",
+            "ministral-3-8b",
+            "mistral-large-4",
+            "mistral-small-4"
+          ]
+        },
+        {
+          "vendor": "Meta Llama",
+          "urls": [
+            "https://ai.meta.com/resources/models-and-libraries/llama-downloads/"
+          ],
+          "decision": "Meta currently distributes Llama 4 Scout and Maverick, including named deployment variants. Omit the older Llama 3.3 weights for scope rather than claiming Meta retired them.",
+          "keep": [
+            "Llama-4-Maverick-17B-128E-Instruct",
+            "Llama-4-Maverick-17B-128E-Instruct-FP8",
+            "Llama-4-Scout-17B-16E-Instruct",
+            "Llama-4-Scout-17B-16E-Instruct-FP8"
+          ]
+        },
+        {
+          "vendor": "Scope",
+          "urls": [],
+          "decision": "Current means conservative mainstream core, not an assertion that every omitted model or alias is retired globally. Provider catalogs, official pricing and live-support evidence can differ across endpoints and region. No delivered file was changed."
+        }
+      ]
+    },
+    "extra_sources": [
+      {
+        "models": [
+          "command-a-plus"
+        ],
+        "url": "https://docs.cohere.com/docs/command-a-plus"
+      },
+      {
+        "models": [
+          "mimo-v2.6-pro",
+          "mimo-v2.6-flash"
+        ],
+        "url": "https://mimo.xiaomi.com/blog/mimo-v2-6-tool-call-repetition"
+      },
+      {
+        "models": [
+          "step-3.7-flash",
+          "step-5-preview"
+        ],
+        "url": "https://www.stepfun.com/"
+      },
+      {
+        "models": [
+          "doubao-seed-2-1-pro",
+          "doubao-seed-2-1-lite",
+          "doubao-seed-2-0-mini",
+          "doubao-seed-evolving"
+        ],
+        "url": "https://docs.volcengine.com/docs/82379/1330310?lang=en",
+        "note": "Current Ark API model list; plan-specific retirement notices are not generalized to the whole API."
+      }
+    ]
+  }
+}

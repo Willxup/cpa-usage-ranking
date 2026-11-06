@@ -18,6 +18,7 @@ type Config struct {
 	ShutdownTimeout          time.Duration
 	WebDir                   string
 	SQLitePath               string
+	ModelsPath               string
 	TrustedProxies           []string
 	RegistrationIPv6By64     bool
 	RegistrationRequests     registration.RequestLimits
@@ -29,7 +30,7 @@ type Config struct {
 // Load reads environment variables. Explicitly empty values are invalid.
 func Load() (Config, error) {
 	cfg := Config{
-		HTTPAddr: "127.0.0.1:8080", ShutdownTimeout: 10 * time.Second, SQLitePath: "data/ranking.db",
+		HTTPAddr: "127.0.0.1:8080", ShutdownTimeout: 10 * time.Second, SQLitePath: "data/ranking.db", ModelsPath: "config/models.json",
 		RegistrationIPv6By64: true, RegistrationEnabled: true, RegistrationMaxBodyBytes: 4096,
 		RegistrationRequests:  registration.DefaultRequestLimits(),
 		RegistrationCreations: registration.DefaultCreationLimits(),
@@ -66,6 +67,12 @@ func Load() (Config, error) {
 		cfg.SQLitePath = strings.TrimSpace(value)
 		if cfg.SQLitePath == "" {
 			return Config{}, fmt.Errorf("RANKING_SQLITE_PATH must be a non-empty file path")
+		}
+	}
+	if value, ok := os.LookupEnv("RANKING_MODELS_PATH"); ok {
+		cfg.ModelsPath = strings.TrimSpace(value)
+		if cfg.ModelsPath == "" {
+			return Config{}, fmt.Errorf("RANKING_MODELS_PATH must be a non-empty file path")
 		}
 	}
 	if value, ok := os.LookupEnv("RANKING_TRUSTED_PROXIES"); ok {

@@ -14,6 +14,7 @@ import (
 	"cpa-usage-ranking/internal/clients"
 	"cpa-usage-ranking/internal/config"
 	"cpa-usage-ranking/internal/httpserver"
+	"cpa-usage-ranking/internal/models"
 	"cpa-usage-ranking/internal/registration"
 	"cpa-usage-ranking/internal/storage"
 	"github.com/gin-gonic/gin"
@@ -31,6 +32,9 @@ func main() {
 func run(logger *slog.Logger) (err error) {
 	cfg, err := config.Load()
 	if err != nil {
+		return err
+	}
+	if _, err := models.Load(cfg.ModelsPath); err != nil {
 		return err
 	}
 	gin.SetMode(gin.ReleaseMode)

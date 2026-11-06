@@ -6,7 +6,8 @@ An independent usage-ranking service under construction. Protected client
 registration, credential-bound internal authentication, static avatars and
 SQLite identity/profile persistence are available. Reporting and leaderboards
 are not implemented; business readiness remains 503. No website account UI is
-provided.
+provided. The [model catalog](docs/model-catalog.md) is validated at startup;
+its reference prices were not independently reverified for this delivery.
 
 ## Development
 
@@ -144,8 +145,8 @@ RANKING_WEB_DIR=web/dist ./bin/ranking
 ```
 
 Go serves the built application and API on the same origin. Deploy the binary,
-`web/dist/` and the third-party notices/licenses together; Node is needed only
-for building. `RANKING_WEB_DIR` is relative to the process working directory
+`config/models.json`, `web/dist/` and the third-party notices/licenses together;
+Node is needed only for building. `RANKING_WEB_DIR` is relative to the process working directory
 unless absolute. If unset, only backend routes are enabled. If set to an
 incomplete build, startup fails instead of silently serving a broken site.
 
@@ -177,10 +178,12 @@ stop the process, replace the build, then restart.
 | `RANKING_SHUTDOWN_TIMEOUT` | `10s` | Positive grace period for shutdown |
 | `RANKING_WEB_DIR` | unset | Optional built frontend directory; unset means no frontend routes |
 | `RANKING_SQLITE_PATH` | `data/ranking.db` | SQLite file path, relative to the working directory unless absolute |
+| `RANKING_MODELS_PATH` | `config/models.json` | Model catalog file, relative to the working directory unless absolute |
 | `RANKING_TRUSTED_PROXIES` | unset (none) | Comma-separated trusted proxy IPs/CIDRs |
 | `RANKING_REGISTRATION_IPV6_64` | `true` | Group native IPv6 registration sources by /64 |
 
 Registration limits, body bound and the creation switch are listed in
 [registration API configuration](docs/registration-api.md#startup-configuration).
-Explicitly empty or invalid settings fail validation. No configuration files
-are loaded automatically. Do not commit credentials or local `.env` files.
+Explicitly empty or invalid settings fail validation. The model catalog is
+required at startup; environment variables are not loaded from `.env` files.
+Do not commit credentials or local `.env` files.
