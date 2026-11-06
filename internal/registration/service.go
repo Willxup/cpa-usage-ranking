@@ -13,8 +13,9 @@ import (
 )
 
 var (
-	ErrDisabled      = errors.New("client is disabled")
-	ErrInvalidAvatar = errors.New("invalid avatar selection")
+	ErrDisabled           = errors.New("client is disabled")
+	ErrInvalidAvatar      = errors.New("invalid avatar selection")
+	ErrRegistrationClosed = errors.New("new identity registration is closed")
 )
 
 // Profile only describes a new identity; it cannot claim an existing client ID.
@@ -29,19 +30,23 @@ type Result struct {
 }
 
 type Options struct {
-	CreationLimits CreationLimits
-	Now            func() time.Time
+	CreationLimits       CreationLimits
+	NewIdentitiesEnabled bool
+	Now                  func() time.Time
 }
 
-func DefaultOptions() Options { return Options{CreationLimits: DefaultCreationLimits()} }
+func DefaultOptions() Options {
+	return Options{CreationLimits: DefaultCreationLimits(), NewIdentitiesEnabled: true}
+}
 
 type Service struct {
-	mu        sync.Mutex
-	repo      *clients.Repository
-	catalog   *avatars.Catalog
-	limits    CreationLimits
-	now       func() time.Time
-	creations map[string][]time.Time
+	mu                   sync.Mutex
+	repo                 *clients.Repository
+	catalog              *avatars.Catalog
+	limits               CreationLimits
+	now                  func() time.Time
+	creations            map[string][]time.Time
+	newIdentitiesEnabled bool
 }
 
 // Use one Service per process so admission and successful-create accounting share a lock.
@@ -53,7 +58,7 @@ func NewService(repo *clients.Repository, catalog *avatars.Catalog, options Opti
 		options.Now = time.Now
 	}
 	return &Service{repo: repo, catalog: catalog, limits: options.CreationLimits,
-		now: options.Now, creations: make(map[string][]time.Time)}, nil
+		now: options.Now, creations: make(map[string][]time.Time), newIdentitiesEnabled: options.NewIdentitiesEnabled}, nil
 }
 
 // Register accepts a validated credential digest, never the credential text.
@@ -68,6 +73,10 @@ func (s *Service) Register(ctx context.Context, source string, hash clients.Cred
 	}
 	if !errors.Is(err, clients.ErrNotFound) {
 		return Result{}, err
+	}
+	// 关闭只影响尚不存在的身份；安全重试与禁用判断优先，鉴权使用独立路径。
+	if !s.newIdentitiesEnabled {
+		return Result{}, ErrRegistrationClosed
 	}
 	name, err := profiles.NormalizeDisplayName(profile.DisplayName)
 	if err != nil {

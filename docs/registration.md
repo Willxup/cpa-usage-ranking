@@ -55,7 +55,21 @@ evicting active history. Existing-identity retries remain available.
 This is **single-process, in-memory** accounting: restart clears it, separate
 instances do not share it, and it is not a promise of one human per identity.
 Request limits are independent and still count failed attempts and safe retries.
-The service is internal only; no registration HTTP route is exposed until all
-safeguards and the creation switch are connected.
+## Creation switch
+
+`RANKING_REGISTRATION_ENABLED` defaults to `true`. Set `false` and restart to
+close **new-identity creation only**. An unknown digest is rejected with
+`ErrRegistrationClosed`; existing active digests still return the same identity
+and current profile, before new-profile validation, quotas or capacity checks.
+Disabled identities remain rejected. Normal credential authentication is an
+independent path and is not switched off.
+
+The switch is not full-site maintenance mode and does not stop health/static
+routes. No administration UI or hot-reload service is provided. Reporting HTTP
+is not implemented yet; queued/write-transaction status checks and the future
+reporting chain require their own implementation and validation.
+
+The registration service and all gates are internal only; the production HTTP
+endpoint is connected as a separate integration step.
 Tests in `internal/registration/test/` use real SQLite files, including concurrent
 safe retries, database failures, disabled identities and profile changes.

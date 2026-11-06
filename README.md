@@ -53,7 +53,9 @@ is available for subsequent business routes, with no demonstration API.
 per-source/global gates and startup parameters; it does not limit health or
 static routes. Successful new identities also have [rolling source quotas](docs/registration.md#successful-creation-quotas)
 (default 3/hour and 10/24 hours), distinct from request limits. All quota state
-is process-local and resets on restart. Registration HTTP is not exposed yet.
+is process-local and resets on restart. `RANKING_REGISTRATION_ENABLED=false`
+closes only new-identity creation after restart; safe retries and authentication
+remain available. Registration HTTP is not exposed yet.
 
 ## Frontend development
 

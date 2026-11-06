@@ -22,11 +22,12 @@ type Config struct {
 	RegistrationIPv6By64  bool
 	RegistrationRequests  registration.RequestLimits
 	RegistrationCreations registration.CreationLimits
+	RegistrationEnabled   bool
 }
 
 // Load reads environment variables. Explicitly empty values are invalid.
 func Load() (Config, error) {
-	cfg := Config{HTTPAddr: "127.0.0.1:8080", ShutdownTimeout: 10 * time.Second, SQLitePath: "data/ranking.db", RegistrationIPv6By64: true, RegistrationRequests: registration.DefaultRequestLimits(), RegistrationCreations: registration.DefaultCreationLimits()}
+	cfg := Config{HTTPAddr: "127.0.0.1:8080", ShutdownTimeout: 10 * time.Second, SQLitePath: "data/ranking.db", RegistrationIPv6By64: true, RegistrationRequests: registration.DefaultRequestLimits(), RegistrationCreations: registration.DefaultCreationLimits(), RegistrationEnabled: true}
 	if value, ok := os.LookupEnv("RANKING_HTTP_ADDR"); ok {
 		cfg.HTTPAddr = strings.TrimSpace(value)
 	}
@@ -78,6 +79,13 @@ func Load() (Config, error) {
 			return Config{}, fmt.Errorf("RANKING_REGISTRATION_IPV6_64 must be a boolean")
 		}
 		cfg.RegistrationIPv6By64 = parsed
+	}
+	if value, ok := os.LookupEnv("RANKING_REGISTRATION_ENABLED"); ok {
+		parsed, err := strconv.ParseBool(strings.TrimSpace(value))
+		if err != nil {
+			return Config{}, fmt.Errorf("RANKING_REGISTRATION_ENABLED must be a boolean")
+		}
+		cfg.RegistrationEnabled = parsed
 	}
 	for _, setting := range []struct {
 		key    string
