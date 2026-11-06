@@ -9,6 +9,7 @@ import (
 func MigrateSchema(ctx context.Context, writer *sql.DB) error {
 	return Migrate(ctx, writer, []Migration{
 		{Version: 1, Apply: createClientsV1},
+		{Version: 2, Apply: createModelsV2},
 	})
 }
 
@@ -23,6 +24,15 @@ func createClientsV1(ctx context.Context, tx *sql.Tx) error {
 		avatar_id INTEGER NOT NULL CHECK (avatar_id > 0),
 		disabled INTEGER NOT NULL DEFAULT 0 CHECK (disabled IN (0, 1)),
 		created_at_ms INTEGER NOT NULL
+	)`)
+	return err
+}
+
+func createModelsV2(ctx context.Context, tx *sql.Tx) error {
+	// ID 0 留给未来的合计语义；目录项始终使用正数且不复用已分配的 ID。
+	_, err := tx.ExecContext(ctx, `CREATE TABLE models (
+		id INTEGER PRIMARY KEY AUTOINCREMENT CHECK (id > 0),
+		model_name TEXT NOT NULL UNIQUE
 	)`)
 	return err
 }

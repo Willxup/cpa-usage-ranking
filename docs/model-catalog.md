@@ -7,6 +7,13 @@ invalid or conflicting configuration stops startup. Edits take effect only
 after restart; there is no remote fetching, automatic fallback or hot reload.
 Deploy the file with the binary even when the frontend is not used.
 
+After database migrations, startup registers all current canonical names in one
+SQLite transaction. IDs are stable across restarts and catalog reordering;
+removing a name preserves its dictionary row, and reintroducing it restores the
+same ID. Historical dictionary rows do not make removed models active. Aliases
+and prices are not stored in the dictionary, and ID 0 is reserved for future
+totals. Registration failure rolls back the batch and prevents startup.
+
 `currency` must be `USD` and `price_unit` must be `per_million_tokens`.
 `models` is an array of records with `model_name`, `alias` (an array, possibly
 empty) and `prices`. Names are nonempty valid UTF-8 of at most 128 bytes, have

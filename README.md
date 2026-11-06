@@ -32,7 +32,9 @@ HTTP requests. It creates missing parent directories, prepares the migration
 ledger and enables WAL, FULL synchronization and foreign keys. Each declared
 migration and its version record commit atomically; already-applied versions
 are skipped. Schema version 1 creates `clients` for identity/profile persistence;
-startup does not seed participants. Database failures stop startup; they do not
+version 2 creates the stable canonical-model ID dictionary and startup registers
+current catalog names transactionally. Startup does not seed participants.
+Database failures stop startup; they do not
 trigger automatic repair or fallback. Shutdown drains HTTP before closing the
 bounded write/read connection pools. See [SQLite storage](docs/storage.md) and
 [client storage](docs/client-storage.md). Business readiness remains 503.

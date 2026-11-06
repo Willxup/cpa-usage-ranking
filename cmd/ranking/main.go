@@ -34,7 +34,8 @@ func run(logger *slog.Logger) (err error) {
 	if err != nil {
 		return err
 	}
-	if _, err := models.Load(cfg.ModelsPath); err != nil {
+	modelCatalog, err := models.Load(cfg.ModelsPath)
+	if err != nil {
 		return err
 	}
 	gin.SetMode(gin.ReleaseMode)
@@ -67,6 +68,9 @@ func run(logger *slog.Logger) (err error) {
 	// Serve 返回前已停止接入并排空请求，再释放数据库连接。
 	defer func() { err = errors.Join(err, db.Close()) }()
 	if err := storage.MigrateSchema(ctx, db.Writer); err != nil {
+		return err
+	}
+	if _, err := models.Register(ctx, db.Writer, modelCatalog); err != nil {
 		return err
 	}
 	logger.Info("sqlite initialized")
