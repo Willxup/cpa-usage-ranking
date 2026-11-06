@@ -24,15 +24,9 @@ type Resolution struct {
 // Resolve removes surrounding whitespace and the path through the final '/'.
 // Matching is exact, case-sensitive and limited to the current catalog.
 func (r *Registry) Resolve(raw string) (Resolution, error) {
-	if !utf8.ValidString(raw) || len(raw) > 128 || strings.IndexFunc(raw, unicode.IsControl) >= 0 {
-		return Resolution{}, fmt.Errorf("%w: expected valid UTF-8 of at most 128 bytes without control characters", ErrInvalidReportedName)
-	}
-	name := strings.TrimSpace(raw)
-	if slash := strings.LastIndexByte(name, '/'); slash >= 0 {
-		name = name[slash+1:]
-	}
-	if name == "" {
-		return Resolution{}, fmt.Errorf("%w: final name is empty", ErrInvalidReportedName)
+	name, err := NormalizeReportedName(raw)
+	if err != nil {
+		return Resolution{}, err
 	}
 	result := Resolution{NormalizedName: name}
 	if index, ok := r.catalog.byName[name]; ok {
@@ -42,6 +36,21 @@ func (r *Registry) Resolve(raw string) (Resolution, error) {
 		result.Matched = true
 	}
 	return result, nil
+}
+
+// NormalizeReportedName validates and normalizes without consulting a catalog.
+func NormalizeReportedName(raw string) (string, error) {
+	if !utf8.ValidString(raw) || len(raw) > 128 || strings.IndexFunc(raw, unicode.IsControl) >= 0 {
+		return "", fmt.Errorf("%w: expected valid UTF-8 of at most 128 bytes without control characters", ErrInvalidReportedName)
+	}
+	name := strings.TrimSpace(raw)
+	if slash := strings.LastIndexByte(name, '/'); slash >= 0 {
+		name = name[slash+1:]
+	}
+	if name == "" {
+		return "", fmt.Errorf("%w: final name is empty", ErrInvalidReportedName)
+	}
+	return name, nil
 }
 
 // ReportedTier distinguishes an omitted field from an explicitly null value.
