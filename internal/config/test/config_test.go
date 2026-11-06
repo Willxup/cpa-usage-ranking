@@ -11,7 +11,7 @@ import (
 
 func clearEnvironment(t *testing.T) {
 	t.Helper()
-	for _, key := range []string{"RANKING_HTTP_ADDR", "RANKING_SHUTDOWN_TIMEOUT", "RANKING_WEB_DIR", "RANKING_SQLITE_PATH", "RANKING_TRUSTED_PROXIES", "RANKING_REGISTRATION_IPV6_64", "RANKING_REGISTRATION_SOURCE_REQUESTS", "RANKING_REGISTRATION_GLOBAL_REQUESTS", "RANKING_REGISTRATION_REQUEST_MAX_SOURCES", "RANKING_REGISTRATION_REQUEST_WINDOW"} {
+	for _, key := range []string{"RANKING_HTTP_ADDR", "RANKING_SHUTDOWN_TIMEOUT", "RANKING_WEB_DIR", "RANKING_SQLITE_PATH", "RANKING_TRUSTED_PROXIES", "RANKING_REGISTRATION_IPV6_64", "RANKING_REGISTRATION_SOURCE_REQUESTS", "RANKING_REGISTRATION_GLOBAL_REQUESTS", "RANKING_REGISTRATION_REQUEST_MAX_SOURCES", "RANKING_REGISTRATION_REQUEST_WINDOW", "RANKING_REGISTRATION_HOURLY_CREATIONS", "RANKING_REGISTRATION_DAILY_CREATIONS", "RANKING_REGISTRATION_CREATION_MAX_SOURCES"} {
 		t.Setenv(key, "")
 		if err := os.Unsetenv(key); err != nil {
 			t.Fatal(err)
@@ -50,16 +50,19 @@ func TestOverrides(t *testing.T) {
 
 func TestInvalidValues(t *testing.T) {
 	for key, values := range map[string][]string{
-		"RANKING_HTTP_ADDR":                        {"", "localhost", "http://localhost:8080", "a/b:8080", "a b:8080", "::1:8080", ":", ":http", ":-1", ":+80", ":65536"},
-		"RANKING_SHUTDOWN_TIMEOUT":                 {"", "0s", "-1s", "10", "forever", "999999999999999999999h"},
-		"RANKING_WEB_DIR":                          {"", "   "},
-		"RANKING_SQLITE_PATH":                      {"", "   "},
-		"RANKING_TRUSTED_PROXIES":                  {"", " ", "localhost", "127.0.0.1,", "10.0.0.0/33", "https://proxy"},
-		"RANKING_REGISTRATION_IPV6_64":             {"", "yes", "2"},
-		"RANKING_REGISTRATION_SOURCE_REQUESTS":     {"", "0", "-1", "1.5", "999999999999999999999"},
-		"RANKING_REGISTRATION_GLOBAL_REQUESTS":     {"", "0", "invalid"},
-		"RANKING_REGISTRATION_REQUEST_MAX_SOURCES": {"", "0", "-1"},
-		"RANKING_REGISTRATION_REQUEST_WINDOW":      {"", "0s", "-1s", "forever"},
+		"RANKING_HTTP_ADDR":                         {"", "localhost", "http://localhost:8080", "a/b:8080", "a b:8080", "::1:8080", ":", ":http", ":-1", ":+80", ":65536"},
+		"RANKING_SHUTDOWN_TIMEOUT":                  {"", "0s", "-1s", "10", "forever", "999999999999999999999h"},
+		"RANKING_WEB_DIR":                           {"", "   "},
+		"RANKING_SQLITE_PATH":                       {"", "   "},
+		"RANKING_TRUSTED_PROXIES":                   {"", " ", "localhost", "127.0.0.1,", "10.0.0.0/33", "https://proxy"},
+		"RANKING_REGISTRATION_IPV6_64":              {"", "yes", "2"},
+		"RANKING_REGISTRATION_SOURCE_REQUESTS":      {"", "0", "-1", "1.5", "999999999999999999999"},
+		"RANKING_REGISTRATION_GLOBAL_REQUESTS":      {"", "0", "invalid"},
+		"RANKING_REGISTRATION_REQUEST_MAX_SOURCES":  {"", "0", "-1"},
+		"RANKING_REGISTRATION_REQUEST_WINDOW":       {"", "0s", "-1s", "forever"},
+		"RANKING_REGISTRATION_HOURLY_CREATIONS":     {"", "0", "-1", "1.5"},
+		"RANKING_REGISTRATION_DAILY_CREATIONS":      {"", "0", "invalid"},
+		"RANKING_REGISTRATION_CREATION_MAX_SOURCES": {"", "0", "-1"},
 	} {
 		for _, value := range values {
 			t.Run(key+"/"+value, func(t *testing.T) {

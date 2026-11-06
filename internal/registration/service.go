@@ -4,6 +4,8 @@ package registration
 import (
 	"context"
 	"errors"
+	"sync"
+	"time"
 
 	"cpa-usage-ranking/internal/avatars"
 	"cpa-usage-ranking/internal/clients"
@@ -26,18 +28,40 @@ type Result struct {
 	Created bool
 }
 
-type Service struct {
-	repo    *clients.Repository
-	catalog *avatars.Catalog
+type Options struct {
+	CreationLimits CreationLimits
+	Now            func() time.Time
 }
 
-func NewService(repo *clients.Repository, catalog *avatars.Catalog) *Service {
-	return &Service{repo: repo, catalog: catalog}
+func DefaultOptions() Options { return Options{CreationLimits: DefaultCreationLimits()} }
+
+type Service struct {
+	mu        sync.Mutex
+	repo      *clients.Repository
+	catalog   *avatars.Catalog
+	limits    CreationLimits
+	now       func() time.Time
+	creations map[string][]time.Time
+}
+
+// Use one Service per process so admission and successful-create accounting share a lock.
+func NewService(repo *clients.Repository, catalog *avatars.Catalog, options Options) (*Service, error) {
+	if err := options.CreationLimits.Validate(); err != nil {
+		return nil, err
+	}
+	if options.Now == nil {
+		options.Now = time.Now
+	}
+	return &Service{repo: repo, catalog: catalog, limits: options.CreationLimits,
+		now: options.Now, creations: make(map[string][]time.Time)}, nil
 }
 
 // Register accepts a validated credential digest, never the credential text.
 // An existing digest wins before profile validation, including disabled status.
-func (s *Service) Register(ctx context.Context, hash clients.CredentialHash, profile Profile) (Result, error) {
+func (s *Service) Register(ctx context.Context, source string, hash clients.CredentialHash, profile Profile) (Result, error) {
+	// 进程内串行准入直到 INSERT 完成，无预扣名额，也不在持有写事务时再借写池。
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	client, err := s.repo.ByCredentialHash(ctx, hash)
 	if err == nil {
 		return existing(client)
@@ -56,6 +80,9 @@ func (s *Service) Register(ctx context.Context, hash clients.CredentialHash, pro
 	if _, ok := s.catalog.Lookup(avatarID); !ok {
 		return Result{}, ErrInvalidAvatar
 	}
+	if err := s.checkCreationQuota(source, s.now()); err != nil {
+		return Result{}, err
+	}
 	// 单条 INSERT 原子保存身份与完整资料；摘要唯一约束处理跨请求并发。
 	client, err = s.repo.Create(ctx, clients.NewClient{CredentialHash: hash, DisplayName: name, AvatarID: avatarID})
 	if errors.Is(err, clients.ErrCredentialExists) {
@@ -68,6 +95,8 @@ func (s *Service) Register(ctx context.Context, hash clients.CredentialHash, pro
 	if err != nil {
 		return Result{}, err
 	}
+	// 只对真正成功的新建记账；失败和摘要冲突不消耗创建额度。
+	s.creations[source] = append(s.creations[source], s.now())
 	return Result{Client: client, Created: true}, nil
 }
 

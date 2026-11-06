@@ -51,7 +51,9 @@ profiles; registration HTTP is not exposed yet. Internal credential-bound
 is available for subsequent business routes, with no demonstration API.
 [Registration request admission](docs/registration-admission.md) provides bounded
 per-source/global gates and startup parameters; it does not limit health or
-static routes. Registration remains unexposed until all safeguards are connected.
+static routes. Successful new identities also have [rolling source quotas](docs/registration.md#successful-creation-quotas)
+(default 3/hour and 10/24 hours), distinct from request limits. All quota state
+is process-local and resets on restart. Registration HTTP is not exposed yet.
 
 ## Frontend development
 

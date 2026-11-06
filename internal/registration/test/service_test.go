@@ -16,6 +16,11 @@ import (
 
 func setup(t *testing.T) (*storage.DB, *clients.Repository, *registration.Service) {
 	t.Helper()
+	return setupOptions(t, registration.DefaultOptions())
+}
+
+func setupOptions(t *testing.T, options registration.Options) (*storage.DB, *clients.Repository, *registration.Service) {
+	t.Helper()
 	db, err := storage.Open(context.Background(), filepath.Join(t.TempDir(), "registration.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -33,7 +38,11 @@ func setup(t *testing.T) (*storage.DB, *clients.Repository, *registration.Servic
 	if err != nil {
 		t.Fatal(err)
 	}
-	return db, repo, registration.NewService(repo, catalog)
+	service, err := registration.NewService(repo, catalog, options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return db, repo, service
 }
 
 func digest(i byte) clients.CredentialHash { return clients.CredentialHash{i} }
@@ -51,7 +60,7 @@ func count(t *testing.T, db *storage.DB) int {
 func TestRegistrationAndCurrentProfileRetry(t *testing.T) {
 	db, repo, service := setup(t)
 	ctx := context.Background()
-	first, err := service.Register(ctx, digest(1), registration.Profile{DisplayName: "  Ａlice 🙂  "})
+	first, err := service.Register(ctx, "source", digest(1), registration.Profile{DisplayName: "  Ａlice 🙂  "})
 	if err != nil || !first.Created || first.Client.ID <= 0 || first.Client.DisplayName != "Alice 🙂" || first.Client.AvatarID != 1 {
 		t.Fatalf("registration: %+v %v", first, err)
 	}
@@ -60,12 +69,12 @@ func TestRegistrationAndCurrentProfileRetry(t *testing.T) {
 	}
 	// 已有身份忽略新建资料，不以参数未变为重试前提。
 	for _, profile := range []registration.Profile{{}, {DisplayName: "replacement", AvatarID: id(2)}, {DisplayName: "\x00", AvatarID: id(-1)}} {
-		retry, err := service.Register(ctx, digest(1), profile)
+		retry, err := service.Register(ctx, "source", digest(1), profile)
 		if err != nil || retry.Created || retry.Client.ID != first.Client.ID || retry.Client.DisplayName != "Current profile" || retry.Client.AvatarID != 66 || !retry.Client.CreatedAt.Equal(first.Client.CreatedAt) {
 			t.Fatalf("retry changed identity/profile: %+v %v", retry, err)
 		}
 	}
-	other, err := service.Register(ctx, digest(2), registration.Profile{DisplayName: "Current profile", AvatarID: id(66)})
+	other, err := service.Register(ctx, "source", digest(2), registration.Profile{DisplayName: "Current profile", AvatarID: id(66)})
 	if err != nil || other.Client.ID == first.Client.ID || !other.Created || count(t, db) != 2 {
 		t.Fatalf("same profile claimed identity: %+v %v", other, err)
 	}
@@ -84,19 +93,19 @@ func TestNewIdentityValidationAndDisabledRetry(t *testing.T) {
 		{registration.Profile{DisplayName: "name", AvatarID: id(-1)}, registration.ErrInvalidAvatar},
 		{registration.Profile{DisplayName: "name", AvatarID: id(67)}, registration.ErrInvalidAvatar},
 	} {
-		_, err := service.Register(ctx, digest(1), c.profile)
+		_, err := service.Register(ctx, "source", digest(1), c.profile)
 		if !errors.Is(err, c.want) || count(t, db) != 0 {
 			t.Fatalf("validation: %v", err)
 		}
 	}
-	first, err := service.Register(ctx, digest(1), registration.Profile{DisplayName: "name", AvatarID: id(66)})
+	first, err := service.Register(ctx, "source", digest(1), registration.Profile{DisplayName: "name", AvatarID: id(66)})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := repo.SetDisabled(ctx, first.Client.ID, true); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := service.Register(ctx, digest(1), registration.Profile{DisplayName: "changed"}); !errors.Is(err, registration.ErrDisabled) {
+	if _, err := service.Register(ctx, "source", digest(1), registration.Profile{DisplayName: "changed"}); !errors.Is(err, registration.ErrDisabled) {
 		t.Fatalf("disabled retry: %v", err)
 	}
 	stored, err := repo.ByID(ctx, first.Client.ID)
@@ -111,7 +120,10 @@ func TestConcurrentSafeRetriesAcrossServices(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	other := registration.NewService(repo, catalog)
+	other, err := registration.NewService(repo, catalog, registration.DefaultOptions())
+	if err != nil {
+		t.Fatal(err)
+	}
 	const n = 32
 	results := make(chan registration.Result, n)
 	failures := make(chan error, n)
@@ -124,7 +136,7 @@ func TestConcurrentSafeRetriesAcrossServices(t *testing.T) {
 			if i%2 != 0 {
 				s = other
 			}
-			result, err := s.Register(context.Background(), digest(1), registration.Profile{DisplayName: "same name"})
+			result, err := s.Register(context.Background(), "source", digest(1), registration.Profile{DisplayName: "same name"})
 			if err != nil {
 				failures <- err
 				return
@@ -164,7 +176,7 @@ func TestDatabaseFailureLeavesNoPartialIdentity(t *testing.T) {
 	if _, err := db.Writer.Exec(`CREATE TRIGGER reject_registration BEFORE INSERT ON clients BEGIN SELECT RAISE(ABORT, 'test failure'); END`); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := service.Register(ctx, digest(1), registration.Profile{DisplayName: "name"}); err == nil || count(t, db) != 0 {
+	if _, err := service.Register(ctx, "source", digest(1), registration.Profile{DisplayName: "name"}); err == nil || count(t, db) != 0 {
 		t.Fatal("failed insert left identity")
 	}
 	if _, err := db.Writer.Exec("DROP TRIGGER reject_registration"); err != nil {
@@ -172,10 +184,10 @@ func TestDatabaseFailureLeavesNoPartialIdentity(t *testing.T) {
 	}
 	cancelled, cancel := context.WithCancel(ctx)
 	cancel()
-	if _, err := service.Register(cancelled, digest(1), registration.Profile{DisplayName: "name"}); !errors.Is(err, context.Canceled) || count(t, db) != 0 {
+	if _, err := service.Register(cancelled, "source", digest(1), registration.Profile{DisplayName: "name"}); !errors.Is(err, context.Canceled) || count(t, db) != 0 {
 		t.Fatalf("cancelled registration: %v", err)
 	}
-	r, err := service.Register(ctx, digest(1), registration.Profile{DisplayName: "name"})
+	r, err := service.Register(ctx, "source", digest(1), registration.Profile{DisplayName: "name"})
 	if err != nil || !r.Created || count(t, db) != 1 {
 		t.Fatalf("retry after failure: %+v %v", r, err)
 	}

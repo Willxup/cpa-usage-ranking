@@ -14,19 +14,22 @@ func TestRegistrationRequestConfiguration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.RegistrationRequests != registration.DefaultRequestLimits() {
-		t.Fatalf("defaults: %+v", cfg.RegistrationRequests)
+	if cfg.RegistrationRequests != registration.DefaultRequestLimits() || cfg.RegistrationCreations != registration.DefaultCreationLimits() {
+		t.Fatalf("defaults: %+v", cfg)
 	}
 	t.Setenv("RANKING_REGISTRATION_SOURCE_REQUESTS", "2")
 	t.Setenv("RANKING_REGISTRATION_GLOBAL_REQUESTS", "3")
 	t.Setenv("RANKING_REGISTRATION_REQUEST_MAX_SOURCES", "4")
 	t.Setenv("RANKING_REGISTRATION_REQUEST_WINDOW", "5s")
+	t.Setenv("RANKING_REGISTRATION_HOURLY_CREATIONS", "4")
+	t.Setenv("RANKING_REGISTRATION_DAILY_CREATIONS", "12")
+	t.Setenv("RANKING_REGISTRATION_CREATION_MAX_SOURCES", "50")
 	cfg, err = config.Load()
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := registration.RequestLimits{SourceRequests: 2, GlobalRequests: 3, MaxSources: 4, Window: 5 * time.Second}
-	if cfg.RegistrationRequests != want {
-		t.Fatalf("overrides: %+v", cfg.RegistrationRequests)
+	if cfg.RegistrationRequests != want || cfg.RegistrationCreations != (registration.CreationLimits{Hourly: 4, Daily: 12, MaxSources: 50}) {
+		t.Fatalf("overrides: %+v", cfg)
 	}
 }

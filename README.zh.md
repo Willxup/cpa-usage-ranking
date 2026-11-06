@@ -24,7 +24,7 @@ go run ./cmd/ranking
 公开昵称的归一化与校验已提供内部函数，尚未接入 HTTP 接口，具体见[昵称规则](docs/display-names.md)。[静态头像目录](docs/avatar-catalog.md)校验编号、默认项和资源；二进制嵌入获准复用的 66 张 WebP（默认编号 1），通过 `/avatars/catalog.json` 和 `/avatars/images/001.webp` 至 `066.webp` 分发，不依赖前端目录。
 [凭据解析与摘要](docs/client-credentials.md)接受客户端预先保存的 32 字节 CSPRNG 秘密，使用规范无填充 base64url Bearer 编码；服务端仅存 SHA-256 摘要，不签发秘密。
 内部[注册服务](docs/registration.md)可原子创建校验后的身份，并以安全重试返回原身份及当前资料、不覆盖资料；注册 HTTP 尚未开放。后续业务可使用凭据绑定唯一身份的内部[鉴权中间件](docs/client-credentials.md#internal-identity-enforcement)，不增加演示 API。
-[注册请求准入](docs/registration-admission.md)提供有界的来源/全局限流及启动参数，不影响健康或静态资源路由；所有保护接齐前不开放注册接口。
+[注册请求准入](docs/registration-admission.md)提供有界的来源/全局限流及启动参数，不影响健康或静态资源路由；成功新建另受[滚动来源配额](docs/registration.md#successful-creation-quotas)限制（默认 3/小时、10/24 小时），已有身份重试不重复占用；状态仅在单机进程内，重启清零。注册 HTTP 尚未开放。
 
 ## 前端开发
 
