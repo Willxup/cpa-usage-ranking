@@ -14,6 +14,19 @@ same ID. Historical dictionary rows do not make removed models active. Aliases
 and prices are not stored in the dictionary, and ID 0 is reserved for future
 totals. Registration failure rolls back the batch and prevents startup.
 
+The internal resolver checks the original reported name for valid UTF-8,
+control characters and the 128-byte limit, then trims surrounding whitespace
+and removes the path through the final `/`. An empty final name is invalid.
+It matches the resulting name exactly against the current canonical names and
+aliases; aliases share the canonical ID. There is no case folding, Unicode
+normalization or automatic version-suffix removal. A valid unknown name is an
+unmatched result, not a format error, and lookup does not insert it into SQLite.
+This is an internal capability only: there is no reporting or model HTTP API yet.
+
+Tier codes are `default` = 0, `priority` = 1, and `flex` = 2. The internal tier
+boundary distinguishes an omitted value (default) from explicit null, empty or
+unsupported values (invalid); it does not define a report JSON protocol.
+
 `currency` must be `USD` and `price_unit` must be `per_million_tokens`.
 `models` is an array of records with `model_name`, `alias` (an array, possibly
 empty) and `prices`. Names are nonempty valid UTF-8 of at most 128 bytes, have

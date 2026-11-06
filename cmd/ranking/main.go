@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 
 	"cpa-usage-ranking/internal/avatars"
@@ -70,9 +71,12 @@ func run(logger *slog.Logger) (err error) {
 	if err := storage.MigrateSchema(ctx, db.Writer); err != nil {
 		return err
 	}
-	if _, err := models.Register(ctx, db.Writer, modelCatalog); err != nil {
+	modelRegistry, err := models.Register(ctx, db.Writer, modelCatalog)
+	if err != nil {
 		return err
 	}
+	// 当前还没有上报入口；保留启动快照至退出，后续接入时复用同一映射。
+	defer runtime.KeepAlive(modelRegistry)
 	logger.Info("sqlite initialized")
 	registrationService, err := registration.NewService(clients.NewRepository(db), catalog, registration.Options{
 		CreationLimits: cfg.RegistrationCreations, NewIdentitiesEnabled: cfg.RegistrationEnabled,

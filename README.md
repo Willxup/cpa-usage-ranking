@@ -7,7 +7,9 @@ registration, credential-bound internal authentication, static avatars and
 SQLite identity/profile persistence are available. Reporting and leaderboards
 are not implemented; business readiness remains 503. No website account UI is
 provided. The [model catalog](docs/model-catalog.md) is validated at startup;
-its reference prices were not independently reverified for this delivery.
+its internal resolver maps exact names and aliases to stable IDs, without a
+reporting or model API. Reference prices were not independently reverified for
+this delivery.
 
 ## Development
 
