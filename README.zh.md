@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-独立的通用用量排名服务。目前已具备 SQLite 连接、事务迁移及客户端身份/资料存储；注册、鉴权、上报和榜单接口仍未实现。
+独立的通用用量排名服务。目前已具备受保护注册、内部凭据鉴权、静态头像、SQLite 事务迁移与身份/资料存储。上报和榜单仍未实现，业务就绪保持 503；没有网站账号 UI。
 
 ## 开发
 
@@ -21,10 +21,9 @@ go run ./cmd/ranking
 
 启动时在监听 HTTP 之前打开 `data/ranking.db`，可通过 `RANKING_SQLITE_PATH` 覆盖。自动创建缺失的父目录和迁移版本表，启用 WAL、FULL 同步和外键。每个迁移版本的变更与成功记录在同一事务中提交，失败回滚该版本，已完成版本不重复执行；当前版本 1 建立 `clients` 身份与资料表，不填充模拟参与者。连接或迁移失败直接退出，不自动修复或回退。关停先排空 HTTP，再关闭有界读写连接池，业务就绪仍返回 503。具体约定见 [SQLite 存储说明](docs/storage.md)和[客户端存储说明](docs/client-storage.md)。
 
-公开昵称的归一化与校验已提供内部函数，尚未接入 HTTP 接口，具体见[昵称规则](docs/display-names.md)。[静态头像目录](docs/avatar-catalog.md)校验编号、默认项和资源；二进制嵌入获准复用的 66 张 WebP（默认编号 1），通过 `/avatars/catalog.json` 和 `/avatars/images/001.webp` 至 `066.webp` 分发，不依赖前端目录。
+注册应用公开[昵称规则](docs/display-names.md)及头像目录校验，不提供资料修改接口。[静态头像目录](docs/avatar-catalog.md)校验编号、默认项和资源；二进制嵌入获准复用的 66 张 WebP（默认编号 1），通过 `/avatars/catalog.json` 和 `/avatars/images/001.webp` 至 `066.webp` 分发，不依赖前端目录。
 [凭据解析与摘要](docs/client-credentials.md)接受客户端预先保存的 32 字节 CSPRNG 秘密，使用规范无填充 base64url Bearer 编码；服务端仅存 SHA-256 摘要，不签发秘密。
-内部[注册服务](docs/registration.md)可原子创建校验后的身份，并以安全重试返回原身份及当前资料、不覆盖资料；注册 HTTP 尚未开放。后续业务可使用凭据绑定唯一身份的内部[鉴权中间件](docs/client-credentials.md#internal-identity-enforcement)，不增加演示 API。
-[注册请求准入](docs/registration-admission.md)提供有界的来源/全局限流及启动参数，不影响健康或静态资源路由；成功新建另受[滚动来源配额](docs/registration.md#successful-creation-quotas)限制（默认 3/小时、10/24 小时），已有身份重试不重复占用；状态仅在单机进程内，重启清零。`RANKING_REGISTRATION_ENABLED=false` 重启后仅关闭新身份创建，保留已有身份重试和鉴权，不等于全站停机。注册 HTTP 尚未开放。
+`POST /v1/clients/register` 已接通[受保护注册 API](docs/registration-api.md)：新建返回 201，相同秘密重试返回 200 及当前资料、不覆盖。客户端首次尝试前先生成并保存 32 字节 CSPRNG 秘密，通过 HTTPS Bearer 携带。来源/全局请求限流包含失败和重试；成功新建另受滚动配额（默认 3/小时、10/24 小时）保护。有界内存状态仅属于单机进程、重启清零。`RANKING_REGISTRATION_ENABLED=false` 重启后仅关闭新建，保留已有身份重试和鉴权；不是全站停机。请求、响应、状态码、代理信任与全部部署参数见 API 文档。内部[鉴权中间件](docs/client-credentials.md#internal-identity-enforcement)仅凭秘密选择身份，不增加演示 `/me` API。
 
 ## 前端开发
 
@@ -64,7 +63,7 @@ make run        # 构建后由 Go 在 8080 端口提供页面
 
 `BIN_DIR` 默认 `bin`，`GO_TEST_FLAGS` 默认 `-p 2`，均可覆盖。构建不依赖本地秘密或内部规划文件。前端产物在 `web/dist/assets/third-party-notices.txt` 中包含 React Bits 来源及完整许可，部署时保留该文件。
 
-浏览器测试及配置位于 `web/test/`。`make test-browser` 构建并启动独立 Go 进程，使用回环端口 4187，验证桌面/手机布局、真实健康请求、键盘/触控、减少动效、失败重试及 404 边界，然后停止进程；不会接管已有服务。端口占用时可覆盖 `RANKING_TEST_PORT`。产物默认在 `web/test/results/`，可用 `PLAYWRIGHT_OUTPUT_DIR`、`PLAYWRIGHT_BROWSERS_PATH` 调整产物及浏览器下载位置。浏览器检查使用结果目录旁 `databases/<port>/` 中的独立测试库，不访问应用默认数据库。精简 Linux 环境可能需要管理员先补齐 Playwright 的 Chromium 系统依赖。这些冒烟测试不代表已经验证十万客户端容量。
+浏览器测试及配置位于 `web/test/`。`make test-browser` 构建并启动独立 Go 进程，使用回环端口 4187，验证桌面/手机布局、真实健康请求、键盘/触控、减少动效、失败重试、404 边界、66 张头像解码及真实注册/安全重试，然后停止进程；不会接管已有服务。端口占用时可覆盖 `RANKING_TEST_PORT`。产物默认在 `web/test/results/`，可用 `PLAYWRIGHT_OUTPUT_DIR`、`PLAYWRIGHT_BROWSERS_PATH` 调整产物及浏览器下载位置。浏览器检查使用结果目录旁 `databases/<port>/` 中的独立测试库，不访问应用默认数据库。精简 Linux 环境可能需要管理员先补齐 Playwright 的 Chromium 系统依赖。这些冒烟测试不代表已经验证十万客户端容量。
 
 ## 正式前端托管
 
@@ -83,6 +82,8 @@ Go 同域提供构建后的页面和 API。部署二进制、`web/dist/` 及第�
 
 - `GET /healthz`：200 与 `{"status":"ok"}` 仅表示进程存活。
 - `GET /readyz`：业务尚未实现时返回 503，不假报就绪。
+- `POST /v1/clients/register`：受保护创建/安全重试，见[注册 API](docs/registration-api.md)。
+- `GET`/`HEAD /avatars/catalog.json` 及目录列出的 `/avatars/images/*` 图片。
 - 未知路由和不支持的方法返回 JSON 错误（404/405）。
 - 异常响应不暴露细节，日志不记录请求正文、请求头或 panic 值。
 - 默认不信任客户端提供的转发 IP 头；显式代理配置见[注册来源说明](docs/registration-sources.md)。
@@ -98,4 +99,4 @@ Go 同域提供构建后的页面和 API。部署二进制、`web/dist/` 及第�
 | `RANKING_TRUSTED_PROXIES` | 未设置（无） | 逗号分隔的可信代理 IP/CIDR |
 | `RANKING_REGISTRATION_IPV6_64` | `true` | 原生 IPv6 注册来源按 /64 分组 |
 
-显式空值或非法配置会校验失败。不自动加载配置文件，不提交凭据或本地 `.env` 文件。
+注册限额、请求体边界和新建开关见[注册 API 配置](docs/registration-api.md#startup-configuration)。显式空值或非法配置会校验失败。不自动加载配置文件，不提交凭据或本地 `.env` 文件。

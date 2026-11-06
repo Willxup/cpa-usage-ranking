@@ -4,8 +4,10 @@
 public nickname and returns the value to store and return to the client.
 Invalid input returns an empty string and an error matching
 `profiles.ErrInvalidDisplayName` with `errors.Is`; errors do not include the
-submitted name. This helper is not yet connected to an HTTP endpoint or the
-client repository. The repository still expects already-validated values.
+submitted name. The [registration API](registration-api.md) applies this helper
+for new identities before calling the repository. Existing-identity retries
+return current stored profiles without revalidating submitted new-profile fields.
+The repository itself still expects already-validated values.
 
 ## Rules, in order
 
@@ -49,4 +51,5 @@ as escaped plain text, not interpreted as HTML or automatically made into links;
 normalization itself does not perform HTML escaping.
 
 Tests are in `internal/profiles/test/` and do not require a database, frontend
-build or local planning files. No registration/profile routes or UI are added.
+build or local planning files. Registration HTTP validation has separate real
+HTTP/SQLite tests; no profile-edit route or account UI is added.

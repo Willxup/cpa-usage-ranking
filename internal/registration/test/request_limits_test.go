@@ -95,6 +95,26 @@ func TestConcurrentRequestAdmission(t *testing.T) {
 	}
 }
 
+func TestRequestRetryAfterCoversOverlappingWindows(t *testing.T) {
+	now := time.Date(2026, 11, 9, 0, 0, 0, 0, time.UTC)
+	limiter, err := registration.NewRequestLimiter(registration.RequestLimits{SourceRequests: 1, GlobalRequests: 2, Window: time.Minute, MaxSources: 2}, func() time.Time { return now })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := limiter.Admit("a"); err != nil {
+		t.Fatal(err)
+	}
+	now = now.Add(50 * time.Second)
+	if err := limiter.Admit("b"); err != nil {
+		t.Fatal(err)
+	}
+	now = now.Add(10 * time.Second)
+	// 全站新窗口为 [60,120)，b 仍在 [50,110) 的有效来源窗口。
+	requireLimit(t, limiter.Admit("b"), "registration_rate_limited", 50*time.Second)
+	// 来源拒绝也耗尽全站第二个名额，Retry-After 不能只等到 110。
+	requireLimit(t, limiter.Admit("b"), "registration_rate_limited", time.Minute)
+}
+
 func TestRequestLimitValidationAndRetryAfter(t *testing.T) {
 	for _, limits := range []registration.RequestLimits{{}, {SourceRequests: 1, GlobalRequests: 1, Window: time.Second}, {SourceRequests: 1, GlobalRequests: 1, Window: -time.Second, MaxSources: 1}} {
 		if _, err := registration.NewRequestLimiter(limits, nil); err == nil {

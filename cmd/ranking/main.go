@@ -11,8 +11,10 @@ import (
 	"syscall"
 
 	"cpa-usage-ranking/internal/avatars"
+	"cpa-usage-ranking/internal/clients"
 	"cpa-usage-ranking/internal/config"
 	"cpa-usage-ranking/internal/httpserver"
+	"cpa-usage-ranking/internal/registration"
 	"cpa-usage-ranking/internal/storage"
 	"github.com/gin-gonic/gin"
 )
@@ -64,6 +66,21 @@ func run(logger *slog.Logger) (err error) {
 		return err
 	}
 	logger.Info("sqlite initialized")
+	registrationService, err := registration.NewService(clients.NewRepository(db), catalog, registration.Options{
+		CreationLimits: cfg.RegistrationCreations, NewIdentitiesEnabled: cfg.RegistrationEnabled,
+	})
+	if err != nil {
+		return err
+	}
+	requestLimiter, err := registration.NewRequestLimiter(cfg.RegistrationRequests, nil)
+	if err != nil {
+		return err
+	}
+	if err := httpserver.MountRegistration(router, registrationService, requestLimiter, httpserver.RegistrationHTTPOptions{
+		GroupIPv6By64: cfg.RegistrationIPv6By64, MaxBodyBytes: int64(cfg.RegistrationMaxBodyBytes),
+	}); err != nil {
+		return err
+	}
 	listener, err := net.Listen("tcp", cfg.HTTPAddr)
 	if err != nil {
 		return fmt.Errorf("listen HTTP: %w", err)

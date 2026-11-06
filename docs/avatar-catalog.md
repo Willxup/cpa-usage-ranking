@@ -80,7 +80,8 @@ identity and lookup always use the explicit ID.
   only when an avatar selection is **omitted**.
 - `catalog.Lookup(id int64) (avatars.Avatar, bool)` performs membership lookup.
   An explicitly unknown ID, including zero or a negative value, returns false;
-  it does not fall back. An HTTP registration boundary can map this to 422.
+  it does not fall back. The registration HTTP boundary maps invalid new-avatar
+  selections to 422.
 - `catalog.List() []avatars.Avatar` returns a copy in catalog order. `Avatar`
   contains `ID` (`avatar_id`) and `Path` (`path`). The loaded catalog is read-only
   and can be shared by concurrent readers.

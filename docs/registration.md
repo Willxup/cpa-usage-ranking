@@ -69,7 +69,8 @@ routes. No administration UI or hot-reload service is provided. Reporting HTTP
 is not implemented yet; queued/write-transaction status checks and the future
 reporting chain require their own implementation and validation.
 
-The registration service and all gates are internal only; the production HTTP
-endpoint is connected as a separate integration step.
+The service and all gates are connected by the protected
+[`POST /v1/clients/register` endpoint](registration-api.md). HTTP responses expose
+only client ID, normalized/current name and avatar ID; no credential or digest.
 Tests in `internal/registration/test/` use real SQLite files, including concurrent
 safe retries, database failures, disabled identities and profile changes.

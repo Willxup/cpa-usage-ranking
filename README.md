@@ -2,10 +2,11 @@
 
 [简体中文](README.zh.md)
 
-An independent usage-ranking service. The foundation is under construction;
-registration, reporting and leaderboards are not implemented yet. SQLite
-connections, transactional migrations and client identity/profile persistence
-are available. There is no registration or authentication endpoint yet.
+An independent usage-ranking service under construction. Protected client
+registration, credential-bound internal authentication, static avatars and
+SQLite identity/profile persistence are available. Reporting and leaderboards
+are not implemented; business readiness remains 503. No website account UI is
+provided.
 
 ## Development
 
@@ -35,8 +36,8 @@ trigger automatic repair or fallback. Shutdown drains HTTP before closing the
 bounded write/read connection pools. See [SQLite storage](docs/storage.md) and
 [client storage](docs/client-storage.md). Business readiness remains 503.
 
-Public display-name normalization and validation are available as an internal
-helper, not yet an HTTP endpoint. See [display-name rules](docs/display-names.md).
+Registration applies [public display-name rules](docs/display-names.md) and the
+static avatar catalog; it is not a profile-edit endpoint.
 The [static avatar catalog](docs/avatar-catalog.md) validates IDs, defaults and
 resources. The binary embeds 66 approved WebP avatars (default ID 1), served at
 `/avatars/catalog.json` and `/avatars/images/001.webp` through `066.webp`.
@@ -44,18 +45,16 @@ These routes work without a frontend directory.
 [Client credential parsing/hashing](docs/client-credentials.md) accepts a
 client-persisted 32-byte CSPRNG secret as canonical unpadded base64url Bearer
 text; the server stores only its SHA-256 digest. No secrets are issued.
-The internal [registration service](docs/registration.md) creates validated
-identities and returns existing identities on safe retries without changing
-profiles; registration HTTP is not exposed yet. Internal credential-bound
-[authentication middleware](docs/client-credentials.md#internal-identity-enforcement)
-is available for subsequent business routes, with no demonstration API.
-[Registration request admission](docs/registration-admission.md) provides bounded
-per-source/global gates and startup parameters; it does not limit health or
-static routes. Successful new identities also have [rolling source quotas](docs/registration.md#successful-creation-quotas)
-(default 3/hour and 10/24 hours), distinct from request limits. All quota state
-is process-local and resets on restart. `RANKING_REGISTRATION_ENABLED=false`
-closes only new-identity creation after restart; safe retries and authentication
-remain available. Registration HTTP is not exposed yet.
+`POST /v1/clients/register` now exposes the [protected registration API](docs/registration-api.md):
+201 for a new identity, 200 for same-secret retries returning the current profile
+without changes. Use HTTPS and persist a 32-byte CSPRNG secret before the first
+attempt. Source/global request gates count failures and retries; new identities
+also have rolling quotas (default 3/hour and 10/24 hours). All admission state
+is bounded, process-local and resets on restart. `RANKING_REGISTRATION_ENABLED=false`
+closes only new creation after restart, not existing retries or authentication.
+See the API document for requests, status codes, proxy trust and all deployment
+parameters. Internal [authentication middleware](docs/client-credentials.md#internal-identity-enforcement)
+selects identity only by credential; no demonstration `/me` API is added.
 
 ## Frontend development
 
@@ -125,7 +124,8 @@ React Bits attribution and its complete license at
 Browser tests/configuration live in `web/test/`. `make test-browser` builds and
 starts an isolated Go process on loopback port 4187, checks desktop/mobile
 layouts, real health requests, keyboard/touch access, reduced motion, retry
-and 404 boundaries, then stops the process. It refuses to reuse an existing
+and 404 boundaries, all 66 avatar decodes and real registration/safe retries,
+then stops the process. It refuses to reuse an existing
 service. Override `RANKING_TEST_PORT` if occupied. Results default to
 `web/test/results/`; `PLAYWRIGHT_OUTPUT_DIR` and `PLAYWRIGHT_BROWSERS_PATH` can
 relocate artifacts and browser downloads. Browser checks use a separate SQLite
@@ -161,6 +161,9 @@ stop the process, replace the build, then restart.
 
 - `GET /healthz`: 200 with `{"status":"ok"}` means the process is alive.
 - `GET /readyz`: 503 while business services are not implemented.
+- `POST /v1/clients/register`: protected creation/safe retry; see the
+  [registration API](docs/registration-api.md).
+- `GET`/`HEAD /avatars/catalog.json` and listed `/avatars/images/*` resources.
 - Unknown routes and unsupported methods return JSON errors (404/405).
 - Panic responses are generic; request bodies, headers and panic values are not logged.
 - Forwarded client-IP headers are not trusted by default. See
@@ -177,5 +180,7 @@ stop the process, replace the build, then restart.
 | `RANKING_TRUSTED_PROXIES` | unset (none) | Comma-separated trusted proxy IPs/CIDRs |
 | `RANKING_REGISTRATION_IPV6_64` | `true` | Group native IPv6 registration sources by /64 |
 
+Registration limits, body bound and the creation switch are listed in
+[registration API configuration](docs/registration-api.md#startup-configuration).
 Explicitly empty or invalid settings fail validation. No configuration files
 are loaded automatically. Do not commit credentials or local `.env` files.

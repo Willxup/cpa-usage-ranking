@@ -36,6 +36,6 @@ adjacent windows; these defaults are deployment controls, not a rolling request
 rate promise.
 
 State is local to one process and resets on restart; it is not shared across
-instances and does not prove one-human-one-identity. At this stage the reusable
-gates have test-only HTTP coverage; the protected production registration route
-is connected only when all registration safeguards are present.
+instances and does not prove one-human-one-identity. The gates are attached only
+to the protected [registration POST endpoint](registration-api.md), before Bearer
+and bounded JSON validation. Health and static resources are unaffected.

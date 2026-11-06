@@ -14,20 +14,26 @@ import (
 
 // Config contains only settings used by the current service.
 type Config struct {
-	HTTPAddr              string
-	ShutdownTimeout       time.Duration
-	WebDir                string
-	SQLitePath            string
-	TrustedProxies        []string
-	RegistrationIPv6By64  bool
-	RegistrationRequests  registration.RequestLimits
-	RegistrationCreations registration.CreationLimits
-	RegistrationEnabled   bool
+	HTTPAddr                 string
+	ShutdownTimeout          time.Duration
+	WebDir                   string
+	SQLitePath               string
+	TrustedProxies           []string
+	RegistrationIPv6By64     bool
+	RegistrationRequests     registration.RequestLimits
+	RegistrationCreations    registration.CreationLimits
+	RegistrationEnabled      bool
+	RegistrationMaxBodyBytes int
 }
 
 // Load reads environment variables. Explicitly empty values are invalid.
 func Load() (Config, error) {
-	cfg := Config{HTTPAddr: "127.0.0.1:8080", ShutdownTimeout: 10 * time.Second, SQLitePath: "data/ranking.db", RegistrationIPv6By64: true, RegistrationRequests: registration.DefaultRequestLimits(), RegistrationCreations: registration.DefaultCreationLimits(), RegistrationEnabled: true}
+	cfg := Config{
+		HTTPAddr: "127.0.0.1:8080", ShutdownTimeout: 10 * time.Second, SQLitePath: "data/ranking.db",
+		RegistrationIPv6By64: true, RegistrationEnabled: true, RegistrationMaxBodyBytes: 4096,
+		RegistrationRequests:  registration.DefaultRequestLimits(),
+		RegistrationCreations: registration.DefaultCreationLimits(),
+	}
 	if value, ok := os.LookupEnv("RANKING_HTTP_ADDR"); ok {
 		cfg.HTTPAddr = strings.TrimSpace(value)
 	}
@@ -97,6 +103,7 @@ func Load() (Config, error) {
 		{"RANKING_REGISTRATION_HOURLY_CREATIONS", &cfg.RegistrationCreations.Hourly},
 		{"RANKING_REGISTRATION_DAILY_CREATIONS", &cfg.RegistrationCreations.Daily},
 		{"RANKING_REGISTRATION_CREATION_MAX_SOURCES", &cfg.RegistrationCreations.MaxSources},
+		{"RANKING_REGISTRATION_MAX_BODY_BYTES", &cfg.RegistrationMaxBodyBytes},
 	} {
 		if err := positiveInt(setting.key, setting.target); err != nil {
 			return Config{}, err

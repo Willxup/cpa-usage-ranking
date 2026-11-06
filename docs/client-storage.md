@@ -23,7 +23,7 @@ account ID, avatar table or identity mapping based on names, avatars or IPs.
 The database enforces credential uniqueness and shape, positive avatar IDs,
 and the two-valued disabled flag. Name normalization/validation and catalog
 membership checking are **not implemented here**; callers must supply validated
-profile values when those services are connected. The repository neither
+profile values, as the [registration service](registration.md) does. The repository neither
 normalizes names nor guesses an avatar default. The separate
 [display-name helper](display-names.md) provides name normalization/validation;
 the [avatar catalog loader](avatar-catalog.md) provides ID membership lookup.
@@ -64,5 +64,6 @@ Tests live in `internal/clients/test/` and `internal/storage/test/`, using real
 SQLite files. They cover independent same-name identities, credential conflicts
 (including concurrent writes through separate pools), profile/status isolation,
 large avatar IDs, persistence across reopening and migration replay, missing
-records, cancellation and database constraints. No registration endpoint is
-mocked or presented as implemented.
+records, cancellation and database constraints. The separate
+[protected registration API](registration-api.md) has real HTTP and SQLite
+tests; storage tests do not mock a registration service.
