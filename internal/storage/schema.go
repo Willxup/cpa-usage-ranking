@@ -11,6 +11,7 @@ func MigrateSchema(ctx context.Context, writer *sql.DB) error {
 		{Version: 1, Apply: createClientsV1},
 		{Version: 2, Apply: createModelsV2},
 		{Version: 3, Apply: createReportWindowV3},
+		{Version: 4, Apply: createDailySnapshotsV4},
 	})
 }
 
@@ -26,6 +27,40 @@ func createClientsV1(ctx context.Context, tx *sql.Tx) error {
 		disabled INTEGER NOT NULL DEFAULT 0 CHECK (disabled IN (0, 1)),
 		created_at_ms INTEGER NOT NULL
 	)`)
+	return err
+}
+
+func createDailySnapshotsV4(ctx context.Context, tx *sql.Tx) error {
+	_, err := tx.ExecContext(ctx, `CREATE TABLE daily_reports (
+		day TEXT NOT NULL,
+		client_id INTEGER NOT NULL REFERENCES clients(id),
+		revision INTEGER NOT NULL CHECK (revision >= 0),
+		digest BLOB NOT NULL CHECK (typeof(digest) = 'blob' AND length(digest) = 32),
+		received_at_ms INTEGER NOT NULL,
+		PRIMARY KEY (day, client_id)
+	) WITHOUT ROWID;
+	CREATE TABLE daily_stats (
+		day TEXT NOT NULL,
+		client_id INTEGER NOT NULL,
+		model_id INTEGER NOT NULL CHECK (model_id >= 0),
+		tier INTEGER NOT NULL CHECK (tier IN (0, 1, 2)),
+		total_tokens INTEGER NOT NULL CHECK (total_tokens >= 0),
+		input_tokens INTEGER NOT NULL CHECK (input_tokens >= 0),
+		output_tokens INTEGER NOT NULL CHECK (output_tokens >= 0),
+		cache_read_tokens INTEGER NOT NULL CHECK (cache_read_tokens >= 0),
+		cache_write_tokens INTEGER NOT NULL CHECK (cache_write_tokens >= 0),
+		reasoning_tokens INTEGER NOT NULL CHECK (reasoning_tokens >= 0),
+		request_count INTEGER NOT NULL CHECK (request_count > 0),
+		success_count INTEGER NOT NULL CHECK (success_count >= 0),
+		ttft_sum_ms REAL NOT NULL CHECK (ttft_sum_ms >= 0),
+		ttft_samples INTEGER NOT NULL CHECK (ttft_samples >= 0),
+		latency_sum_ms REAL NOT NULL CHECK (latency_sum_ms >= 0),
+		latency_samples INTEGER NOT NULL CHECK (latency_samples >= 0),
+		PRIMARY KEY (day, client_id, model_id, tier),
+		FOREIGN KEY (day, client_id) REFERENCES daily_reports(day, client_id) ON DELETE CASCADE,
+		CHECK (model_id > 0 OR tier = 0)
+	) WITHOUT ROWID;
+	CREATE INDEX daily_stats_totals ON daily_stats(day, client_id) WHERE model_id=0`)
 	return err
 }
 

@@ -8,7 +8,9 @@ migration, startup atomically registers the current catalog's canonical names.
 IDs are positive and stable; ID 0 is reserved for future totals and is not a
 dictionary row. Removed names remain in the dictionary but are not active until
 reintroduced in the catalog. Version 3 adds the persistent report-window watermark;
-startup advances it to at least UTC yesterday. Opening a database does **not** make `/readyz`
+startup advances it to at least UTC yesterday. Version 4 adds daily report
+revision metadata and daily statistics tables; it does not add periodic summaries.
+Opening a database does **not** make `/readyz`
 return success; the ranking service is not implemented yet.
 
 ## Build and file location
@@ -71,7 +73,11 @@ of `Migration{Version, Apply}`. `Version` must be a positive, increasing integer
 `internal/storage/schema.go`. Version 1 creates `clients` and version 2 creates
 `models` with only an ID and a unique canonical name; aliases and prices are
 not copied into the database. Version 3 adds the single-row report-window state.
-Existing databases upgrade through the same path.
+Version 4 creates `daily_reports` and `daily_stats` using composite primary keys
+and `WITHOUT ROWID`; a partial index supports total-row reads. The total uses
+model ID 0 and tier 0 without inserting a model dictionary row; real details use
+positive model IDs. Totals and details are alternative views and must not be
+summed together. Existing databases upgrade through the same path.
 Migrations do not silently adopt an untracked table with the same name.
 
 For each version, the runner starts an IMMEDIATE transaction, checks the ledger,
