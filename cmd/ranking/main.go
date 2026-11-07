@@ -2,16 +2,17 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net"
 	"os"
 	"os/signal"
-	"runtime"
 	"syscall"
 	"time"
 
+	"cpa-usage-ranking/internal/auth"
 	"cpa-usage-ranking/internal/avatars"
 	"cpa-usage-ranking/internal/clients"
 	"cpa-usage-ranking/internal/config"
@@ -80,10 +81,29 @@ func run(logger *slog.Logger) (err error) {
 	if err != nil {
 		return err
 	}
-	// 当前还没有上报入口；保留启动快照至退出，后续接入时复用同一映射。
-	defer runtime.KeepAlive(modelRegistry)
 	logger.Info("sqlite initialized")
-	registrationService, err := registration.NewService(clients.NewRepository(db), catalog, registration.Options{
+	repository := clients.NewRepository(db)
+	reportAdmission, err := reports.NewAdmission(cfg.ReportIngestion, nil)
+	if err != nil {
+		return err
+	}
+	reportWriter, err := reports.NewWriter(reports.NewStore(db.Writer, modelRegistry, nil), cfg.ReportWriter)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		shutdown, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
+		defer cancel()
+		err = errors.Join(err, reportWriter.Close(shutdown))
+	}()
+	windowCtx, stopWindow := context.WithCancel(context.Background())
+	windowDone := make(chan struct{})
+	go func() { defer close(windowDone); watchReportWindow(windowCtx, db.Writer, logger) }()
+	defer func() { stopWindow(); <-windowDone }()
+	if err := httpserver.MountReports(router, auth.NewAuthenticator(repository), reportAdmission, reportWriter, int64(cfg.ReportIngestion.MaxBodyBytes)); err != nil {
+		return err
+	}
+	registrationService, err := registration.NewService(repository, catalog, registration.Options{
 		CreationLimits: cfg.RegistrationCreations, NewIdentitiesEnabled: cfg.RegistrationEnabled,
 	})
 	if err != nil {
@@ -104,4 +124,28 @@ func run(logger *slog.Logger) (err error) {
 	}
 	logger.Info("http listener opened", "address", listener.Addr().String())
 	return httpserver.Serve(ctx, listener, router, cfg.ShutdownTimeout)
+}
+
+// Observe midnight even without incoming reports. A one-minute maximum wait
+// also notices forward clock corrections; every report independently advances
+// and rechecks the durable watermark before it can commit.
+func watchReportWindow(ctx context.Context, writer *sql.DB, logger *slog.Logger) {
+	for {
+		now := time.Now().UTC()
+		next := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, time.UTC)
+		delay := next.Sub(now)
+		if delay > time.Minute {
+			delay = time.Minute
+		}
+		timer := time.NewTimer(delay)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return
+		case <-timer.C:
+			if err := reports.AdvanceWindow(ctx, writer, time.Now()); err != nil && ctx.Err() == nil {
+				logger.Error("report window checkpoint failed")
+			}
+		}
+	}
 }

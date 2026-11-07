@@ -90,7 +90,7 @@ remain subject to request budgets and request-state capacity.
 identities with 503 `registration_closed`. Existing active retries still return
 200; disabled identities remain 403. Credential authentication, health, avatars
 and the frontend remain independent. This is not whole-site maintenance mode.
-There is no hot-reload/configuration UI. Reporting is not implemented yet.
+There is no hot-reload/configuration UI. Existing clients can still use the [daily report API](report-snapshots.md) while new registration is closed.
 
 Both request and creation state are bounded, **single-process, in-memory** and
 reset on restart; they are not shared across processes. Expired records are

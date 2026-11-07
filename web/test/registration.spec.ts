@@ -18,8 +18,27 @@ test('registers and safely retries against the real production binary without ad
     const first = await send({ display_name: '  Ｂrowser 🙂  ', avatar_id: 66 })
     const retry = await send({ display_name: '\u0000', avatar_id: -1 })
     const minimal = await send({})
+    const day = new Date().toISOString().slice(0, 10)
+    const snapshot = {
+      schema_version: 1, revision: '1', items: [{
+        model: 'claude-fable-5', total_tokens: '10', input_tokens: '8', output_tokens: '2',
+        cache_read_tokens: '3', cache_write_tokens: '1', reasoning_tokens: '1',
+        request_count: '2', success_count: '1', ttft_avg_ms: null, ttft_samples: '0',
+        latency_avg_ms: 2, latency_samples: '2',
+      }],
+    }
+    const report = async () => {
+      const response = await fetch(`/v1/reports/${day}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('registration-test-secret')}` },
+        body: JSON.stringify(snapshot),
+      })
+      return { status: response.status, body: await response.json() as Record<string, unknown> }
+    }
+    const firstReport = await report()
+    const retryReport = await report()
     localStorage.removeItem('registration-test-secret')
-    return { first, retry, minimal }
+    return { first, retry, minimal, firstReport, retryReport }
   })
   expect(result.first.status).toBe(201)
   expect(result.first.cache).toBe('no-store')
@@ -30,6 +49,8 @@ test('registers and safely retries against the real production binary without ad
   expect(result.minimal.status).toBe(200)
   expect(result.retry.body).toEqual(result.first.body)
   expect(result.minimal.body).toEqual(result.first.body)
+  expect(result.firstReport).toEqual({ status: 200, body: { revision: '1' } })
+  expect(result.retryReport).toEqual(result.firstReport)
   const rejected = await request.post('/v1/clients/register', { data: { display_name: 'No secret' } })
   expect(rejected.status()).toBe(401)
   expect(await rejected.json()).toEqual({ error: { code: 'invalid_credential', message: 'Invalid client credential' } })

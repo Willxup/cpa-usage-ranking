@@ -5,7 +5,7 @@ for HTTP requests. Schema version 1 creates `clients` for
 [client identity/profile persistence](client-storage.md); startup creates no
 participant records. Version 2 creates the model-name dictionary. After the
 migration, startup atomically registers the current catalog's canonical names.
-IDs are positive and stable; ID 0 is reserved for future totals and is not a
+IDs are positive and stable; ID 0 is reserved for internal totals and is not a
 dictionary row. Removed names remain in the dictionary but are not active until
 reintroduced in the catalog. Version 3 adds the persistent report-window watermark;
 startup advances it to at least UTC yesterday. Version 4 adds daily report

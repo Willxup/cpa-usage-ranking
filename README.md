@@ -3,13 +3,12 @@
 [简体中文](README.zh.md)
 
 An independent usage-ranking service under construction. Protected client
-registration, credential-bound internal authentication, static avatars and
-SQLite identity/profile persistence are available. Reporting and leaderboards
-are not implemented; business readiness remains 503. No website account UI is
-provided. The [model catalog](docs/model-catalog.md) is validated at startup;
-its internal resolver maps exact names and aliases to stable IDs, without a
-reporting or model API. Reference prices were not independently reverified for
-this delivery.
+registration, daily snapshot ingestion, static avatars and SQLite persistence
+are available. Leaderboards and periodic aggregation are not implemented;
+business readiness remains 503. No website account UI is provided. The
+[model catalog](docs/model-catalog.md) is validated at startup and maps exact
+names and aliases to stable IDs; there is no model management API. Reference
+prices were not independently reverified for this delivery.
 
 ## Development
 
@@ -35,7 +34,8 @@ ledger and enables WAL, FULL synchronization and foreign keys. Each declared
 migration and its version record commit atomically; already-applied versions
 are skipped. Schema version 1 creates `clients` for identity/profile persistence;
 version 2 creates the stable canonical-model ID dictionary and startup registers
-current catalog names transactionally. Startup does not seed participants.
+current catalog names transactionally. Versions 3–4 add a persistent reporting
+window and daily snapshot tables. Startup does not seed participants.
 Database failures stop startup; they do not
 trigger automatic repair or fallback. Shutdown drains HTTP before closing the
 bounded write/read connection pools. See [SQLite storage](docs/storage.md) and
@@ -60,6 +60,11 @@ closes only new creation after restart, not existing retries or authentication.
 See the API document for requests, status codes, proxy trust and all deployment
 parameters. Internal [authentication middleware](docs/client-credentials.md#internal-identity-enforcement)
 selects identity only by credential; no demonstration `/me` API is added.
+
+`PUT /v1/reports/{utc_day}` accepts an authenticated full snapshot for UTC
+today or yesterday. Revisions, catalog-independent idempotency, persistent
+window closure, limits and atomic replacement are described in the
+[daily report API](docs/report-snapshots.md). This does not enable a leaderboard.
 
 ## Frontend development
 
@@ -168,6 +173,8 @@ stop the process, replace the build, then restart.
 - `GET /readyz`: 503 while business services are not implemented.
 - `POST /v1/clients/register`: protected creation/safe retry; see the
   [registration API](docs/registration-api.md).
+- `PUT /v1/reports/{utc_day}`: protected full daily snapshot; see the
+  [daily report API](docs/report-snapshots.md).
 - `GET`/`HEAD /avatars/catalog.json` and listed `/avatars/images/*` resources.
 - Unknown routes and unsupported methods return JSON errors (404/405).
 - Panic responses are generic; request bodies, headers and panic values are not logged.
@@ -187,7 +194,8 @@ stop the process, replace the build, then restart.
 | `RANKING_REGISTRATION_IPV6_64` | `true` | Group native IPv6 registration sources by /64 |
 
 Registration limits, body bound and the creation switch are listed in
-[registration API configuration](docs/registration-api.md#startup-configuration).
+[registration API configuration](docs/registration-api.md#startup-configuration);
+report limits and writer settings are in the [report API](docs/report-snapshots.md).
 Explicitly empty or invalid settings fail validation. The model catalog is
 required at startup; environment variables are not loaded from `.env` files.
 Do not commit credentials or local `.env` files.

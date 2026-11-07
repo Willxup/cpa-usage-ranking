@@ -1,0 +1,113 @@
+package httpserver
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"mime"
+	"net/http"
+	"strconv"
+
+	"cpa-usage-ranking/internal/auth"
+	"cpa-usage-ranking/internal/reports"
+	"github.com/gin-gonic/gin"
+)
+
+// MountReports binds identity before admission, decoding or writing. Neither
+// the JSON body nor query parameters may select a different client.
+func MountReports(router *gin.Engine, authenticator *auth.Authenticator, admission *reports.Admission, writer *reports.Writer, maxBodyBytes int64) error {
+	if authenticator == nil || admission == nil || writer == nil || maxBodyBytes <= 0 {
+		return fmt.Errorf("invalid report HTTP configuration")
+	}
+	router.PUT("/v1/reports/:utc_day", ClientAuthentication(authenticator), func(c *gin.Context) {
+		client, ok := AuthenticatedClient(c)
+		if !ok {
+			writeError(c, http.StatusInternalServerError, "internal_error", "Internal server error")
+			return
+		}
+		if err := admission.Admit(client.ID); err != nil {
+			var limit *reports.AdmissionError
+			if errors.As(err, &limit) {
+				c.Header("Retry-After", strconv.FormatInt(limit.RetryAfterSeconds(), 10))
+				writeError(c, http.StatusTooManyRequests, limit.Code, "Report admission limit reached")
+			} else {
+				writeError(c, http.StatusInternalServerError, "internal_error", "Internal server error")
+			}
+			return
+		}
+		mediaType, _, err := mime.ParseMediaType(c.GetHeader("Content-Type"))
+		if err != nil || mediaType != "application/json" || (c.GetHeader("Content-Encoding") != "" && c.GetHeader("Content-Encoding") != "identity") {
+			writeError(c, http.StatusUnsupportedMediaType, "unsupported_media_type", "Use uncompressed application/json")
+			return
+		}
+		if c.Request.ContentLength > maxBodyBytes {
+			writeError(c, http.StatusRequestEntityTooLarge, "request_too_large", "Report body is too large")
+			return
+		}
+		input, err := admission.Decode(c.Request.Body)
+		switch {
+		case errors.Is(err, reports.ErrDecodeBusy):
+			c.Header("Retry-After", "1")
+			writeError(c, http.StatusServiceUnavailable, "report_overloaded", "Report service is busy")
+			return
+		case errors.Is(err, reports.ErrBodyTooLarge):
+			writeError(c, http.StatusRequestEntityTooLarge, "request_too_large", "Report body is too large")
+			return
+		case errors.Is(err, reports.ErrTooManyItems):
+			writeError(c, http.StatusUnprocessableEntity, "too_many_items", "Too many report items")
+			return
+		case err != nil:
+			writeError(c, http.StatusUnprocessableEntity, "invalid_report", "Invalid report")
+			return
+		}
+		prepared, err := reports.Prepare(input)
+		if err != nil {
+			writeError(c, http.StatusUnprocessableEntity, "invalid_report", "Invalid report")
+			return
+		}
+		result, err := writer.Enqueue(c.Request.Context(), client.ID, c.Param("utc_day"), prepared)
+		if err != nil {
+			if errors.Is(err, reports.ErrQueueFull) || errors.Is(err, reports.ErrWriterClosed) {
+				c.Header("Retry-After", "1")
+				writeError(c, http.StatusServiceUnavailable, "report_overloaded", "Report service is busy")
+			} else if c.Request.Context().Err() == nil {
+				writeError(c, http.StatusInternalServerError, "internal_error", "Internal server error")
+			}
+			return
+		}
+		select {
+		case <-c.Request.Context().Done():
+			// A lost response around commit is ambiguous; the client can retry.
+			return
+		case outcome := <-result:
+			writeReportResult(c, outcome)
+		}
+	})
+	return nil
+}
+
+func writeReportResult(c *gin.Context, result reports.WriteResult) {
+	var conflict *reports.RevisionConflict
+	switch {
+	case result.Err == nil:
+		c.JSON(http.StatusOK, gin.H{"revision": strconv.FormatInt(result.Revision, 10)})
+	case errors.As(result.Err, &conflict):
+		c.AbortWithStatusJSON(http.StatusConflict, gin.H{"error": gin.H{"code": "revision_conflict", "message": "Report revision conflicts with the current snapshot"}, "revision": strconv.FormatInt(conflict.Current, 10)})
+	case errors.Is(result.Err, reports.ErrInvalidDay), errors.Is(result.Err, reports.ErrFutureDay):
+		writeError(c, http.StatusUnprocessableEntity, "invalid_day", "Invalid or future UTC day")
+	case errors.Is(result.Err, reports.ErrExpiredDay):
+		writeError(c, http.StatusGone, "expired_day", "Report window has closed")
+	case errors.Is(result.Err, reports.ErrInvalid):
+		writeError(c, http.StatusUnprocessableEntity, "invalid_report", "Invalid report")
+	case errors.Is(result.Err, reports.ErrClientDisabled):
+		writeError(c, http.StatusForbidden, "client_disabled", "Client is disabled")
+	case errors.Is(result.Err, reports.ErrClientMissing):
+		c.Header("WWW-Authenticate", "Bearer")
+		writeError(c, http.StatusUnauthorized, "invalid_credential", "Invalid client credential")
+	case errors.Is(result.Err, context.DeadlineExceeded), errors.Is(result.Err, context.Canceled):
+		c.Header("Retry-After", "1")
+		writeError(c, http.StatusServiceUnavailable, "report_overloaded", "Report service is busy")
+	default:
+		writeError(c, http.StatusInternalServerError, "internal_error", "Internal server error")
+	}
+}
