@@ -12,4 +12,22 @@ For each client and UTC day, the first revision may be zero. A higher revision m
 
 The reporting window is UTC today and yesterday. Future or invalid dates are rejected; older dates are expired. The database has separate daily revision metadata and 12-value statistics tables; each nonempty matched snapshot has one internal total row, separate from model/tier detail. A persistent `closed_before_day` watermark advances only forward from observed server UTC time, independently of any report transaction. Startup advances it; a report write must advance it separately before its transaction and recheck time and watermark inside the transaction, including before commit. Client disabled state is also rechecked in that transaction.
 
-The internal writer serializes one report at a time with a default 128-entry pending queue and a five-second transaction timeout. Full or closed queues reject new submissions. A canceled request is not acknowledged early; if its response is lost around commit, retry the same revision. Shutdown stops admission, drains accepted work within its deadline, then cancels unfinished work and waits for rollback before closing the database. Rejected reports, failed transactions, retries, clock rollback and restart cannot reopen an already recorded boundary.
+The internal writer serializes one report at a time with a default 128-entry pending queue and a five-second transaction timeout. Full or closed queues reject new submissions. A canceled request is not acknowledged early; if its response is lost around commit, retry the same revision. Shutdown stops admission, drains accepted work within its deadline, then cancels unfinished work and waits for rollback before closing the database.
+
+Report admission is separate from registration. Configuration is read at startup; values must be positive. These conservative starting defaults are deployment parameters, not a validated 100,000-client capacity promise:
+
+| Environment variable | Default | Meaning |
+| --- | --- | --- |
+| `RANKING_REPORT_MAX_BODY_BYTES` | 131072 | Maximum ordinary JSON body bytes |
+| `RANKING_REPORT_MAX_ITEMS` | 128 | Maximum raw items before matching or merging |
+| `RANKING_REPORT_DECODE_CONCURRENCY` | 16 | Concurrent body reads and decodes |
+| `RANKING_REPORT_QUEUE_CAPACITY` | 128 | Pending report writes |
+| `RANKING_REPORT_TRANSACTION_TIMEOUT` | `5s` | Per-report writer execution deadline |
+| `RANKING_REPORT_CLIENT_INTERVAL` | `1m` | One token per interval per authenticated client |
+| `RANKING_REPORT_CLIENT_BURST` | 2 | Per-client token bucket capacity |
+| `RANKING_REPORT_GLOBAL_INTERVAL` | `5ms` | One global token per interval |
+| `RANKING_REPORT_GLOBAL_BURST` | 400 | Global token bucket capacity |
+| `RANKING_REPORT_MAX_CLIENTS` | 100000 | Maximum tracked client rate states |
+| `RANKING_REPORT_STATE_TTL` | `10m` | Idle time before a fully refilled state may expire |
+
+Rate state is bounded in memory and resets on restart. Capacity exhaustion rejects new clients instead of evicting active state. No request decompression is provided. Rejected reports, failed transactions, retries, clock rollback and restart cannot reopen an already recorded boundary.

@@ -14,6 +14,7 @@ import (
 )
 
 var ErrInvalid = errors.New("invalid report")
+var ErrTooManyItems = errors.New("too many report items")
 
 // Report contains the typed input, before validation or catalog matching.
 type Report struct {
@@ -41,6 +42,19 @@ type Item struct {
 // Decode accepts exactly one schema-version-1 report. Semantic metric and
 // model-name validation is separate. Errors never contain submitted values.
 func Decode(data []byte) (Report, error) {
+	return decode(data, 0)
+}
+
+// DecodeLimited bounds items before individual item decoding. The limit applies
+// to raw entries, not post-catalog model/tier combinations.
+func DecodeLimited(data []byte, maxItems int) (Report, error) {
+	if maxItems <= 0 {
+		return Report{}, ErrInvalid
+	}
+	return decode(data, maxItems)
+}
+
+func decode(data []byte, maxItems int) (Report, error) {
 	if !utf8.Valid(data) {
 		return Report{}, ErrInvalid
 	}
@@ -63,6 +77,9 @@ func Decode(data []byte) (Report, error) {
 	var entries []json.RawMessage
 	if err := json.Unmarshal(rawItems, &entries); err != nil || entries == nil {
 		return Report{}, ErrInvalid
+	}
+	if maxItems > 0 && len(entries) > maxItems {
+		return Report{}, ErrTooManyItems
 	}
 	report := Report{Revision: revision, Items: make([]Item, 0, len(entries))}
 	for _, entry := range entries {

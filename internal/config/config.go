@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"cpa-usage-ranking/internal/registration"
+	"cpa-usage-ranking/internal/reports"
 )
 
 // Config contains only settings used by the current service.
@@ -25,6 +26,8 @@ type Config struct {
 	RegistrationCreations    registration.CreationLimits
 	RegistrationEnabled      bool
 	RegistrationMaxBodyBytes int
+	ReportIngestion          reports.IngestionLimits
+	ReportWriter             reports.WriterOptions
 }
 
 // Load reads environment variables. Explicitly empty values are invalid.
@@ -34,6 +37,7 @@ func Load() (Config, error) {
 		RegistrationIPv6By64: true, RegistrationEnabled: true, RegistrationMaxBodyBytes: 4096,
 		RegistrationRequests:  registration.DefaultRequestLimits(),
 		RegistrationCreations: registration.DefaultCreationLimits(),
+		ReportIngestion:       reports.DefaultIngestionLimits(), ReportWriter: reports.DefaultWriterOptions(),
 	}
 	if value, ok := os.LookupEnv("RANKING_HTTP_ADDR"); ok {
 		cfg.HTTPAddr = strings.TrimSpace(value)
@@ -111,13 +115,34 @@ func Load() (Config, error) {
 		{"RANKING_REGISTRATION_DAILY_CREATIONS", &cfg.RegistrationCreations.Daily},
 		{"RANKING_REGISTRATION_CREATION_MAX_SOURCES", &cfg.RegistrationCreations.MaxSources},
 		{"RANKING_REGISTRATION_MAX_BODY_BYTES", &cfg.RegistrationMaxBodyBytes},
+		{"RANKING_REPORT_MAX_BODY_BYTES", &cfg.ReportIngestion.MaxBodyBytes},
+		{"RANKING_REPORT_MAX_ITEMS", &cfg.ReportIngestion.MaxItems},
+		{"RANKING_REPORT_DECODE_CONCURRENCY", &cfg.ReportIngestion.ConcurrentDecodes},
+		{"RANKING_REPORT_CLIENT_BURST", &cfg.ReportIngestion.ClientBurst},
+		{"RANKING_REPORT_GLOBAL_BURST", &cfg.ReportIngestion.GlobalBurst},
+		{"RANKING_REPORT_MAX_CLIENTS", &cfg.ReportIngestion.MaxClients},
+		{"RANKING_REPORT_QUEUE_CAPACITY", &cfg.ReportWriter.QueueCapacity},
 	} {
 		if err := positiveInt(setting.key, setting.target); err != nil {
 			return Config{}, err
 		}
 	}
-	if err := positiveDuration("RANKING_REGISTRATION_REQUEST_WINDOW", &cfg.RegistrationRequests.Window); err != nil {
-		return Config{}, err
+	for _, setting := range []struct {
+		key    string
+		target *time.Duration
+	}{
+		{"RANKING_REGISTRATION_REQUEST_WINDOW", &cfg.RegistrationRequests.Window},
+		{"RANKING_REPORT_CLIENT_INTERVAL", &cfg.ReportIngestion.ClientInterval},
+		{"RANKING_REPORT_GLOBAL_INTERVAL", &cfg.ReportIngestion.GlobalInterval},
+		{"RANKING_REPORT_STATE_TTL", &cfg.ReportIngestion.StateTTL},
+		{"RANKING_REPORT_TRANSACTION_TIMEOUT", &cfg.ReportWriter.TransactionTimeout},
+	} {
+		if err := positiveDuration(setting.key, setting.target); err != nil {
+			return Config{}, err
+		}
+	}
+	if err := cfg.ReportIngestion.Validate(); err != nil {
+		return Config{}, fmt.Errorf("invalid report limits: %w", err)
 	}
 	return cfg, nil
 }
