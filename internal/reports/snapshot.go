@@ -15,6 +15,7 @@ type Prepared struct {
 	revision int64
 	items    []Item
 	digest   [sha256.Size]byte
+	valid    bool
 }
 
 func (p Prepared) Revision() int64           { return p.revision }
@@ -76,7 +77,7 @@ func Prepare(report Report) (Prepared, error) {
 	if err != nil {
 		return Prepared{}, ErrInvalid
 	}
-	return Prepared{revision: report.Revision, items: items, digest: sha256.Sum256(encoded)}, nil
+	return Prepared{revision: report.Revision, items: items, digest: sha256.Sum256(encoded), valid: true}, nil
 }
 
 // Key identifies a stored row. ModelID 0 and tier default are reserved for
