@@ -10,6 +10,7 @@ func MigrateSchema(ctx context.Context, writer *sql.DB) error {
 	return Migrate(ctx, writer, []Migration{
 		{Version: 1, Apply: createClientsV1},
 		{Version: 2, Apply: createModelsV2},
+		{Version: 3, Apply: createReportWindowV3},
 	})
 }
 
@@ -24,6 +25,14 @@ func createClientsV1(ctx context.Context, tx *sql.Tx) error {
 		avatar_id INTEGER NOT NULL CHECK (avatar_id > 0),
 		disabled INTEGER NOT NULL DEFAULT 0 CHECK (disabled IN (0, 1)),
 		created_at_ms INTEGER NOT NULL
+	)`)
+	return err
+}
+
+func createReportWindowV3(ctx context.Context, tx *sql.Tx) error {
+	_, err := tx.ExecContext(ctx, `CREATE TABLE report_window (
+		id INTEGER PRIMARY KEY CHECK (id = 1),
+		closed_before_day TEXT NOT NULL
 	)`)
 	return err
 }

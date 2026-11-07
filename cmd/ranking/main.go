@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"runtime"
 	"syscall"
+	"time"
 
 	"cpa-usage-ranking/internal/avatars"
 	"cpa-usage-ranking/internal/clients"
@@ -17,6 +18,7 @@ import (
 	"cpa-usage-ranking/internal/httpserver"
 	"cpa-usage-ranking/internal/models"
 	"cpa-usage-ranking/internal/registration"
+	"cpa-usage-ranking/internal/reports"
 	"cpa-usage-ranking/internal/storage"
 	"github.com/gin-gonic/gin"
 )
@@ -70,6 +72,9 @@ func run(logger *slog.Logger) (err error) {
 	defer func() { err = errors.Join(err, db.Close()) }()
 	if err := storage.MigrateSchema(ctx, db.Writer); err != nil {
 		return err
+	}
+	if err := reports.AdvanceWindow(ctx, db.Writer, time.Now()); err != nil {
+		return fmt.Errorf("advance report window: %w", err)
 	}
 	modelRegistry, err := models.Register(ctx, db.Writer, modelCatalog)
 	if err != nil {

@@ -7,7 +7,8 @@ participant records. Version 2 creates the model-name dictionary. After the
 migration, startup atomically registers the current catalog's canonical names.
 IDs are positive and stable; ID 0 is reserved for future totals and is not a
 dictionary row. Removed names remain in the dictionary but are not active until
-reintroduced in the catalog. Opening a database does **not** make `/readyz`
+reintroduced in the catalog. Version 3 adds the persistent report-window watermark;
+startup advances it to at least UTC yesterday. Opening a database does **not** make `/readyz`
 return success; the ranking service is not implemented yet.
 
 ## Build and file location
@@ -69,7 +70,8 @@ of `Migration{Version, Apply}`. `Version` must be a positive, increasing integer
 `storage.MigrateSchema(ctx, db.Writer)` to apply the explicit built-in list in
 `internal/storage/schema.go`. Version 1 creates `clients` and version 2 creates
 `models` with only an ID and a unique canonical name; aliases and prices are
-not copied into the database. Existing databases upgrade through the same path.
+not copied into the database. Version 3 adds the single-row report-window state.
+Existing databases upgrade through the same path.
 Migrations do not silently adopt an untracked table with the same name.
 
 For each version, the runner starts an IMMEDIATE transaction, checks the ledger,
