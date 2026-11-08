@@ -35,6 +35,7 @@ func TestSettlementPeriodBoundariesAndSampleSums(t *testing.T) {
 	put(other, "2026-10-31", a)
 	put(client, "2026-11-01", b)
 	put(client, "2026-12-31", a)
+	put(other, "2026-12-31", usage("unknown", models.Default, 5, 1, 1)) // 全过滤快照也要删除版本。
 	put(client, "2027-01-01", b)
 	put(other, "2027-01-01") // 空快照也要删除版本。
 	if err := reports.AdvanceWindow(ctx, db.Writer, instant("2027-01-03T00:00:00Z")); err != nil {
@@ -43,7 +44,7 @@ func TestSettlementPeriodBoundariesAndSampleSums(t *testing.T) {
 	for _, item := range []struct {
 		day string
 		id  int64
-	}{{"2026-10-31", client}, {"2026-10-31", other}, {"2026-11-01", client}, {"2026-12-31", client}, {"2027-01-01", client}, {"2027-01-01", other}} {
+	}{{"2026-10-31", client}, {"2026-10-31", other}, {"2026-11-01", client}, {"2026-12-31", client}, {"2026-12-31", other}, {"2027-01-01", client}, {"2027-01-01", other}} {
 		ok, err := reports.Finalize(ctx, db.Writer, item.day, item.id)
 		if err != nil || !ok {
 			t.Fatalf("finalize %+v: %v %v", item, ok, err)
@@ -79,7 +80,7 @@ func TestSettlementPeriodBoundariesAndSampleSums(t *testing.T) {
 	if err := db.Reader.QueryRow(`SELECT latency_sum_ms,latency_samples FROM period_stats WHERE kind='week' AND start_day='2026-10-26' AND client_id=? AND model_id=? AND tier=0`, client, alpha).Scan(&sum, &samples); err != nil || sum != 20 || samples != 4 {
 		t.Fatalf("latency sum %v samples %d: %v", sum, samples, err)
 	}
-	if scalar(t, db.Reader, `SELECT count(*) FROM period_stats WHERE kind='day' AND (model_id<>0 OR client_id=? AND start_day='2027-01-01')`, other) != 0 {
+	if scalar(t, db.Reader, `SELECT count(*) FROM period_stats WHERE kind='day' AND (model_id<>0 OR client_id=? AND start_day IN ('2026-12-31','2027-01-01'))`, other) != 0 {
 		t.Fatal("model daily row or empty daily summary created")
 	}
 }
@@ -96,6 +97,12 @@ func TestSettlementUsesPersistedClosedWatermark(t *testing.T) {
 	}
 	if ok, err := reports.Finalize(ctx, db.Writer, "2026-11-01", id); err != nil || ok {
 		t.Fatalf("open day settled %v %v", ok, err)
+	}
+	if _, err := store.Apply(ctx, id, "2026-10-31", prepared(t, 1, usage("alpha", 0, 2, 1, 1))); err != nil {
+		t.Fatal(err)
+	}
+	if ok, err := reports.Finalize(ctx, db.Writer, "2026-10-31", id); err != nil || ok {
+		t.Fatalf("day equal to watermark settled %v %v", ok, err)
 	}
 	if err := reports.AdvanceWindow(ctx, db.Writer, instant("2026-11-03T00:00:00Z")); err != nil {
 		t.Fatal(err)
