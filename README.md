@@ -67,7 +67,9 @@ today or yesterday. Revisions, catalog-independent idempotency, persistent
 window closure, limits and atomic replacement are described in the
 [daily report API](docs/report-snapshots.md). Closed snapshots are finalized in
 bounded background transactions; expired daily and weekly summaries are pruned
-without deleting unsettled data. This does not enable a leaderboard.
+without deleting unsettled data. Internal candidate reads combine settled and
+pending usage in a consistent SQLite snapshot; daily model-level history is not
+retained. See [storage](docs/storage.md). This does not enable a leaderboard.
 
 ## Frontend development
 

@@ -121,7 +121,15 @@ func (p Prepared) Aggregate(registry *models.Registry) (map[Key]Metrics, error) 
 	return rows, nil
 }
 
+// AddMetrics 合并非负原始计数及耗时总和；溢出或非有限值不会产生部分结果。
+func AddMetrics(a, b Metrics) (Metrics, bool) {
+	return addMetrics(a, b)
+}
+
 func addMetrics(a, b Metrics) (Metrics, bool) {
+	if a.TTFTSumMS < 0 || b.TTFTSumMS < 0 || a.LatencySumMS < 0 || b.LatencySumMS < 0 {
+		return Metrics{}, false
+	}
 	pairs := []struct {
 		dst   *int64
 		value int64

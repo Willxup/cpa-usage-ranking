@@ -86,6 +86,15 @@ are alternative views and must not be summed together. Existing databases
 upgrade through the same path.
 Migrations do not silently adopt an untracked table with the same name.
 
+Internal candidate reads combine one period's finalized rows with all unsettled
+rows in that UTC period, in a single read-only SQLite transaction. Cumulative
+reads include the full backlog. The transaction ends before derived processing;
+reads time out independently and reject overflow or more than 100,000 clients
+per candidate view. All-model totals and individual model/tier views are
+separate. Daily views support totals only, because finalized model-level daily
+rows are not retained. This internal facility is not a public query or ranking
+API, and the limit is not a verified client-capacity claim.
+
 For each version, the runner starts an IMMEDIATE transaction, checks the ledger,
 runs unapplied work, records the version and commits. The record is never
 committed separately from the schema/data changes. A callback, version-record,
