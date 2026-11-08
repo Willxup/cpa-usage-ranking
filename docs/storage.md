@@ -105,6 +105,17 @@ requires complete TTFT coverage and latency sum greater than TTFT sum. These
 are aggregate estimates, not concurrent throughput or an arithmetic mean of
 per-request speeds; incomplete coverage is not guessed.
 
+The internal cache worker attempts initialization at startup and refreshes at
+`RANKING_CACHE_REFRESH_INTERVAL` (default `5m`, a positive duration). Build
+items run sequentially; every item releases its read transaction before encoding.
+Only a complete successful round replaces the previous immutable snapshot. A
+failure, timeout or capacity limit retains the previous round; a missing first
+round is unavailable, and reads never rebuild it. Pending ticks during a build
+are discarded. Uploads and settlement do not trigger builds. The current build
+has no approved leaderboard items, so no cache is published. The initial
+100,000-candidate, 16 MiB encoded-round and 32-item limits are safety bounds,
+not evidence of tested client capacity.
+
 For each version, the runner starts an IMMEDIATE transaction, checks the ledger,
 runs unapplied work, records the version and commits. The record is never
 committed separately from the schema/data changes. A callback, version-record,

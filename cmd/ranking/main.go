@@ -14,12 +14,14 @@ import (
 
 	"cpa-usage-ranking/internal/auth"
 	"cpa-usage-ranking/internal/avatars"
+	"cpa-usage-ranking/internal/cache"
 	"cpa-usage-ranking/internal/clients"
 	"cpa-usage-ranking/internal/config"
 	"cpa-usage-ranking/internal/httpserver"
 	"cpa-usage-ranking/internal/models"
 	"cpa-usage-ranking/internal/registration"
 	"cpa-usage-ranking/internal/reports"
+	"cpa-usage-ranking/internal/statistics"
 	"cpa-usage-ranking/internal/storage"
 	"github.com/gin-gonic/gin"
 )
@@ -111,6 +113,26 @@ func run(logger *slog.Logger) (err error) {
 	go func() { defer close(maintenanceDone); maintenance.Run(maintenanceCtx) }()
 	// 先停止生产者，之后关闭 writer 并等待事务释放，最后才关闭数据库。
 	defer func() { stopMaintenance(); <-maintenanceDone }()
+	reader, err := statistics.NewReader(db.Reader, statistics.DefaultMaxCandidates, statistics.DefaultReadTimeout)
+	if err != nil {
+		return err
+	}
+	cacheOptions := cache.DefaultOptions()
+	cacheOptions.Interval = cfg.CacheRefreshInterval
+	// P2 尚未确认；没有真实构建项，不能用占位内容冒充已初始化缓存。
+	cacheService, err := cache.New(reader, nil, cacheOptions, logger)
+	if err != nil {
+		return err
+	}
+	cacheCtx, stopCache := context.WithCancel(context.Background())
+	cacheDone := make(chan struct{})
+	go func() {
+		defer close(cacheDone)
+		if err := cacheService.Run(cacheCtx); err != nil && !errors.Is(err, context.Canceled) {
+			logger.Error("cache worker stopped", "error", err.Error())
+		}
+	}()
+	defer func() { stopCache(); <-cacheDone }()
 	if err := httpserver.MountReports(router, auth.NewAuthenticator(repository), reportAdmission, reportWriter, int64(cfg.ReportIngestion.MaxBodyBytes)); err != nil {
 		return err
 	}

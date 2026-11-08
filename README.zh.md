@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-独立的通用用量排名服务。目前已具备受保护注册、日累计快照上报、后台日结、静态头像及 SQLite 存储。启动时校验[模型目录](docs/model-catalog.md)，将精确名称及别名映射至稳定 ID；本次交付未重新核实参考价格。排行聚合缓存和榜单仍未实现，业务就绪保持 503；没有网站账号 UI。
+独立的通用用量排名服务。目前已具备受保护注册、日累计快照上报、后台日结、静态头像及 SQLite 存储。启动时校验[模型目录](docs/model-catalog.md)，将精确名称及别名映射至稳定 ID；本次交付未重新核实参考价格。内部候选统计及缓存生命周期已具备，但尚无获批的榜单构建项或公开榜单，业务就绪保持 503；没有网站账号 UI。
 
 ## 开发
 
@@ -97,6 +97,7 @@ Go 同域提供构建后的页面和 API。部署二进制、`config/models.json
 | --- | --- | --- |
 | `RANKING_HTTP_ADDR` | `127.0.0.1:8080` | 监听地址，数值端口 0 表示选择空闲端口 |
 | `RANKING_SHUTDOWN_TIMEOUT` | `10s` | 正数形式的优雅关停等待时间 |
+| `RANKING_CACHE_REFRESH_INTERVAL` | `5m` | 内部缓存定时刷新间隔，必须为正数 |
 | `RANKING_WEB_DIR` | 未设置 | 可选的前端构建目录；未设置时不提供前端路由 |
 | `RANKING_SQLITE_PATH` | `data/ranking.db` | SQLite 文件路径，相对路径以进程工作目录为基准 |
 | `RANKING_MODELS_PATH` | `config/models.json` | 模型目录文件，相对路径以进程工作目录为基准 |

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"cpa-usage-ranking/internal/cache"
 	"cpa-usage-ranking/internal/registration"
 	"cpa-usage-ranking/internal/reports"
 )
@@ -29,6 +30,7 @@ type Config struct {
 	ReportIngestion          reports.IngestionLimits
 	ReportWriter             reports.WriterOptions
 	DailyRetentionDays       int
+	CacheRefreshInterval     time.Duration
 }
 
 // Load reads environment variables. Explicitly empty values are invalid.
@@ -39,7 +41,8 @@ func Load() (Config, error) {
 		RegistrationRequests:  registration.DefaultRequestLimits(),
 		RegistrationCreations: registration.DefaultCreationLimits(),
 		ReportIngestion:       reports.DefaultIngestionLimits(), ReportWriter: reports.DefaultWriterOptions(),
-		DailyRetentionDays: reports.DefaultMaintenanceOptions().DailyRetentionDays,
+		DailyRetentionDays:   reports.DefaultMaintenanceOptions().DailyRetentionDays,
+		CacheRefreshInterval: cache.DefaultRefreshInterval,
 	}
 	if value, ok := os.LookupEnv("RANKING_HTTP_ADDR"); ok {
 		cfg.HTTPAddr = strings.TrimSpace(value)
@@ -139,6 +142,7 @@ func Load() (Config, error) {
 		{"RANKING_REPORT_GLOBAL_INTERVAL", &cfg.ReportIngestion.GlobalInterval},
 		{"RANKING_REPORT_STATE_TTL", &cfg.ReportIngestion.StateTTL},
 		{"RANKING_REPORT_TRANSACTION_TIMEOUT", &cfg.ReportWriter.TransactionTimeout},
+		{"RANKING_CACHE_REFRESH_INTERVAL", &cfg.CacheRefreshInterval},
 	} {
 		if err := positiveDuration(setting.key, setting.target); err != nil {
 			return Config{}, err

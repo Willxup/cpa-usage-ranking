@@ -4,8 +4,8 @@
 
 An independent usage-ranking service under construction. Protected client
 registration, daily snapshot ingestion, background settlement and SQLite persistence
-are available. Leaderboards and ranking-cache aggregation are not implemented;
-business readiness remains 503. No website account UI is provided. The
+are available. Internal candidate statistics and a cache lifecycle are available,
+but no public leaderboard or approved leaderboard build exists; business readiness remains 503. No website account UI is provided. The
 [model catalog](docs/model-catalog.md) is validated at startup and maps exact
 names and aliases to stable IDs; there is no model management API. Reference
 prices were not independently reverified for this delivery.
@@ -192,6 +192,7 @@ stop the process, replace the build, then restart.
 | --- | --- | --- |
 | `RANKING_HTTP_ADDR` | `127.0.0.1:8080` | Listen address; numeric port 0 selects a free port |
 | `RANKING_SHUTDOWN_TIMEOUT` | `10s` | Positive grace period for shutdown |
+| `RANKING_CACHE_REFRESH_INTERVAL` | `5m` | Positive internal cache refresh interval |
 | `RANKING_WEB_DIR` | unset | Optional built frontend directory; unset means no frontend routes |
 | `RANKING_SQLITE_PATH` | `data/ranking.db` | SQLite file path, relative to the working directory unless absolute |
 | `RANKING_MODELS_PATH` | `config/models.json` | Model catalog file, relative to the working directory unless absolute |
