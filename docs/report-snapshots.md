@@ -24,6 +24,16 @@ The reporting window is UTC today and yesterday. Future or invalid dates are rej
 
 The internal writer serializes one report at a time with a default 128-entry pending queue and a five-second transaction timeout. Full or closed queues reject new submissions. SQLite write-lock waits for a report are retried within that deadline and respond to request cancellation or shutdown. Startup/background window checkpoints use the same cancellable lock handling with a five-second maximum attempt; shutdown can cancel them sooner. The original connection busy timeout is restored before returning it to other database writers. Cancellation while enqueuing or waiting for a write returns 503 if a response can still be delivered, never an empty 200. A lost response around commit is ambiguous; retry the same revision. Shutdown stops admission, drains accepted work within its deadline, then cancels unfinished work and waits for rollback before closing the database.
 
+A closed snapshot can be finalized internally using the persistent watermark,
+not the current wall clock. Each client/day is one transaction: its separate
+model/tier details and total are added to the corresponding UTC week, month and
+cumulative rows, a total-only daily summary is stored, then the daily source and
+revision are deleted. Empty snapshots only lose their revision. Checked integer
+and floating-point sums or a database failure roll back the entire item, leaving
+the source for retry; rerunning a committed item cannot add it twice. Durations
+remain sums with their own sample counts. This storage step does not expose a
+ranking or historical query.
+
 Report admission is separate from registration. Configuration is read at startup; values must be positive. These conservative starting defaults are deployment parameters, not a validated 100,000-client capacity promise:
 
 | Environment variable | Default | Meaning |

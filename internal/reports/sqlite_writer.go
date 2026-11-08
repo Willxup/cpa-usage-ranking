@@ -11,9 +11,9 @@ import (
 	"github.com/mattn/go-sqlite3"
 )
 
-// withReportWriter shares the cancellable SQLite lock wait between snapshots
-// and window checkpoints. Each attempt must finish/roll back its transaction
-// before returning; this is private to the two report-writing paths.
+// withReportWriter shares cancellable SQLite lock waiting between report,
+// window and settlement writes. Each attempt must finish or roll back its
+// transaction before returning.
 func withReportWriter(ctx context.Context, writer *sql.DB, apply func(*sql.Conn) error) (resultErr error) {
 	conn, err := writer.Conn(ctx)
 	if err != nil {
