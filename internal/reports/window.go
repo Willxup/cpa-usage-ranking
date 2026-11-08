@@ -40,7 +40,13 @@ func utcWindow(now time.Time) (today, yesterday string, err error) {
 // transaction. It must run at startup and before admission to a report write;
 // unsuccessful reports must not roll the boundary back.
 func AdvanceWindow(ctx context.Context, writer *sql.DB, now time.Time) error {
-	return advanceWindow(ctx, now, writer.ExecContext)
+	// Retain the connection's usual five-second lock-wait budget while allowing
+	// startup/shutdown cancellation to interrupt a background checkpoint sooner.
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	return withReportWriter(ctx, writer, func(conn *sql.Conn) error {
+		return advanceWindow(ctx, now, conn.ExecContext)
+	})
 }
 
 func advanceWindow(ctx context.Context, now time.Time, exec func(context.Context, string, ...any) (sql.Result, error)) error {
