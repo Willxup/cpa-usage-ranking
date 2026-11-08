@@ -12,6 +12,7 @@ func MigrateSchema(ctx context.Context, writer *sql.DB) error {
 		{Version: 2, Apply: createModelsV2},
 		{Version: 3, Apply: createReportWindowV3},
 		{Version: 4, Apply: createDailySnapshotsV4},
+		{Version: 5, Apply: createPeriodStatsV5},
 	})
 }
 
@@ -27,6 +28,34 @@ func createClientsV1(ctx context.Context, tx *sql.Tx) error {
 		disabled INTEGER NOT NULL DEFAULT 0 CHECK (disabled IN (0, 1)),
 		created_at_ms INTEGER NOT NULL
 	)`)
+	return err
+}
+
+func createPeriodStatsV5(ctx context.Context, tx *sql.Tx) error {
+	// 周期键的顺序供按周期和模型读取；日摘要只允许全模型合计。
+	_, err := tx.ExecContext(ctx, `CREATE TABLE period_stats (
+		kind TEXT NOT NULL CHECK (kind IN ('day', 'week', 'month', 'all')),
+		start_day TEXT NOT NULL,
+		model_id INTEGER NOT NULL CHECK (model_id >= 0),
+		tier INTEGER NOT NULL CHECK (tier IN (0, 1, 2)),
+		client_id INTEGER NOT NULL REFERENCES clients(id),
+		total_tokens INTEGER NOT NULL CHECK (typeof(total_tokens) = 'integer' AND total_tokens >= 0),
+		input_tokens INTEGER NOT NULL CHECK (typeof(input_tokens) = 'integer' AND input_tokens >= 0),
+		output_tokens INTEGER NOT NULL CHECK (typeof(output_tokens) = 'integer' AND output_tokens >= 0),
+		cache_read_tokens INTEGER NOT NULL CHECK (typeof(cache_read_tokens) = 'integer' AND cache_read_tokens >= 0),
+		cache_write_tokens INTEGER NOT NULL CHECK (typeof(cache_write_tokens) = 'integer' AND cache_write_tokens >= 0),
+		reasoning_tokens INTEGER NOT NULL CHECK (typeof(reasoning_tokens) = 'integer' AND reasoning_tokens >= 0),
+		request_count INTEGER NOT NULL CHECK (typeof(request_count) = 'integer' AND request_count > 0),
+		success_count INTEGER NOT NULL CHECK (typeof(success_count) = 'integer' AND success_count >= 0),
+		ttft_sum_ms REAL NOT NULL CHECK (ttft_sum_ms >= 0),
+		ttft_samples INTEGER NOT NULL CHECK (typeof(ttft_samples) = 'integer' AND ttft_samples >= 0),
+		latency_sum_ms REAL NOT NULL CHECK (latency_sum_ms >= 0),
+		latency_samples INTEGER NOT NULL CHECK (typeof(latency_samples) = 'integer' AND latency_samples >= 0),
+		PRIMARY KEY (kind, start_day, model_id, tier, client_id),
+		CHECK (model_id > 0 OR tier = 0),
+		CHECK (kind <> 'day' OR model_id = 0),
+		CHECK (kind <> 'all' OR start_day = '0001-01-01')
+	) WITHOUT ROWID`)
 	return err
 }
 

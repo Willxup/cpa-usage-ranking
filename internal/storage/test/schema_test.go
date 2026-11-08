@@ -25,7 +25,7 @@ func TestCurrentSchemaUpgradesEmptyLedgerAndReplaysSafely(t *testing.T) {
 	if queryInt(t, db.Reader, "SELECT COUNT(*) FROM models") != 0 {
 		t.Fatal("schema migration unexpectedly registered models")
 	}
-	if queryInt(t, db.Reader, "SELECT COUNT(*) FROM schema_migrations") != 4 || queryInt(t, db.Reader, "SELECT MAX(version) FROM schema_migrations") != 4 {
+	if queryInt(t, db.Reader, "SELECT COUNT(*) FROM schema_migrations") != 5 || queryInt(t, db.Reader, "SELECT MAX(version) FROM schema_migrations") != 5 {
 		t.Fatal("current schema versions were not recorded exactly once")
 	}
 }

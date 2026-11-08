@@ -9,8 +9,8 @@ IDs are positive and stable; ID 0 is reserved for internal totals and is not a
 dictionary row. Removed names remain in the dictionary but are not active until
 reintroduced in the catalog. Version 3 adds the persistent report-window watermark;
 startup advances it to at least UTC yesterday. Version 4 adds daily report
-revision metadata and daily statistics tables; it does not add periodic summaries.
-Opening a database does **not** make `/readyz`
+revision metadata and daily statistics tables. Version 5 adds storage for
+finalized daily, weekly, monthly and cumulative statistics. Opening a database does **not** make `/readyz`
 return success; the ranking service is not implemented yet.
 
 ## Build and file location
@@ -76,8 +76,14 @@ not copied into the database. Version 3 adds the single-row report-window state.
 Version 4 creates `daily_reports` and `daily_stats` using composite primary keys
 and `WITHOUT ROWID`; a partial index supports total-row reads. The total uses
 model ID 0 and tier 0 without inserting a model dictionary row; real details use
-positive model IDs. Totals and details are alternative views and must not be
-summed together. Existing databases upgrade through the same path.
+positive model IDs. Version 5 adds `period_stats` with a composite primary key
+`(kind, start_day, model_id, tier, client_id)` and `WITHOUT ROWID`. Its daily
+rows are total-only; other periods keep totals and model/tier details separately.
+Weeks start Monday UTC and months start on day 1 UTC, both with inclusive starts
+and exclusive ends. Cumulative rows use the fixed internal start `0001-01-01`.
+Each row stores the same 12 sums and counts, not averages. Totals and details
+are alternative views and must not be summed together. Existing databases
+upgrade through the same path.
 Migrations do not silently adopt an untracked table with the same name.
 
 For each version, the runner starts an IMMEDIATE transaction, checks the ledger,
