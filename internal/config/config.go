@@ -28,6 +28,7 @@ type Config struct {
 	RegistrationMaxBodyBytes int
 	ReportIngestion          reports.IngestionLimits
 	ReportWriter             reports.WriterOptions
+	DailyRetentionDays       int
 }
 
 // Load reads environment variables. Explicitly empty values are invalid.
@@ -38,6 +39,7 @@ func Load() (Config, error) {
 		RegistrationRequests:  registration.DefaultRequestLimits(),
 		RegistrationCreations: registration.DefaultCreationLimits(),
 		ReportIngestion:       reports.DefaultIngestionLimits(), ReportWriter: reports.DefaultWriterOptions(),
+		DailyRetentionDays: reports.DefaultMaintenanceOptions().DailyRetentionDays,
 	}
 	if value, ok := os.LookupEnv("RANKING_HTTP_ADDR"); ok {
 		cfg.HTTPAddr = strings.TrimSpace(value)
@@ -122,6 +124,7 @@ func Load() (Config, error) {
 		{"RANKING_REPORT_GLOBAL_BURST", &cfg.ReportIngestion.GlobalBurst},
 		{"RANKING_REPORT_MAX_CLIENTS", &cfg.ReportIngestion.MaxClients},
 		{"RANKING_REPORT_QUEUE_CAPACITY", &cfg.ReportWriter.QueueCapacity},
+		{"RANKING_SETTLED_DAY_RETENTION_DAYS", &cfg.DailyRetentionDays},
 	} {
 		if err := positiveInt(setting.key, setting.target); err != nil {
 			return Config{}, err
@@ -140,6 +143,9 @@ func Load() (Config, error) {
 		if err := positiveDuration(setting.key, setting.target); err != nil {
 			return Config{}, err
 		}
+	}
+	if cfg.DailyRetentionDays > reports.MaxDailyRetentionDays {
+		return Config{}, fmt.Errorf("RANKING_SETTLED_DAY_RETENTION_DAYS must not exceed %d", reports.MaxDailyRetentionDays)
 	}
 	if err := cfg.ReportIngestion.Validate(); err != nil {
 		return Config{}, fmt.Errorf("invalid report limits: %w", err)

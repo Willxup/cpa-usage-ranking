@@ -17,7 +17,7 @@ func clearEnvironment(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for _, key := range []string{"RANKING_REPORT_MAX_BODY_BYTES", "RANKING_REPORT_MAX_ITEMS", "RANKING_REPORT_DECODE_CONCURRENCY", "RANKING_REPORT_CLIENT_BURST", "RANKING_REPORT_GLOBAL_BURST", "RANKING_REPORT_MAX_CLIENTS", "RANKING_REPORT_QUEUE_CAPACITY", "RANKING_REPORT_CLIENT_INTERVAL", "RANKING_REPORT_GLOBAL_INTERVAL", "RANKING_REPORT_STATE_TTL", "RANKING_REPORT_TRANSACTION_TIMEOUT"} {
+	for _, key := range []string{"RANKING_REPORT_MAX_BODY_BYTES", "RANKING_REPORT_MAX_ITEMS", "RANKING_REPORT_DECODE_CONCURRENCY", "RANKING_REPORT_CLIENT_BURST", "RANKING_REPORT_GLOBAL_BURST", "RANKING_REPORT_MAX_CLIENTS", "RANKING_REPORT_QUEUE_CAPACITY", "RANKING_REPORT_CLIENT_INTERVAL", "RANKING_REPORT_GLOBAL_INTERVAL", "RANKING_REPORT_STATE_TTL", "RANKING_REPORT_TRANSACTION_TIMEOUT", "RANKING_SETTLED_DAY_RETENTION_DAYS"} {
 		t.Setenv(key, "")
 		if err := os.Unsetenv(key); err != nil {
 			t.Fatal(err)
@@ -34,7 +34,7 @@ func TestDefaults(t *testing.T) {
 	if cfg.HTTPAddr != "127.0.0.1:8080" || cfg.ShutdownTimeout != 10*time.Second || cfg.WebDir != "" || cfg.SQLitePath != "data/ranking.db" || cfg.ModelsPath != "config/models.json" || len(cfg.TrustedProxies) != 0 || !cfg.RegistrationIPv6By64 {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
-	if cfg.ReportIngestion.MaxBodyBytes != 128<<10 || cfg.ReportIngestion.MaxItems != 128 || cfg.ReportIngestion.ConcurrentDecodes != 16 || cfg.ReportIngestion.ClientInterval != time.Minute || cfg.ReportIngestion.ClientBurst != 2 || cfg.ReportWriter.QueueCapacity != 128 {
+	if cfg.ReportIngestion.MaxBodyBytes != 128<<10 || cfg.ReportIngestion.MaxItems != 128 || cfg.ReportIngestion.ConcurrentDecodes != 16 || cfg.ReportIngestion.ClientInterval != time.Minute || cfg.ReportIngestion.ClientBurst != 2 || cfg.ReportWriter.QueueCapacity != 128 || cfg.DailyRetentionDays != 31 {
 		t.Fatalf("unexpected report defaults: %+v %+v", cfg.ReportIngestion, cfg.ReportWriter)
 	}
 }
@@ -87,6 +87,7 @@ func TestInvalidValues(t *testing.T) {
 		"RANKING_REPORT_GLOBAL_INTERVAL":            {"", "0s", "-1s"},
 		"RANKING_REPORT_STATE_TTL":                  {"", "0s", "-1s"},
 		"RANKING_REPORT_TRANSACTION_TIMEOUT":        {"", "0s", "-1s"},
+		"RANKING_SETTLED_DAY_RETENTION_DAYS":        {"", "0", "-1", "36501", "1.5"},
 	} {
 		for _, value := range values {
 			t.Run(key+"/"+value, func(t *testing.T) {

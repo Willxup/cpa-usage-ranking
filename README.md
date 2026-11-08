@@ -3,8 +3,8 @@
 [简体中文](README.zh.md)
 
 An independent usage-ranking service under construction. Protected client
-registration, daily snapshot ingestion, static avatars and SQLite persistence
-are available. Leaderboards and periodic aggregation are not implemented;
+registration, daily snapshot ingestion, background settlement and SQLite persistence
+are available. Leaderboards and ranking-cache aggregation are not implemented;
 business readiness remains 503. No website account UI is provided. The
 [model catalog](docs/model-catalog.md) is validated at startup and maps exact
 names and aliases to stable IDs; there is no model management API. Reference
@@ -35,7 +35,8 @@ migration and its version record commit atomically; already-applied versions
 are skipped. Schema version 1 creates `clients` for identity/profile persistence;
 version 2 creates the stable canonical-model ID dictionary and startup registers
 current catalog names transactionally. Versions 3–4 add a persistent reporting
-window and daily snapshot tables. Startup does not seed participants.
+window and daily snapshot tables; version 5 adds finalized period statistics.
+Startup does not seed participants.
 Database failures stop startup; they do not
 trigger automatic repair or fallback. Shutdown drains HTTP before closing the
 bounded write/read connection pools. See [SQLite storage](docs/storage.md) and
@@ -64,7 +65,9 @@ selects identity only by credential; no demonstration `/me` API is added.
 `PUT /v1/reports/{utc_day}` accepts an authenticated full snapshot for UTC
 today or yesterday. Revisions, catalog-independent idempotency, persistent
 window closure, limits and atomic replacement are described in the
-[daily report API](docs/report-snapshots.md). This does not enable a leaderboard.
+[daily report API](docs/report-snapshots.md). Closed snapshots are finalized in
+bounded background transactions; expired daily and weekly summaries are pruned
+without deleting unsettled data. This does not enable a leaderboard.
 
 ## Frontend development
 

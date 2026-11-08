@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log/slog"
 	"time"
+
+	"cpa-usage-ranking/internal/periods"
 )
 
 // MaintenanceOptions 为日结扫描、失败冷却及观测设置有限预算。
@@ -17,10 +19,11 @@ type MaintenanceOptions struct {
 	Cooldown            time.Duration
 	ObservationInterval time.Duration
 	ReadTimeout         time.Duration
+	DailyRetentionDays  int
 }
 
 func DefaultMaintenanceOptions() MaintenanceOptions {
-	return MaintenanceOptions{BatchSize: 16, Rounds: 4, Interval: time.Second, Cooldown: time.Minute, ObservationInterval: time.Minute, ReadTimeout: 250 * time.Millisecond}
+	return MaintenanceOptions{BatchSize: 16, Rounds: 4, Interval: time.Second, Cooldown: time.Minute, ObservationInterval: time.Minute, ReadTimeout: 250 * time.Millisecond, DailyRetentionDays: 31}
 }
 
 type settlementKey struct {
@@ -39,10 +42,11 @@ type Maintenance struct {
 	lastWarning     time.Time
 	suppressed      int64
 	lastObservation time.Time
+	nextRetention   time.Time
 }
 
 func NewMaintenance(reader, db *sql.DB, writer *Writer, logger *slog.Logger, options MaintenanceOptions) (*Maintenance, error) {
-	if reader == nil || db == nil || writer == nil || logger == nil || options.BatchSize <= 0 || options.Rounds <= 0 || options.Interval <= 0 || options.Cooldown <= 0 || options.ObservationInterval <= 0 || options.ReadTimeout <= 0 {
+	if reader == nil || db == nil || writer == nil || logger == nil || options.BatchSize <= 0 || options.Rounds <= 0 || options.Interval <= 0 || options.Cooldown <= 0 || options.ObservationInterval <= 0 || options.ReadTimeout <= 0 || options.DailyRetentionDays < 1 || options.DailyRetentionDays > MaxDailyRetentionDays {
 		return nil, errors.New("invalid maintenance options")
 	}
 	return &Maintenance{reader: reader, db: db, writer: writer, logger: logger, options: options}, nil
@@ -55,6 +59,7 @@ func (m *Maintenance) Run(ctx context.Context) {
 	for {
 		m.observe(ctx)
 		m.advance(ctx)
+		m.prune(ctx)
 		select {
 		case <-ctx.Done():
 			return
@@ -107,6 +112,47 @@ func (m *Maintenance) advance(ctx context.Context) {
 			}
 			m.cursor = key
 		}
+	}
+}
+
+func (m *Maintenance) prune(ctx context.Context) {
+	if ctx.Err() != nil || time.Now().Before(m.nextRetention) {
+		return
+	}
+	more, failed := false, false
+	for _, kind := range []string{periods.Day, periods.Week} {
+		var deleted int64
+		result, err := m.writer.EnqueueMaintenance(ctx, func(txctx context.Context) error {
+			var err error
+			deleted, err = Prune(txctx, m.db, time.Now(), m.options.DailyRetentionDays, kind, m.options.BatchSize)
+			return err
+		})
+		if err != nil {
+			if ctx.Err() == nil && !errors.Is(err, ErrQueueFull) {
+				m.warn("retention enqueue failed", err, settlementKey{})
+			}
+			return
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case err = <-result:
+		}
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			failed = true
+			m.warn("retention batch failed", err, settlementKey{})
+		} else if deleted == int64(m.options.BatchSize) {
+			more = true
+		}
+	}
+	// 无过期行时避免每秒写事务；存在积压则每轮继续一小批。
+	if failed {
+		m.nextRetention = time.Now().Add(m.options.Cooldown)
+	} else if !more {
+		m.nextRetention = time.Now().Add(m.options.ObservationInterval)
 	}
 }
 

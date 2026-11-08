@@ -100,7 +100,9 @@ func run(logger *slog.Logger) (err error) {
 	windowDone := make(chan struct{})
 	go func() { defer close(windowDone); watchReportWindow(windowCtx, db.Writer, logger) }()
 	defer func() { stopWindow(); <-windowDone }()
-	maintenance, err := reports.NewMaintenance(db.Reader, db.Writer, reportWriter, logger, reports.DefaultMaintenanceOptions())
+	maintenanceOptions := reports.DefaultMaintenanceOptions()
+	maintenanceOptions.DailyRetentionDays = cfg.DailyRetentionDays
+	maintenance, err := reports.NewMaintenance(db.Reader, db.Writer, reportWriter, logger, maintenanceOptions)
 	if err != nil {
 		return err
 	}

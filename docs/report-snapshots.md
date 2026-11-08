@@ -46,6 +46,17 @@ cancels accepted work, and the database closes only after transactions release
 it. SQLite external-lock waits during maintenance obey the transaction deadline
 and shutdown cancellation, restoring the connection's ordinary busy timeout.
 
+Retention touches finalized `period_stats` only, never `daily_reports` or
+`daily_stats`. By default daily total summaries retain UTC today and the
+preceding 30 UTC dates (31 dates including today); the cutoff itself is kept.
+Weekly details and totals retain the current UTC Monday-based week and the
+previous week, also inclusive. Monthly and cumulative rows are retained
+indefinitely. A deployment can adjust the daily count using
+`RANKING_SETTLED_DAY_RETENTION_DAYS` (default `31`, range `1`–`36500`).
+Cleanup runs in bounded batches through the same writer and deadline as
+settlement; a large backlog takes multiple rounds. If an old snapshot is still
+awaiting settlement, its source remains until settlement succeeds.
+
 Report admission is separate from registration. Configuration is read at startup; values must be positive. These conservative starting defaults are deployment parameters, not a validated 100,000-client capacity promise:
 
 | Environment variable | Default | Meaning |
