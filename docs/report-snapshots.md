@@ -22,7 +22,7 @@ For each client and UTC day, the first revision may be zero. A higher revision m
 
 The reporting window is UTC today and yesterday. Future or invalid dates are rejected; older dates are expired. The database has separate daily revision metadata and 12-value statistics tables; each nonempty matched snapshot has one internal total row, separate from model/tier detail. A persistent `closed_before_day` watermark advances only forward from observed server UTC time, independently of any report transaction. Startup advances it, and the service observes the UTC boundary even without reports (with a one-minute maximum recheck interval for clock corrections). A report write must advance it separately before its transaction and recheck time and watermark inside the transaction, including before commit. Client disabled state is also rechecked in that transaction.
 
-The internal writer serializes one report at a time with a default 128-entry pending queue and a five-second transaction timeout. Full or closed queues reject new submissions. SQLite write-lock waits for a report are retried within that deadline and respond to request cancellation or shutdown. Startup/background window checkpoints use the same cancellable lock handling with a five-second maximum attempt; shutdown can cancel them sooner. The original connection busy timeout is restored before returning it to other database writers. Cancellation while enqueuing or waiting for a write returns 503 if a response can still be delivered, never an empty 200. A lost response around commit is ambiguous; retry the same revision. Shutdown stops admission, drains accepted work within its deadline, then cancels unfinished work and waits for rollback before closing the database.
+The internal writer serializes report and maintenance transactions, with a default 128-entry pending report queue, a separate single-entry maintenance queue, and a five-second transaction timeout for either kind. When both have work, they take turns. Full or closed queues reject new submissions. SQLite write-lock waits for a report are retried within that deadline and respond to request cancellation or shutdown. Startup/background window checkpoints use the same cancellable lock handling with a five-second maximum attempt; shutdown can cancel them sooner. The original connection busy timeout is restored before returning it to other database writers. Cancellation while enqueuing or waiting for a write returns 503 if a response can still be delivered, never an empty 200. A lost response around commit is ambiguous; retry the same revision. Shutdown stops admission, drains accepted work within its deadline, then cancels unfinished work and waits for rollback before closing the database.
 
 A closed snapshot can be finalized internally using the persistent watermark,
 not the current wall clock. Each client/day is one transaction: its separate
@@ -34,6 +34,18 @@ the source for retry; rerunning a committed item cannot add it twice. Durations
 remain sums with their own sample counts. This storage step does not expose a
 ranking or historical query.
 
+After startup, a background producer scans closed snapshots in `(day, client_id)`
+order using bounded pages and limited rounds, submitting each item separately to
+the writer. Failures roll back that item and do not block later keys. A bounded
+sweep-wide cooldown delays retry after errors without retaining an unbounded
+per-client failure map; newly inserted keys behind the cursor may wait for the
+next sweep. Warnings are rate limited. Internal logs periodically report the
+closed backlog count, oldest UTC date and its age, with a bounded read timeout;
+no management API is added. The producer stops before the writer drains or
+cancels accepted work, and the database closes only after transactions release
+it. SQLite external-lock waits during maintenance obey the transaction deadline
+and shutdown cancellation, restoring the connection's ordinary busy timeout.
+
 Report admission is separate from registration. Configuration is read at startup; values must be positive. These conservative starting defaults are deployment parameters, not a validated 100,000-client capacity promise:
 
 | Environment variable | Default | Meaning |
@@ -42,7 +54,7 @@ Report admission is separate from registration. Configuration is read at startup
 | `RANKING_REPORT_MAX_ITEMS` | 128 | Maximum raw items before matching or merging |
 | `RANKING_REPORT_DECODE_CONCURRENCY` | 16 | Concurrent body reads and decodes |
 | `RANKING_REPORT_QUEUE_CAPACITY` | 128 | Pending report writes |
-| `RANKING_REPORT_TRANSACTION_TIMEOUT` | `5s` | Per-report writer execution deadline |
+| `RANKING_REPORT_TRANSACTION_TIMEOUT` | `5s` | Per-report or per-maintenance writer execution deadline |
 | `RANKING_REPORT_CLIENT_INTERVAL` | `1m` | One token per interval per authenticated client |
 | `RANKING_REPORT_CLIENT_BURST` | 2 | Per-client token bucket capacity |
 | `RANKING_REPORT_GLOBAL_INTERVAL` | `5ms` | One global token per interval |

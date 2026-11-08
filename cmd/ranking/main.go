@@ -100,6 +100,15 @@ func run(logger *slog.Logger) (err error) {
 	windowDone := make(chan struct{})
 	go func() { defer close(windowDone); watchReportWindow(windowCtx, db.Writer, logger) }()
 	defer func() { stopWindow(); <-windowDone }()
+	maintenance, err := reports.NewMaintenance(db.Reader, db.Writer, reportWriter, logger, reports.DefaultMaintenanceOptions())
+	if err != nil {
+		return err
+	}
+	maintenanceCtx, stopMaintenance := context.WithCancel(context.Background())
+	maintenanceDone := make(chan struct{})
+	go func() { defer close(maintenanceDone); maintenance.Run(maintenanceCtx) }()
+	// 先停止生产者，之后关闭 writer 并等待事务释放，最后才关闭数据库。
+	defer func() { stopMaintenance(); <-maintenanceDone }()
 	if err := httpserver.MountReports(router, auth.NewAuthenticator(repository), reportAdmission, reportWriter, int64(cfg.ReportIngestion.MaxBodyBytes)); err != nil {
 		return err
 	}

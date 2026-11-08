@@ -33,25 +33,28 @@ type WriteResult struct {
 }
 
 type writeRequest struct {
-	ctx      context.Context
-	clientID int64
-	day      string
-	prepared Prepared
-	result   chan WriteResult
+	ctx               context.Context
+	clientID          int64
+	day               string
+	prepared          Prepared
+	result            chan WriteResult
+	maintenance       func(context.Context) error
+	maintenanceResult chan error
 }
 
 // Writer has one worker and a bounded pending queue. The queue itself is never
 // closed, so concurrent admission and shutdown cannot send on a closed channel.
 type Writer struct {
-	mu        sync.Mutex
-	closed    bool
-	queue     chan writeRequest
-	stopping  chan struct{}
-	done      chan struct{}
-	abort     context.Context
-	cancel    context.CancelFunc
-	processor SnapshotProcessor
-	timeout   time.Duration
+	mu          sync.Mutex
+	closed      bool
+	queue       chan writeRequest
+	maintenance chan writeRequest
+	stopping    chan struct{}
+	done        chan struct{}
+	abort       context.Context
+	cancel      context.CancelFunc
+	processor   SnapshotProcessor
+	timeout     time.Duration
 }
 
 func NewWriter(processor SnapshotProcessor, options WriterOptions) (*Writer, error) {
@@ -59,7 +62,7 @@ func NewWriter(processor SnapshotProcessor, options WriterOptions) (*Writer, err
 		return nil, fmt.Errorf("invalid report writer options")
 	}
 	abort, cancel := context.WithCancel(context.Background())
-	w := &Writer{queue: make(chan writeRequest, options.QueueCapacity), stopping: make(chan struct{}), done: make(chan struct{}), abort: abort, cancel: cancel, processor: processor, timeout: options.TransactionTimeout}
+	w := &Writer{queue: make(chan writeRequest, options.QueueCapacity), maintenance: make(chan writeRequest, 1), stopping: make(chan struct{}), done: make(chan struct{}), abort: abort, cancel: cancel, processor: processor, timeout: options.TransactionTimeout}
 	go w.run()
 	return w, nil
 }
@@ -84,23 +87,69 @@ func (w *Writer) Enqueue(ctx context.Context, clientID int64, day string, prepar
 	}
 }
 
+// EnqueueMaintenance 为单个维护事务预留一个有界槽，与报告交替执行。
+func (w *Writer) EnqueueMaintenance(ctx context.Context, operation func(context.Context) error) (<-chan error, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.closed {
+		return nil, ErrWriterClosed
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if operation == nil {
+		return nil, errors.New("nil maintenance operation")
+	}
+	req := writeRequest{ctx: ctx, maintenance: operation, maintenanceResult: make(chan error, 1)}
+	select {
+	case w.maintenance <- req:
+		return req.maintenanceResult, nil
+	default:
+		return nil, ErrQueueFull
+	}
+}
+
 func (w *Writer) run() {
 	defer close(w.done)
+	preferMaintenance, draining := false, false
 	for {
+		// 两边均有积压时严格交替；一方空闲不妨碍另一方推进。
+		var preferred <-chan writeRequest
+		if preferMaintenance {
+			preferred = w.maintenance
+		} else {
+			preferred = w.queue
+		}
+		select {
+		case req := <-preferred:
+			w.execute(req)
+			preferMaintenance = req.maintenance == nil
+			continue
+		default:
+		}
+		if draining {
+			select {
+			case req := <-w.queue:
+				w.execute(req)
+				preferMaintenance = true
+			case req := <-w.maintenance:
+				w.execute(req)
+				preferMaintenance = false
+			default:
+				return
+			}
+			continue
+		}
 		select {
 		case req := <-w.queue:
 			w.execute(req)
+			preferMaintenance = true
+		case req := <-w.maintenance:
+			w.execute(req)
+			preferMaintenance = false
 		case <-w.stopping:
-			// Admission is already closed under the same lock as enqueue, so
-			// the queue has a finite, stable set of accepted requests.
-			for {
-				select {
-				case req := <-w.queue:
-					w.execute(req)
-				default:
-					return
-				}
-			}
+			// 入队与关闭受同一锁保护，已接纳的队列必定有限。
+			draining = true
 		}
 	}
 }
@@ -111,6 +160,14 @@ func (w *Writer) execute(req writeRequest) {
 	defer func() { stop(); cancel() }()
 	if w.abort.Err() != nil {
 		cancel()
+	}
+	if req.maintenance != nil {
+		if err := ctx.Err(); err != nil {
+			req.maintenanceResult <- err
+		} else {
+			req.maintenanceResult <- req.maintenance(ctx)
+		}
+		return
 	}
 	if err := ctx.Err(); err != nil {
 		req.result <- WriteResult{Err: err}
