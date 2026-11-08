@@ -40,11 +40,15 @@ func utcWindow(now time.Time) (today, yesterday string, err error) {
 // transaction. It must run at startup and before admission to a report write;
 // unsuccessful reports must not roll the boundary back.
 func AdvanceWindow(ctx context.Context, writer *sql.DB, now time.Time) error {
+	return advanceWindow(ctx, now, writer.ExecContext)
+}
+
+func advanceWindow(ctx context.Context, now time.Time, exec func(context.Context, string, ...any) (sql.Result, error)) error {
 	_, yesterday, err := utcWindow(now)
 	if err != nil {
 		return err
 	}
-	_, err = writer.ExecContext(ctx, `INSERT INTO report_window (id, closed_before_day) VALUES (1, ?)
+	_, err = exec(ctx, `INSERT INTO report_window (id, closed_before_day) VALUES (1, ?)
 		ON CONFLICT(id) DO UPDATE SET closed_before_day=excluded.closed_before_day
 		WHERE report_window.closed_before_day < excluded.closed_before_day`, yesterday)
 	return err

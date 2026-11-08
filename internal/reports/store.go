@@ -3,12 +3,14 @@ package reports
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"errors"
 	"fmt"
 	"sort"
 	"time"
 
 	"cpa-usage-ranking/internal/models"
+	"github.com/mattn/go-sqlite3"
 )
 
 var ErrClientDisabled = errors.New("client disabled")
@@ -35,27 +37,60 @@ func NewStore(writer *sql.DB, registry *models.Registry, now func() time.Time) *
 
 // Apply confirms only after commit, or after reading an identical committed
 // version. Watermark advancement is intentionally a separate committed write.
-func (s *Store) Apply(ctx context.Context, clientID int64, day string, prepared Prepared) (int64, error) {
+func (s *Store) Apply(ctx context.Context, clientID int64, day string, prepared Prepared) (revision int64, resultErr error) {
 	if !prepared.valid || clientID <= 0 {
 		return 0, ErrInvalid
+	}
+	conn, err := s.writer.Conn(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("acquire report writer: %w", err)
+	}
+	defer conn.Close()
+	var busyTimeout int
+	if err := conn.QueryRowContext(ctx, "PRAGMA busy_timeout").Scan(&busyTimeout); err != nil {
+		return 0, fmt.Errorf("read sqlite busy timeout: %w", err)
+	}
+	defer func() {
+		// 归还单连接池之前恢复其他写入路径的原有 busy timeout；失败时丢弃连接。
+		if _, err := conn.ExecContext(context.Background(), fmt.Sprintf("PRAGMA busy_timeout=%d", busyTimeout)); err != nil {
+			_ = conn.Raw(func(any) error { return driver.ErrBadConn })
+			resultErr = errors.Join(resultErr, fmt.Errorf("restore sqlite busy timeout: %w", err))
+		}
+	}()
+	if _, err := conn.ExecContext(ctx, "PRAGMA busy_timeout=0"); err != nil {
+		return 0, fmt.Errorf("set sqlite busy timeout: %w", err)
 	}
 	for {
 		if err := ctx.Err(); err != nil {
 			return 0, err
 		}
-		if err := AdvanceWindow(ctx, s.writer, s.now()); err != nil {
-			return 0, fmt.Errorf("advance report window: %w", err)
+		// SQLite 自带的 busy handler 无法及时响应 context；锁冲突改由可取消的短等待重试。
+		err := advanceWindow(ctx, s.now(), conn.ExecContext)
+		if err == nil {
+			revision, err = s.applyOnce(ctx, conn, clientID, day, prepared)
+		} else {
+			err = fmt.Errorf("advance report window: %w", err)
 		}
-		revision, err := s.applyOnce(ctx, clientID, day, prepared)
 		if errors.Is(err, ErrWindowAdvance) {
 			continue
+		}
+		var sqliteErr sqlite3.Error
+		if errors.As(err, &sqliteErr) && (sqliteErr.Code == sqlite3.ErrBusy || sqliteErr.Code == sqlite3.ErrLocked) {
+			timer := time.NewTimer(10 * time.Millisecond)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return 0, ctx.Err()
+			case <-timer.C:
+				continue
+			}
 		}
 		return revision, err
 	}
 }
 
-func (s *Store) applyOnce(ctx context.Context, clientID int64, day string, prepared Prepared) (int64, error) {
-	tx, err := s.writer.BeginTx(ctx, nil)
+func (s *Store) applyOnce(ctx context.Context, conn *sql.Conn, clientID int64, day string, prepared Prepared) (int64, error) {
+	tx, err := conn.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, fmt.Errorf("begin report: %w", err)
 	}
