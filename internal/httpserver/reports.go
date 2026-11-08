@@ -70,14 +70,16 @@ func MountReports(router *gin.Engine, authenticator *auth.Authenticator, admissi
 			if errors.Is(err, reports.ErrQueueFull) || errors.Is(err, reports.ErrWriterClosed) {
 				c.Header("Retry-After", "1")
 				writeError(c, http.StatusServiceUnavailable, "report_overloaded", "Report service is busy")
-			} else if c.Request.Context().Err() == nil {
-				writeError(c, http.StatusInternalServerError, "internal_error", "Internal server error")
+			} else {
+				writeReportResult(c, reports.WriteResult{Err: err})
 			}
 			return
 		}
 		select {
 		case <-c.Request.Context().Done():
-			// A lost response around commit is ambiguous; the client can retry.
+			// A lost response around commit is ambiguous; never fall through to
+			// an empty HTTP 200 if the transport can still accept a response.
+			writeReportResult(c, reports.WriteResult{Err: c.Request.Context().Err()})
 			return
 		case outcome := <-result:
 			writeReportResult(c, outcome)
