@@ -95,6 +95,16 @@ separate. Daily views support totals only, because finalized model-level daily
 rows are not retained. This internal facility is not a public query or ranking
 API, and the limit is not a verified client-capacity claim.
 
+Candidate metrics may be derived from raw sums and counts without changing the
+stored int64 values. Ratios and means are unavailable when their denominator
+is zero; measured zero remains distinct from a missing measurement. Means use
+actual sample counts, and coverage is samples divided by requests. Overall
+output tokens/second is calculated only with complete latency coverage and a
+positive latency sum. The estimate excluding first-token wait additionally
+requires complete TTFT coverage and latency sum greater than TTFT sum. These
+are aggregate estimates, not concurrent throughput or an arithmetic mean of
+per-request speeds; incomplete coverage is not guessed.
+
 For each version, the runner starts an IMMEDIATE transaction, checks the ledger,
 runs unapplied work, records the version and commits. The record is never
 committed separately from the schema/data changes. A callback, version-record,
