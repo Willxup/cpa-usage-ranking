@@ -116,6 +116,7 @@ func TestMaintenanceContinuesPastFailuresAndCoolsDown(t *testing.T) {
 	opts.Interval = 20 * time.Millisecond
 	opts.Cooldown = 800 * time.Millisecond
 	opts.ObservationInterval = time.Second
+	opts.DailyRetentionDays = reports.MaxDailyRetentionDays
 	w, cancel, done := startMaintenance(t, db, opts, slog.New(slog.NewTextHandler(&logs, nil)), processorFunc(func(context.Context, int64, string, reports.Prepared) (int64, error) { return 0, nil }))
 	waitFor(t, func() bool { return scalar(t, db.Reader, `SELECT count(*) FROM daily_reports`) == 2 })
 	if scalar(t, db.Reader, `SELECT count(*) FROM period_stats WHERE kind='day'`) != 6 {
@@ -149,6 +150,7 @@ func TestMaintenanceAndRealReportsShareWriter(t *testing.T) {
 	opts.BatchSize = 3
 	opts.Rounds = 2
 	opts.Interval = 10 * time.Millisecond
+	opts.DailyRetentionDays = reports.MaxDailyRetentionDays
 	w, _, _ := startMaintenance(t, db, opts, slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)), store)
 	result, err := w.Enqueue(context.Background(), id, "2026-11-03", prepared(t, 1, usage("alpha", 0, 9, 1, 1)))
 	if err != nil {
