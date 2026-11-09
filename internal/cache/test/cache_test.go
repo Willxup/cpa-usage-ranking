@@ -348,6 +348,68 @@ func TestRealBoardsPublishFixedPeriodsAcrossMidnight(t *testing.T) {
 	}
 }
 
+func TestRealBoardFailureKeepsWholePublishedRound(t *testing.T) {
+	db, r := cacheFixture(t)
+	var fail atomic.Bool
+	var tick atomic.Int32
+	failed := make(chan struct{}, 2)
+	items := leaderboard.Items()
+	last := &items[len(items)-1]
+	encode := last.Encode
+	last.Encode = func(ctx context.Context, s statistics.Snapshot, w io.Writer) error {
+		if fail.Load() {
+			select {
+			case failed <- struct{}{}:
+			default:
+			}
+			return errors.New("injected final item failure")
+		}
+		return encode(ctx, s, w)
+	}
+	opts := cache.DefaultOptions()
+	opts.Interval = 60 * time.Millisecond
+	opts.Now = func() time.Time { return time.Date(2026, 12, 31, 0, 0, int(tick.Add(1)), 0, time.UTC) }
+	c, err := cache.New(r, items, opts, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = run(t, c)
+	waitFor(t, func() bool { _, err := c.Current(); return err == nil })
+	fail.Store(true)
+	receive(t, failed)
+	first, _ := c.Current()
+	if _, err := db.Writer.Exec(`UPDATE daily_stats SET total_tokens=99 WHERE client_id=1`); err != nil {
+		t.Fatal(err)
+	}
+	receive(t, failed)
+	still, err := c.Current()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range items {
+		a, aok := first.Get(item.ID)
+		b, bok := still.Get(item.ID)
+		if !aok || !bok || a != b {
+			t.Fatal("partial publication", item.ID, a, b)
+		}
+	}
+	fail.Store(false)
+	waitFor(t, func() bool {
+		s, e := c.Current()
+		if e != nil {
+			return false
+		}
+		entry, _ := s.Get("all")
+		var boards map[string][]leaderboard.Entry
+		return json.Unmarshal([]byte(entry.Content), &boards) == nil && len(boards[leaderboard.Usage]) == 1 && boards[leaderboard.Usage][0].Metric == "99"
+	})
+	old, _ := first.Get("all")
+	var boards map[string][]leaderboard.Entry
+	if err := json.Unmarshal([]byte(old.Content), &boards); err != nil || boards[leaderboard.Usage][0].Metric != "12" {
+		t.Fatal(err, boards)
+	}
+}
+
 func TestTimerSkipsOverlapAndOldTicksAndStops(t *testing.T) {
 	_, r := cacheFixture(t)
 	started := make(chan struct{}, 10)
