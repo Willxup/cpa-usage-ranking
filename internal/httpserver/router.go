@@ -2,6 +2,7 @@
 package httpserver
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 
@@ -10,6 +11,11 @@ import (
 
 // NewRouter exposes liveness without claiming unfinished business readiness.
 func NewRouter(logger *slog.Logger) *gin.Engine {
+	return NewRouterWithReadiness(logger, nil)
+}
+
+// NewRouterWithReadiness 接入内部就绪检查；不在请求路径中构建缓存。
+func NewRouterWithReadiness(logger *slog.Logger, ready func(context.Context) bool) *gin.Engine {
 	router := gin.New()
 	router.HandleMethodNotAllowed = true
 	if err := router.SetTrustedProxies(nil); err != nil {
@@ -37,6 +43,10 @@ func NewRouter(logger *slog.Logger) *gin.Engine {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 	router.GET("/readyz", func(c *gin.Context) {
+		if ready != nil && ready(c.Request.Context()) {
+			c.JSON(http.StatusOK, gin.H{"status": "ready"})
+			return
+		}
 		c.JSON(http.StatusServiceUnavailable, gin.H{"status": "not_ready", "reason": "business_not_implemented"})
 	})
 	router.NoRoute(func(c *gin.Context) {

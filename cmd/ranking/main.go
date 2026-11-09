@@ -19,6 +19,7 @@ import (
 	"cpa-usage-ranking/internal/config"
 	"cpa-usage-ranking/internal/httpserver"
 	"cpa-usage-ranking/internal/models"
+	"cpa-usage-ranking/internal/readiness"
 	"cpa-usage-ranking/internal/registration"
 	"cpa-usage-ranking/internal/reports"
 	"cpa-usage-ranking/internal/statistics"
@@ -45,25 +46,18 @@ func run(logger *slog.Logger) (err error) {
 		return err
 	}
 	gin.SetMode(gin.ReleaseMode)
-	router := httpserver.NewRouter(logger)
-	if err := router.SetTrustedProxies(cfg.TrustedProxies); err != nil {
-		return fmt.Errorf("configure trusted proxies: %w", err)
-	}
 	avatarFiles := avatars.BuiltinFS()
 	catalog, err := avatars.Load(avatarFiles)
 	if err != nil {
 		return err
 	}
-	if err := httpserver.MountAvatars(router, catalog, avatarFiles); err != nil {
-		return err
-	}
+	var frontend *httpserver.Frontend
 	if cfg.WebDir != "" {
-		frontend, err := httpserver.OpenFrontend(cfg.WebDir)
+		frontend, err = httpserver.OpenFrontend(cfg.WebDir)
 		if err != nil {
 			return err
 		}
 		defer frontend.Close()
-		frontend.Mount(router)
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -133,6 +127,17 @@ func run(logger *slog.Logger) (err error) {
 		}
 	}()
 	defer func() { stopCache(); <-cacheDone }()
+	ready := readiness.New(db, modelRegistry, catalog, cacheService)
+	router := httpserver.NewRouterWithReadiness(logger, ready.Ready)
+	if err := router.SetTrustedProxies(cfg.TrustedProxies); err != nil {
+		return fmt.Errorf("configure trusted proxies: %w", err)
+	}
+	if err := httpserver.MountAvatars(router, catalog, avatarFiles); err != nil {
+		return err
+	}
+	if frontend != nil {
+		frontend.Mount(router)
+	}
 	if err := httpserver.MountReports(router, auth.NewAuthenticator(repository), reportAdmission, reportWriter, int64(cfg.ReportIngestion.MaxBodyBytes)); err != nil {
 		return err
 	}

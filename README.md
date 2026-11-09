@@ -175,7 +175,10 @@ stop the process, replace the build, then restart.
 ## HTTP foundation
 
 - `GET /healthz`: 200 with `{"status":"ok"}` means the process is alive.
-- `GET /readyz`: 503 while business services are not implemented.
+- `GET /readyz`: 200 only after database and catalogs are initialized and a
+  complete real cache round exists. The current build has no approved
+  leaderboard item, so it returns 503 even when `/healthz` is healthy. Failed
+  later refreshes retain the last complete snapshot; no expiry SLA is imposed.
 - `POST /v1/clients/register`: protected creation/safe retry; see the
   [registration API](docs/registration-api.md).
 - `PUT /v1/reports/{utc_day}`: protected full daily snapshot; see the

@@ -83,7 +83,7 @@ Go 同域提供构建后的页面和 API。部署二进制、`config/models.json
 ## HTTP 基础
 
 - `GET /healthz`：200 与 `{"status":"ok"}` 仅表示进程存活。
-- `GET /readyz`：业务尚未实现时返回 503，不假报就绪。
+- `GET /readyz`：仅在数据库和目录已初始化且首轮真实缓存完整成功后返回 200；当前没有获批的榜单构建项，即使 `/healthz` 健康也返回 503。后续刷新失败保留上轮完整缓存，不额外规定缓存过期 SLA。
 - `POST /v1/clients/register`：受保护创建/安全重试，见[注册 API](docs/registration-api.md)。
 - `PUT /v1/reports/{utc_day}`：受保护的完整日快照，见[上报 API](docs/report-snapshots.md)。
 - `GET`/`HEAD /avatars/catalog.json` 及目录列出的 `/avatars/images/*` 图片。
