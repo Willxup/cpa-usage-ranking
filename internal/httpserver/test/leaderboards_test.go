@@ -107,7 +107,7 @@ INSERT INTO daily_stats VALUES('2026-12-31',1,0,0,9007199254740993,10,0,0,0,0,1,
 				t.Fatal(err, string(obj["entries"]))
 			}
 			for _, row := range rows {
-				if len(row) != 5 || row["rank"] == nil || row["client_id"] == nil || row["display_name"] != "<script>plain</script>" || row["avatar_id"] == nil || row["metric"] == nil {
+				if len(row) != 5 || row["rank"] == nil || row["client_id"] == nil || row["display_name"] != "<script>plain</script>" || row["avatar_id"] != "1" || row["metric"] == nil {
 					t.Fatal(row)
 				}
 			}

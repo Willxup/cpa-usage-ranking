@@ -31,7 +31,7 @@ type Entry struct {
 	Rank        int    `json:"rank"`
 	ClientID    string `json:"client_id"`
 	DisplayName string `json:"display_name"`
-	AvatarID    int64  `json:"avatar_id"`
+	AvatarID    string `json:"avatar_id"`
 	Metric      string `json:"metric"`
 }
 
@@ -188,7 +188,7 @@ func Build(ctx context.Context, s statistics.Snapshot) (map[string][]Entry, erro
 			default:
 				metric = strconv.FormatFloat(c.value, 'f', 2, 64)
 			}
-			entries = append(entries, Entry{Rank: rank, ClientID: strconv.FormatInt(c.id, 10), DisplayName: c.profile.DisplayName, AvatarID: c.profile.AvatarID, Metric: metric})
+			entries = append(entries, Entry{Rank: rank, ClientID: strconv.FormatInt(c.id, 10), DisplayName: c.profile.DisplayName, AvatarID: strconv.FormatInt(c.profile.AvatarID, 10), Metric: metric})
 		}
 		boards[kind] = entries
 		if err := ctx.Err(); err != nil {
