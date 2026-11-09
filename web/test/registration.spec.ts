@@ -54,7 +54,7 @@ test('registers and safely retries against the real production binary without ad
   const rejected = await request.post('/v1/clients/register', { data: { display_name: 'No secret' } })
   expect(rejected.status()).toBe(401)
   expect(await rejected.json()).toEqual({ error: { code: 'invalid_credential', message: 'Invalid client credential' } })
-  expect((await request.get('/readyz')).status()).toBe(503)
+  await expect.poll(async () => (await request.get('/readyz')).status()).toBe(200)
   await expect(page.getByRole('heading', { name: '等待第一份真实数据' })).toBeVisible()
   await expect(page.getByRole('button', { name: /注册|登录/ })).toHaveCount(0)
 })

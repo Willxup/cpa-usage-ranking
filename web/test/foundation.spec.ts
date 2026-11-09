@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 
-test('loads the real production build and checks the live Go process', async ({ page, baseURL }, info) => {
+test('loads the real production build and checks the live Go process', async ({ page, baseURL, request }, info) => {
+  await expect.poll(async () => (await request.get('/readyz')).status()).toBe(200)
   const errors: string[] = []
   const externalRequests: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
@@ -12,8 +13,8 @@ test('loads the real production build and checks the live Go process', async ({ 
   await page.getByRole('button', { name: '检查服务连接' }).click()
   expect((await response).status()).toBe(200)
   expect(await (await response).json()).toEqual({ status: 'ok' })
-  await expect(page.getByRole('status')).toContainText('服务在线')
-  await expect(page.getByText('尚未就绪')).toBeVisible()
+  await expect(page.locator('#status').getByRole('status')).toContainText('服务在线')
+  await expect(page.getByText('以实际加载为准')).toBeVisible()
   await expect(page.getByRole('heading', { name: '等待第一份真实数据' })).toBeVisible()
   await page.screenshot({ path: info.outputPath('desktop.png'), fullPage: true })
   expect(errors).toEqual([])
@@ -43,7 +44,7 @@ for (const width of [320, 375, 768]) {
     await expect(page.getByRole('navigation')).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await page.getByRole('button', { name: '检查服务连接' }).click()
-    await expect(page.getByRole('status')).toContainText('服务在线')
+    await expect(page.locator('#status').getByRole('status')).toContainText('服务在线')
     if (width === 375) await page.screenshot({ path: info.outputPath('mobile.png'), fullPage: true })
   })
 }
@@ -51,14 +52,14 @@ for (const width of [320, 375, 768]) {
 test('supports normal tab navigation and keyboard-only health checks', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('link', { name: '跳到主要内容' })).toHaveCount(0)
-  for (const name of ['CPA Usage Ranking 首页', '排行榜', '模型洞察', '关于', '查看服务状态']) {
+  for (const name of ['CPA Usage Ranking 首页', '排行榜', '关于']) {
     await page.keyboard.press('Tab')
     await expect(page.getByRole('link', { name, exact: true })).toBeFocused()
   }
   await page.keyboard.press('Tab')
   await expect(page.getByRole('button', { name: '检查服务连接' })).toBeFocused()
   await page.keyboard.press('Enter')
-  await expect(page.getByRole('status')).toContainText('服务在线')
+  await expect(page.locator('#status').getByRole('status')).toContainText('服务在线')
 })
 
 test('respects reduced motion and stops decorative animation offscreen', async ({ page }) => {
@@ -70,7 +71,7 @@ test('respects reduced motion and stops decorative animation offscreen', async (
   await expect(button).toHaveAttribute('data-motion', 'off')
   expect(await button.locator('.star-button__trail').first().evaluate((node) => getComputedStyle(node).animationName)).toBe('none')
   await button.click()
-  await expect(page.getByRole('status')).toContainText('服务在线')
+  await expect(page.locator('#status').getByRole('status')).toContainText('服务在线')
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await expect(button).toHaveAttribute('data-motion', 'on')
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
@@ -81,9 +82,9 @@ test('shows a simulated service failure and retries against the real backend', a
   await page.route('**/healthz', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' }), { times: 1 })
   await page.goto('/')
   await page.getByRole('button', { name: '检查服务连接' }).click()
-  await expect(page.getByRole('status')).toContainText('服务返回 503')
+  await expect(page.locator('#status').getByRole('status')).toContainText('服务返回 503')
   await page.getByRole('button', { name: '检查服务连接' }).click()
-  await expect(page.getByRole('status')).toContainText('服务在线')
+  await expect(page.locator('#status').getByRole('status')).toContainText('服务在线')
 })
 
 test('preserves API and missing-resource boundaries and ships source notices', async ({ request }) => {
@@ -92,9 +93,9 @@ test('preserves API and missing-resource boundaries and ships source notices', a
     expect(response.status()).toBe(404)
     expect(response.headers()['content-type']).toContain('application/json')
   }
+  await expect.poll(async () => (await request.get('/readyz')).status()).toBe(200)
   const readiness = await request.get('/readyz')
-  expect(readiness.status()).toBe(503)
-  expect(await readiness.json()).toEqual({ status: 'not_ready', reason: 'business_not_implemented' })
+  expect(await readiness.json()).toEqual({ status: 'ready' })
   const notices = await request.get('/assets/third-party-notices.txt')
   expect(notices.status()).toBe(200)
   expect(await notices.text()).toContain('MIT + Commons Clause')
@@ -127,6 +128,6 @@ test.describe('touch interaction', () => {
   test('can check health without hover', async ({ page }) => {
     await page.goto('/')
     await page.getByRole('button', { name: '检查服务连接' }).tap()
-    await expect(page.getByRole('status')).toContainText('服务在线')
+    await expect(page.locator('#status').getByRole('status')).toContainText('服务在线')
   })
 })

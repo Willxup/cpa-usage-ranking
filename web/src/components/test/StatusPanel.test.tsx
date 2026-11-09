@@ -8,7 +8,7 @@ describe('StatusPanel', () => {
     render(<StatusPanel state="idle" />)
     expect(screen.getByRole('status')).toHaveTextContent('尚未检测')
     expect(screen.getByRole('button', { name: '检查服务连接' })).toBeDisabled()
-    expect(screen.getByText('尚未就绪')).toBeVisible()
+    expect(screen.getByText('以实际加载为准')).toBeVisible()
   })
 
   it('prevents duplicate checks while loading', () => {
@@ -21,9 +21,8 @@ describe('StatusPanel', () => {
   it('does not confuse liveness success with business readiness', () => {
     render(<StatusPanel state="online" onCheck={vi.fn()} />)
     expect(screen.getByRole('status')).toHaveTextContent('服务在线')
-    expect(screen.getByRole('status')).toHaveTextContent('排名业务尚未接入')
-    expect(screen.getByText('尚未就绪')).toBeVisible()
-    expect(screen.getByText('暂未接入')).toBeVisible()
+    expect(screen.getByRole('status')).toHaveTextContent('榜单状态以实际加载结果为准')
+    expect(screen.getByText('以实际加载为准')).toBeVisible()
   })
 
   it('shows a retry action and a useful failure reason', async () => {

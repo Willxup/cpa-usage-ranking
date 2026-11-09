@@ -18,6 +18,8 @@ export default defineConfig({
     proxy: {
       '/healthz': { target: process.env.RANKING_DEV_PROXY_TARGET ?? 'http://127.0.0.1:8080' },
       '/readyz': { target: process.env.RANKING_DEV_PROXY_TARGET ?? 'http://127.0.0.1:8080' },
+      '/v1/leaderboards': { target: process.env.RANKING_DEV_PROXY_TARGET ?? 'http://127.0.0.1:8080' },
+      '/avatars': { target: process.env.RANKING_DEV_PROXY_TARGET ?? 'http://127.0.0.1:8080' },
     },
   },
   test: {

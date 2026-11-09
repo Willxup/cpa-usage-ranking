@@ -8,7 +8,7 @@ type Props = { state: ConnectionState; onCheck?: () => void; message?: string }
 const labels: Record<ConnectionState, { title: string; detail: string }> = {
   idle: { title: '尚未检测', detail: '检查服务连接，只验证进程是否存活。' },
   loading: { title: '正在连接', detail: '正在检查服务进程，请稍候。' },
-  online: { title: '服务在线', detail: '存活检查通过，排名业务尚未接入。' },
+  online: { title: '服务在线', detail: '存活检查通过，榜单状态以实际加载结果为准。' },
   error: { title: '连接失败', detail: '暂时无法连接服务，可以稍后重试。' },
 }
 
@@ -18,7 +18,7 @@ export function StatusPanel({ state, onCheck, message }: Props) {
     <section id="status" className="status-panel glass-panel" aria-labelledby="status-heading">
       <div className="section-topline"><span className="eyebrow">LIVE CONNECTION</span><span className="endpoint-label">GET /healthz</span></div>
       <div className="status-heading-row">
-        <h2 id="status-heading">保持连接，等待启程。</h2>
+        <h2 id="status-heading">保持连接。</h2>
         <span className={`signal-icon signal-icon--${state}`} aria-hidden="true"><span /><span /><span /></span>
       </div>
       <div className={`connection-status connection-status--${state}`} role="status" aria-live="polite" aria-atomic="true">
@@ -27,8 +27,7 @@ export function StatusPanel({ state, onCheck, message }: Props) {
       </div>
       <dl className="service-facts">
         <div><dt>运行状态</dt><dd>{state === 'online' ? '进程存活' : state === 'loading' ? '正在检测' : state === 'error' ? '未能确认' : '尚未检测'}</dd></div>
-        <div><dt>排名业务</dt><dd><span className="pending-pill">尚未就绪</span></dd></div>
-        <div><dt>用量数据</dt><dd>暂未接入</dd></div>
+        <div><dt>榜单状态</dt><dd>以实际加载为准</dd></div>
       </dl>
       <StarButton onClick={onCheck} disabled={!onCheck || state === 'loading'} aria-busy={state === 'loading'}>
         {state === 'loading' ? '正在检查…' : '检查服务连接'}<ArrowIcon />

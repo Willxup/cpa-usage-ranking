@@ -73,7 +73,7 @@ retained. See [storage](docs/storage.md).
 ## Frontend development
 
 Requires Node.js 24.15+ (24.x) and npm. Runtime dependencies are only React and
-React DOM; the application does not have business features yet. Tailwind runs
+React DOM. Tailwind runs
 at build time. Shared colors, typography and focus styling live in
 `web/src/styles/tokens.css`; no external font or icon services are required.
 The selected React Bits control uses CSS only and adds no animation runtime.
@@ -81,14 +81,10 @@ See [third-party source notices](THIRD_PARTY_NOTICES.md) for its pinned source,
 local adaptations and MIT + Commons Clause license.
 
 The interface uses a light, wide layout with coral/violet accents and compact
-desktop sizing without page zoom; mobile sizing remains independent. Summary
-values stay unknown (`—`), and time/search/model filters remain disabled until
-business functionality is implemented. Project icons and regeneration details
+desktop sizing without page zoom; mobile sizing remains independent. The page reads the real cached overall view for today and does not fabricate summaries. Project icons and regeneration details
 are documented in [Brand icons](docs/brand-icons.md).
 
-The responsive preview has in-page navigation, an explicit empty-data view and
-a service-status panel with unchecked/loading/success/error states. It does
-not simulate standings or usage totals. The check button calls the real
+The responsive page has in-page navigation, loading, empty, error and retry states and a separate service-status panel. It does not simulate standings or usage totals. Names are rendered as text; avatars use the server catalog and its default, with a neutral fallback if loading fails. The check button calls the real
 `GET /healthz` endpoint on demand, validates the JSON contract, times out after
 8 seconds, supports retry and cancels requests on unmount. There is no polling.
 A successful check does not mark the ranking business as ready.
@@ -99,7 +95,7 @@ back to a static control. Observers/listeners are removed on unmount; the page
 has no canvas, WebGL, external fonts or background JavaScript animation loop.
 
 For local development, run `go run ./cmd/ranking` and `npm --prefix web run dev`
-in separate terminals. Vite binds to loopback and proxies health endpoints to
+in separate terminals. Vite binds to loopback and proxies health, leaderboard and avatar endpoints to
 `http://127.0.0.1:8080`; override `RANKING_DEV_PROXY_TARGET` if needed. No CORS
 relaxation or production Node server is required.
 
