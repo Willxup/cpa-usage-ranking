@@ -18,8 +18,8 @@ function metric(value: string, board: Board) {
   return board === 'usage' ? BigInt(value).toLocaleString('en-US') : value
 }
 
-export function LeaderboardPanel({ board, period }: { board: Board; period: Period }) {
-  const { data, loading, error, avatars, retry } = useLeaderboard(board, period)
+export function LeaderboardPanel({ board, period, selectionVersion = 0 }: { board: Board; period: Period; selectionVersion?: number }) {
+  const { data, loading, error, avatars, retry } = useLeaderboard(board, period, selectionVersion)
   const previous = data && (loading || error || data.board !== board || data.period !== period)
   return <div className="board-content" aria-busy={loading}>
     <div className="board-message" role="status" aria-live="polite" aria-atomic="true">

@@ -44,6 +44,27 @@ describe('application shell', () => {
     expect(screen.getByRole('button', { name: '昨日' })).toHaveAttribute('aria-pressed', 'true')
   })
 
+  it('marks an earlier result while switching away and back', async () => {
+    let first = true
+    let finish!: (response: Response) => void
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('avatars')) return Promise.resolve(json(catalog))
+      if (first) { first = false; return Promise.resolve(json(empty)) }
+      if (url.includes('/overall/')) return new Promise<Response>((resolve) => { finish = resolve })
+      return new Promise<Response>(() => {})
+    }))
+    const user = userEvent.setup()
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: '今日 · 综合总榜' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: '用量榜' }))
+    await user.click(screen.getByRole('button', { name: '综合总榜' }))
+    expect(screen.getByText(/正在加载今日 · 综合总榜/)).toBeVisible()
+    expect(screen.getByRole('heading', { name: /今日 · 综合总榜/ })).toHaveTextContent('上次结果')
+    finish(json(empty))
+    expect(await screen.findByRole('heading', { name: '今日 · 综合总榜' })).toBeVisible()
+  })
+
   it('keeps landmarks and manual liveness separate from readiness', async () => {
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => Promise.resolve(json(String(input) === '/healthz' ? { status: 'ok' } : String(input).includes('avatars') ? catalog : empty))))
     const user = userEvent.setup()

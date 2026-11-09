@@ -17,9 +17,11 @@ test('shows real submitted data across approved boards and periods', async ({ pa
     const value = await response.json() as { entries: { display_name: string; metric: string }[] }
     return value.entries.some((entry) => entry.display_name === '真实测试参与者' && entry.metric === '9007199254740993')
   }).toBe(true)
+  await page.route('**/avatars/images/002.webp', (route) => route.fulfill({ status: 404, body: '' }), { times: 1 })
   await page.goto('/')
   await expect(page.getByRole('heading', { name: '今日 · 综合总榜' })).toBeVisible()
   await expect(page.getByText('真实测试参与者')).toBeVisible()
+  await expect(page.getByRole('row', { name: /真实测试参与者/ }).locator('.avatar img')).toHaveAttribute('src', '/avatars/images/001.webp')
   await expect(page.getByRole('button', { name: '今日' })).toHaveAttribute('aria-pressed', 'true')
   await page.getByRole('button', { name: '用量榜' }).click()
   await expect(page.getByRole('heading', { name: '今日 · 用量榜' })).toBeVisible()
@@ -67,6 +69,7 @@ test('retains correctly labeled old data on races and retries', async ({ page, r
   }, { times: 1 })
   await page.getByRole('button', { name: '用量榜' }).click()
   await started
+  await expect(page.getByText(/正在加载今日 · 用量榜/)).toBeVisible()
   await expect(page.getByRole('heading', { name: /今日 · 综合总榜/ })).toContainText('上次结果')
   await expect(page.getByRole('heading', { name: /今日 · 用量榜/ })).toHaveCount(0)
   await page.getByRole('button', { name: '成功率榜' }).click()

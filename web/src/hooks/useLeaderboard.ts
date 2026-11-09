@@ -4,11 +4,11 @@ import type { AvatarCatalog, Board, Leaderboard, Period } from '../api/leaderboa
 
 type Result = { key: string; data: Leaderboard | null; error: string | null }
 
-export function useLeaderboard(board: Board, period: Period) {
+export function useLeaderboard(board: Board, period: Period, selectionVersion: number) {
   const [attempt, setAttempt] = useState(0)
   const [result, setResult] = useState<Result>({ key: '', data: null, error: null })
   const [avatars, setAvatars] = useState<AvatarCatalog | null>(null)
-  const key = `${board}/${period}/${attempt}`
+  const key = `${board}/${period}/${selectionVersion}/${attempt}`
   useEffect(() => {
     const controller = new AbortController()
     let active = true

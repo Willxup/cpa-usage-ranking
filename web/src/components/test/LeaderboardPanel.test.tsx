@@ -27,6 +27,14 @@ describe('live leaderboard', () => {
     expect(screen.getByText(/缓存生成于 2026-12-31 12:00:00 UTC/)).toBeVisible()
   })
 
+  it('uses the catalog default for an unknown avatar and never loads a catalog URL', async () => {
+    const unknown = { ...data, entries: [{ ...data.entries[0], avatar_id: '3' }] }
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => Promise.resolve(json(String(input).includes('avatars') ? catalog : unknown))))
+    const { container } = render(<LeaderboardPanel board="usage" period="today" />)
+    await screen.findByText('9,007,199,254,740,993')
+    await waitFor(() => expect(container.querySelector('.avatar img')?.getAttribute('src')).toBe('/avatars/images/001.webp'))
+  })
+
   it('cancels superseded requests and never labels old data as the new board', async () => {
     const pending = new Map<string, { resolve: (response: Response) => void; signal: AbortSignal }>()
     const overall = { ...data, board: 'overall', entries: [{ ...data.entries[0], display_name: '旧总榜', metric: '12.34' }] }
