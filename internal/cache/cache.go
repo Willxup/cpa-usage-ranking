@@ -51,8 +51,8 @@ func DefaultOptions() Options {
 type Entry struct{ Kind, Start, End, Content string }
 type Snapshot struct{ entries map[string]Entry }
 
-func (s *Snapshot) Get(id string) (Entry, bool) { e, ok := s.entries[id]; return e, ok }
-func (s *Snapshot) Len() int                    { return len(s.entries) }
+func (s Snapshot) Get(id string) (Entry, bool) { e, ok := s.entries[id]; return e, ok }
+func (s Snapshot) Len() int                    { return len(s.entries) }
 
 type Cache struct {
 	reader  *statistics.Reader
@@ -79,12 +79,14 @@ func New(reader *statistics.Reader, items []Item, opts Options, logger *slog.Log
 	}
 	return &Cache{reader: reader, items: append([]Item(nil), items...), opts: opts, logger: logger}, nil
 }
-func (c *Cache) Current() (*Snapshot, error) {
+
+// Current 返回快照值副本；调用方覆盖自己的副本不会改写已发布快照。
+func (c *Cache) Current() (Snapshot, error) {
 	s := c.current.Load()
 	if s == nil {
-		return nil, ErrUnavailable
+		return Snapshot{}, ErrUnavailable
 	}
-	return s, nil
+	return *s, nil
 }
 
 // Run 启动即尝试一次，之后由唯一计时器触发；停止时等待正在运行的构建响应取消。

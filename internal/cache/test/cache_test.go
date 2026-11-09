@@ -185,6 +185,12 @@ func TestCompleteRoundAtomicReplacementFailureAndImmutableReaders(t *testing.T) 
 				if !ok || !ok2 || a.Start != b.Start {
 					bad.Store(true)
 				}
+				// 覆盖本地副本不能改写发布对象或其他读者。
+				s = cache.Snapshot{}
+				s, e = c.Current()
+				if _, ok := s.Get("one"); e != nil || !ok {
+					bad.Store(true)
+				}
 			}
 		}()
 	}
@@ -229,7 +235,7 @@ func TestCapacityTimeoutAndReleaseBeforeEncoding(t *testing.T) {
 	var mode atomic.Int32
 	var calls atomic.Int32
 	item := cache.Item{ID: "a", Kind: periods.All, Encode: func(ctx context.Context, s statistics.Snapshot, w io.Writer) error {
-		calls.Add(1)
+		sequence := calls.Add(1)
 		if _, err := db.Writer.Exec(`UPDATE clients SET display_name='changed' WHERE id=1`); err != nil {
 			return err
 		}
@@ -248,7 +254,7 @@ func TestCapacityTimeoutAndReleaseBeforeEncoding(t *testing.T) {
 			<-ctx.Done()
 			return nil
 		}
-		_, err := io.WriteString(w, "ok")
+		_, err := fmt.Fprintf(w, "%02d", sequence)
 		return err
 	}}
 	c, err := cache.New(r, []cache.Item{item}, opts, slog.New(slog.NewTextHandler(io.Discard, nil)))
@@ -258,12 +264,14 @@ func TestCapacityTimeoutAndReleaseBeforeEncoding(t *testing.T) {
 	_, _ = run(t, c)
 	waitFor(t, func() bool { _, e := c.Current(); return e == nil })
 	original, _ := c.Current()
+	originalEntry, _ := original.Get("a")
 	mode.Store(1)
 	before := calls.Load()
 	waitFor(t, func() bool { return calls.Load() > before })
 	time.Sleep(40 * time.Millisecond)
 	now, _ := c.Current()
-	if now != original {
+	entry, _ := now.Get("a")
+	if entry != originalEntry {
 		t.Fatal("overflow replaced cache")
 	}
 	mode.Store(2)
@@ -271,7 +279,8 @@ func TestCapacityTimeoutAndReleaseBeforeEncoding(t *testing.T) {
 	waitFor(t, func() bool { return calls.Load() > before })
 	time.Sleep(45 * time.Millisecond)
 	now, _ = c.Current()
-	if now != original {
+	entry, _ = now.Get("a")
+	if entry != originalEntry {
 		t.Fatal("timeout replaced cache")
 	}
 }

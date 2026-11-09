@@ -61,7 +61,9 @@ func TestReportAndSettlementDoNotTriggerCacheBuild(t *testing.T) {
 	}
 	time.Sleep(50 * time.Millisecond)
 	snapshot, err := c.Current()
-	if err != nil || snapshot != old || calls.Load() != 1 {
+	before, _ := old.Get("fixture")
+	after, _ := snapshot.Get("fixture")
+	if err != nil || before != after || calls.Load() != 1 {
 		t.Fatal("mutation triggered cache refresh", calls.Load(), err)
 	}
 }

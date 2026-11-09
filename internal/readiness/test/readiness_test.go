@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -57,11 +58,11 @@ func TestReadinessTracksRealDependenciesAndCompleteCache(t *testing.T) {
 	var fail atomic.Bool
 	fail.Store(true)
 	item := cache.Item{ID: "fixture", Kind: periods.All, Encode: func(_ context.Context, _ statistics.Snapshot, w io.Writer) error {
-		calls.Add(1)
+		sequence := calls.Add(1)
 		if fail.Load() {
 			return errors.New("failed fixture")
 		}
-		_, err := io.WriteString(w, "valid empty board fixture")
+		_, err := io.WriteString(w, strconv.FormatInt(sequence, 10))
 		return err
 	}}
 	opts := cache.DefaultOptions()
@@ -131,7 +132,9 @@ func TestReadinessTracksRealDependenciesAndCompleteCache(t *testing.T) {
 		t.Fatal("failed refresh discarded successful cache")
 	}
 	current, _ := c.Current()
-	if current != old {
+	oldEntry, _ := old.Get("fixture")
+	currentEntry, _ := current.Get("fixture")
+	if currentEntry != oldEntry {
 		t.Fatal("failed refresh replaced old cache")
 	}
 	if err := db.Reader.Close(); err != nil {
