@@ -151,6 +151,7 @@ invalid values fail startup. No configuration file is loaded automatically.
 
 Tune for shared exits and measured deployment load. This API does not establish
 100,000-client capacity. `/healthz` stays process liveness; `/readyz` **remains
-503** because reporting, ranking generation/cache and real leaderboards are not
-implemented. There is no login/registration webpage, production `/me`, profile
-edit, administration, reporting or leaderboard API at this stage.
+503** because no real leaderboard build has been approved. Authenticated daily
+reporting is available; see the [daily report API](report-snapshots.md). There
+is no login/registration webpage, production `/me`, profile edit,
+administration or leaderboard API at this stage.

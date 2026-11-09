@@ -65,9 +65,9 @@ Disabled identities remain rejected. Normal credential authentication is an
 independent path and is not switched off.
 
 The switch is not full-site maintenance mode and does not stop health/static
-routes. No administration UI or hot-reload service is provided. Reporting HTTP
-is not implemented yet; queued/write-transaction status checks and the future
-reporting chain require their own implementation and validation.
+routes. No administration UI or hot-reload service is provided. Existing active
+identities can continue using the [daily reporting API](report-snapshots.md),
+which checks identity status during the write transaction.
 
 The service and all gates are connected by the protected
 [`POST /v1/clients/register` endpoint](registration-api.md). HTTP responses expose
