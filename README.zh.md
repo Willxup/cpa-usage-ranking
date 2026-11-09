@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-独立的通用用量排名服务。目前已具备受保护注册、日累计快照上报、后台日结、静态头像及 SQLite 存储。启动时校验[模型目录](docs/model-catalog.md)，将精确名称及别名映射至稳定 ID；本次交付未重新核实参考价格。内部候选统计及缓存生命周期已具备，但尚无获批的榜单构建项或公开榜单，业务就绪保持 503；没有网站账号 UI。
+独立的通用用量排名服务。目前已具备受保护注册、日累计快照上报、后台日结、静态头像及 SQLite 存储。启动时校验[模型目录](docs/model-catalog.md)，将精确名称及别名映射至稳定 ID；本次交付未重新核实参考价格。统一缓存针对六个固定 UTC 周期构建五个真实榜单，详见[榜单计算说明](docs/leaderboards.md)；没有网站账号 UI。
 
 ## 开发
 
@@ -19,13 +19,13 @@ go run ./cmd/ranking
 
 ## 存储基础
 
-启动时在监听 HTTP 之前打开 `data/ranking.db`，可通过 `RANKING_SQLITE_PATH` 覆盖。自动创建缺失的父目录和迁移版本表，启用 WAL、FULL 同步和外键。每个迁移版本的变更与成功记录在同一事务中提交，失败回滚该版本，已完成版本不重复执行；版本 1 建立 `clients` 身份与资料表，版本 2 建立稳定标准模型 ID 字典，启动时以事务登记当前目录的标准名称；版本 3–4 增加持久封窗水位和日快照表，版本 5 增加已结周期统计；不填充模拟参与者。连接或迁移失败直接退出，不自动修复或回退。关停先排空 HTTP，再关闭有界读写连接池，业务就绪仍返回 503。具体约定见 [SQLite 存储说明](docs/storage.md)和[客户端存储说明](docs/client-storage.md)。
+启动时在监听 HTTP 之前打开 `data/ranking.db`，可通过 `RANKING_SQLITE_PATH` 覆盖。自动创建缺失的父目录和迁移版本表，启用 WAL、FULL 同步和外键。每个迁移版本的变更与成功记录在同一事务中提交，失败回滚该版本，已完成版本不重复执行；版本 1 建立 `clients` 身份与资料表，版本 2 建立稳定标准模型 ID 字典，启动时以事务登记当前目录的标准名称；版本 3–4 增加持久封窗水位和日快照表，版本 5 增加已结周期统计；不填充模拟参与者。连接或迁移失败直接退出，不自动修复或回退。关停先排空 HTTP，再关闭有界读写连接池，业务就绪还要求真实缓存完整构建成功。具体约定见 [SQLite 存储说明](docs/storage.md)和[客户端存储说明](docs/client-storage.md)。
 
 注册应用公开[昵称规则](docs/display-names.md)及头像目录校验，不提供资料修改接口。[静态头像目录](docs/avatar-catalog.md)校验编号、默认项和资源；二进制嵌入获准复用的 66 张 WebP（默认编号 1），通过 `/avatars/catalog.json` 和 `/avatars/images/001.webp` 至 `066.webp` 分发，不依赖前端目录。
 [凭据解析与摘要](docs/client-credentials.md)接受客户端预先保存的 32 字节 CSPRNG 秘密，使用规范无填充 base64url Bearer 编码；服务端仅存 SHA-256 摘要，不签发秘密。
 `POST /v1/clients/register` 已接通[受保护注册 API](docs/registration-api.md)：新建返回 201，相同秘密重试返回 200 及当前资料、不覆盖。客户端首次尝试前先生成并保存 32 字节 CSPRNG 秘密，通过 HTTPS Bearer 携带。来源/全局请求限流包含失败和重试；成功新建另受滚动配额（默认 3/小时、10/24 小时）保护。有界内存状态仅属于单机进程、重启清零。`RANKING_REGISTRATION_ENABLED=false` 重启后仅关闭新建，保留已有身份重试和鉴权；不是全站停机。请求、响应、状态码、代理信任与全部部署参数见 API 文档。内部[鉴权中间件](docs/client-credentials.md#internal-identity-enforcement)仅凭秘密选择身份，不增加演示 `/me` API。
 
-`PUT /v1/reports/{utc_day}` 接收该凭据所属客户端的 UTC 今天或昨天完整快照。版本、目录无关的幂等重试、持久封窗、限流及原子替换见[日快照上报 API](docs/report-snapshots.md)。后台有界日结，并清理过期日摘要和周统计，不删除未结快照。内部候选读取在同一 SQLite 快照中合并已结和待结用量；日结后不保留逐模型日历史，见[存储说明](docs/storage.md)。这不代表榜单已接入。
+`PUT /v1/reports/{utc_day}` 接收该凭据所属客户端的 UTC 今天或昨天完整快照。版本、目录无关的幂等重试、持久封窗、限流及原子替换见[日快照上报 API](docs/report-snapshots.md)。后台有界日结，并清理过期日摘要和周统计，不删除未结快照。内部候选读取在同一 SQLite 快照中合并已结和待结用量；日结后不保留逐模型日历史，见[存储说明](docs/storage.md)。
 
 ## 前端开发
 
@@ -83,7 +83,7 @@ Go 同域提供构建后的页面和 API。部署二进制、`config/models.json
 ## HTTP 基础
 
 - `GET /healthz`：200 与 `{"status":"ok"}` 仅表示进程存活。
-- `GET /readyz`：仅在数据库和目录已初始化且首轮真实缓存完整成功后返回 200；当前没有获批的榜单构建项，即使 `/healthz` 健康也返回 503。后续刷新失败保留上轮完整缓存，不额外规定缓存过期 SLA。
+- `GET /readyz`：仅在数据库和目录已初始化且首轮真实缓存完整成功后返回 200；此前即使 `/healthz` 健康也返回 503。后续刷新失败保留上轮完整缓存，不额外规定缓存过期 SLA。
 - `POST /v1/clients/register`：受保护创建/安全重试，见[注册 API](docs/registration-api.md)。
 - `PUT /v1/reports/{utc_day}`：受保护的完整日快照，见[上报 API](docs/report-snapshots.md)。
 - `GET`/`HEAD /avatars/catalog.json` 及目录列出的 `/avatars/images/*` 图片。

@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"cpa-usage-ranking/internal/cache"
+	"cpa-usage-ranking/internal/leaderboard"
 	"cpa-usage-ranking/internal/periods"
 	"cpa-usage-ranking/internal/statistics"
 	"cpa-usage-ranking/internal/storage"
@@ -284,6 +286,68 @@ func TestCapacityTimeoutAndReleaseBeforeEncoding(t *testing.T) {
 		t.Fatal("timeout replaced cache")
 	}
 }
+func TestRealBoardsPublishFixedPeriodsAcrossMidnight(t *testing.T) {
+	db, r := cacheFixture(t)
+	var day atomic.Int32
+	day.Store(1)
+	opts := cache.DefaultOptions()
+	opts.Interval = 40 * time.Millisecond
+	opts.Now = func() time.Time { return time.Date(2027, 1, int(day.Load()), 0, 0, 1, 0, time.UTC) }
+	c, err := cache.New(r, leaderboard.Items(), opts, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Current(); !errors.Is(err, cache.ErrUnavailable) {
+		t.Fatal(err)
+	}
+	_, _ = run(t, c)
+	waitFor(t, func() bool { _, err := c.Current(); return err == nil })
+	first, _ := c.Current()
+	if first.Len() != 6 {
+		t.Fatal(first.Len())
+	}
+	yesterday, _ := first.Get("yesterday")
+	year, _ := first.Get("year")
+	all, _ := first.Get("all")
+	if yesterday.Start != "2026-12-31" || yesterday.End != "2027-01-01" || yesterday.GeneratedAt != "2027-01-01T00:00:01Z" || year.Start != "2027-01-01" {
+		t.Fatal(yesterday, year)
+	}
+	var y, a map[string][]leaderboard.Entry
+	if err := json.Unmarshal([]byte(yesterday.Content), &y); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal([]byte(all.Content), &a); err != nil {
+		t.Fatal(err)
+	}
+	if len(y[leaderboard.Usage]) != 1 || y[leaderboard.Usage][0].Metric != "12" || len(a[leaderboard.Overall]) != 1 {
+		t.Fatal(y, a)
+	}
+	if _, err := db.Writer.Exec(`UPDATE clients SET disabled=1 WHERE id=1`); err != nil {
+		t.Fatal(err)
+	}
+	day.Store(2)
+	waitFor(t, func() bool {
+		s, e := c.Current()
+		if e != nil {
+			return false
+		}
+		x, _ := s.Get("yesterday")
+		return x.Start == "2027-01-01"
+	})
+	second, _ := c.Current()
+	freshAll, _ := second.Get("all")
+	if err := json.Unmarshal([]byte(freshAll.Content), &a); err != nil {
+		t.Fatal(err)
+	}
+	if len(a[leaderboard.Overall]) != 0 || freshAll.GeneratedAt != "2027-01-02T00:00:01Z" {
+		t.Fatal(a, freshAll)
+	}
+	old, _ := first.Get("yesterday")
+	if old != yesterday {
+		t.Fatal("old snapshot changed")
+	}
+}
+
 func TestTimerSkipsOverlapAndOldTicksAndStops(t *testing.T) {
 	_, r := cacheFixture(t)
 	started := make(chan struct{}, 10)

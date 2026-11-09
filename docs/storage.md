@@ -10,8 +10,7 @@ dictionary row. Removed names remain in the dictionary but are not active until
 reintroduced in the catalog. Version 3 adds the persistent report-window watermark;
 startup advances it to at least UTC yesterday. Version 4 adds daily report
 revision metadata and daily statistics tables. Version 5 adds storage for
-finalized daily, weekly, monthly and cumulative statistics. Opening a database does **not** make `/readyz`
-return success; the ranking service is not implemented yet.
+finalized daily, weekly, monthly and cumulative statistics. Opening a database alone does **not** make `/readyz` return success: the first complete leaderboard cache round must also succeed.
 
 ## Build and file location
 
@@ -92,8 +91,7 @@ reads include the full backlog. The transaction ends before derived processing;
 reads time out independently and reject overflow or more than 100,000 clients
 per candidate view. All-model totals and individual model/tier views are
 separate. Daily views support totals only, because finalized model-level daily
-rows are not retained. This internal facility is not a public query or ranking
-API, and the limit is not a verified client-capacity claim.
+rows are not retained. Annual views combine finalized monthly rows with the year's unsettled daily rows in the same transaction. Public builds also read profiles and filter disabled clients in that snapshot. The limit is not a verified client-capacity claim.
 
 Candidate metrics may be derived from raw sums and counts without changing the
 stored int64 values. Ratios and means are unavailable when their denominator
@@ -111,8 +109,7 @@ items run sequentially; every item releases its read transaction before encoding
 Only a complete successful round replaces the previous immutable snapshot. A
 failure, timeout or capacity limit retains the previous round; a missing first
 round is unavailable, and reads never rebuild it. Pending ticks during a build
-are discarded. Uploads and settlement do not trigger builds. The current build
-has no approved leaderboard items, so no cache is published. The initial
+are discarded. Uploads, profile changes and settlement do not trigger builds. Six real period items each build five leaderboards; see [leaderboard calculations](leaderboards.md). The initial
 100,000-candidate, 16 MiB encoded-round and 32-item limits are safety bounds,
 not evidence of tested client capacity.
 

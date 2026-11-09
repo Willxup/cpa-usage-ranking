@@ -306,6 +306,81 @@ func TestReadSQLiteSnapshotInterleavesSettlementAndReport(t *testing.T) {
 		t.Fatal(busy, log, checkpointed, err)
 	}
 }
+func TestYearUsesSettledMonthsAndAllPendingDays(t *testing.T) {
+	f := newFixture(t)
+	f.put(t, f.a, "2025-12-31", 1, item("alpha", 0, 101))
+	f.put(t, f.a, "2026-01-01", 1, item("alpha", 0, 2))
+	f.put(t, f.a, "2026-05-03", 1, item("alpha", 0, 3))
+	f.put(t, f.a, "2026-12-31", 1, item("alpha", 0, 5))
+	f.put(t, f.a, "2027-01-01", 1, item("alpha", 0, 103))
+	if err := reports.AdvanceWindow(context.Background(), f.db.Writer, time.Date(2027, 1, 3, 0, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatal(err)
+	}
+	f.closeDay(t, "2026-01-01", f.a)
+	r := f.reader(t, 10)
+	checkYear := func() {
+		s := read(t, r, periods.Year, "2026-12-31", 0, 0)
+		if s.Start != "2026-01-01" || s.End != "2027-01-01" {
+			t.Fatal(s.Start, s.End)
+		}
+		check(t, s, f.a, 10)
+	}
+	checkYear()
+	f.closeDay(t, "2026-05-03", f.a)
+	f.closeDay(t, "2026-12-31", f.a)
+	checkYear()
+}
+
+func TestPublicYearSnapshotInterleavesSettlementProfilesAndDisable(t *testing.T) {
+	f := newFixture(t)
+	f.put(t, f.a, "2026-01-01", 1, item("alpha", 0, 2))
+	f.put(t, f.a, "2026-12-30", 1, item("alpha", 0, 5))
+	f.put(t, f.b, "2026-12-31", 1, item("alpha", 0, 11))
+	if err := reports.AdvanceWindow(context.Background(), f.db.Writer, time.Date(2027, 1, 2, 0, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatal(err)
+	}
+	f.closeDay(t, "2026-01-01", f.a)
+	r, db, d := pausedReader(t, f, 5*time.Second)
+	type outcome struct {
+		s   statistics.Snapshot
+		err error
+	}
+	done := make(chan outcome, 1)
+	go func() {
+		s, err := r.Read(context.Background(), statistics.Selection{Kind: periods.Year, Day: "2026-12-31", Public: true})
+		done <- outcome{s, err}
+	}()
+	<-d.ready
+	f.closeDay(t, "2026-12-30", f.a)
+	if _, err := f.db.Writer.Exec(`UPDATE clients SET display_name='new',disabled=1 WHERE id=?`, f.b); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.db.Writer.Exec(`UPDATE clients SET display_name='new-a',avatar_id=2 WHERE id=?`, f.a); err != nil {
+		t.Fatal(err)
+	}
+	close(d.release)
+	got := <-done
+	if got.err != nil {
+		t.Fatal(got.err)
+	}
+	check(t, got.s, f.a, 7)
+	check(t, got.s, f.b, 11)
+	if got.s.Profiles[f.a].DisplayName != "client" || got.s.Profiles[f.a].AvatarID != 1 || got.s.Profiles[f.b].DisplayName != "client" {
+		t.Fatal(got.s.Profiles)
+	}
+	if db.Stats().InUse != 0 {
+		t.Fatal("reader retained connection")
+	}
+	fresh, err := f.reader(t, 1).Read(context.Background(), statistics.Selection{Kind: periods.Year, Day: "2026-12-31", Public: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fresh.Rows) != 1 || fresh.Profiles[f.a].DisplayName != "new-a" || fresh.Profiles[f.a].AvatarID != 2 {
+		t.Fatal(fresh)
+	}
+	check(t, fresh, f.a, 7)
+}
+
 func TestReadTimeoutInsideSnapshotReleasesTransaction(t *testing.T) {
 	f := newFixture(t)
 	f.put(t, f.a, "2026-12-31", 1, item("alpha", 0, 1))

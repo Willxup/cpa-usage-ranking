@@ -4,8 +4,7 @@
 
 An independent usage-ranking service under construction. Protected client
 registration, daily snapshot ingestion, background settlement and SQLite persistence
-are available. Internal candidate statistics and a cache lifecycle are available,
-but no public leaderboard or approved leaderboard build exists; business readiness remains 503. No website account UI is provided. The
+are available. Five real leaderboards are built in a unified cache for six fixed UTC periods; see [leaderboard calculations](docs/leaderboards.md). No website account UI is provided. The
 [model catalog](docs/model-catalog.md) is validated at startup and maps exact
 names and aliases to stable IDs; there is no model management API. Reference
 prices were not independently reverified for this delivery.
@@ -40,7 +39,7 @@ Startup does not seed participants.
 Database failures stop startup; they do not
 trigger automatic repair or fallback. Shutdown drains HTTP before closing the
 bounded write/read connection pools. See [SQLite storage](docs/storage.md) and
-[client storage](docs/client-storage.md). Business readiness remains 503.
+[client storage](docs/client-storage.md). Readiness also requires a complete real cache round.
 
 Registration applies [public display-name rules](docs/display-names.md) and the
 static avatar catalog; it is not a profile-edit endpoint.
@@ -69,7 +68,7 @@ window closure, limits and atomic replacement are described in the
 bounded background transactions; expired daily and weekly summaries are pruned
 without deleting unsettled data. Internal candidate reads combine settled and
 pending usage in a consistent SQLite snapshot; daily model-level history is not
-retained. See [storage](docs/storage.md). This does not enable a leaderboard.
+retained. See [storage](docs/storage.md).
 
 ## Frontend development
 
@@ -176,8 +175,7 @@ stop the process, replace the build, then restart.
 
 - `GET /healthz`: 200 with `{"status":"ok"}` means the process is alive.
 - `GET /readyz`: 200 only after database and catalogs are initialized and a
-  complete real cache round exists. The current build has no approved
-  leaderboard item, so it returns 503 even when `/healthz` is healthy. Failed
+  complete real cache round exists. Before that it returns 503 even when `/healthz` is healthy. Failed
   later refreshes retain the last complete snapshot; no expiry SLA is imposed.
 - `POST /v1/clients/register`: protected creation/safe retry; see the
   [registration API](docs/registration-api.md).

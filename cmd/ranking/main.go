@@ -18,6 +18,7 @@ import (
 	"cpa-usage-ranking/internal/clients"
 	"cpa-usage-ranking/internal/config"
 	"cpa-usage-ranking/internal/httpserver"
+	"cpa-usage-ranking/internal/leaderboard"
 	"cpa-usage-ranking/internal/models"
 	"cpa-usage-ranking/internal/readiness"
 	"cpa-usage-ranking/internal/registration"
@@ -113,8 +114,7 @@ func run(logger *slog.Logger) (err error) {
 	}
 	cacheOptions := cache.DefaultOptions()
 	cacheOptions.Interval = cfg.CacheRefreshInterval
-	// P2 尚未确认；没有真实构建项，不能用占位内容冒充已初始化缓存。
-	cacheService, err := cache.New(reader, nil, cacheOptions, logger)
+	cacheService, err := cache.New(reader, leaderboard.Items(), cacheOptions, logger)
 	if err != nil {
 		return err
 	}

@@ -31,10 +31,12 @@ var (
 
 // Item 是编译时确定的构建项。读取统一由缓存负责，Encode 只接收已结束事务的候选数据。
 type Item struct {
-	ID, Kind string
-	ModelID  int64
-	Tier     models.Tier
-	Encode   func(context.Context, statistics.Snapshot, io.Writer) error
+	ID, Kind  string
+	ModelID   int64
+	Tier      models.Tier
+	DayOffset int // 固定今日或昨日；相对日期在整轮开始时确定。
+	Public    bool
+	Encode    func(context.Context, statistics.Snapshot, io.Writer) error
 }
 
 type Options struct {
@@ -48,7 +50,7 @@ func DefaultOptions() Options {
 }
 
 // Entry 和 Snapshot 对外只暴露不可变的字符串与值，周期标识和内容一起发布。
-type Entry struct{ Kind, Start, End, Content string }
+type Entry struct{ Kind, Start, End, GeneratedAt, Content string }
 type Snapshot struct{ entries map[string]Entry }
 
 func (s Snapshot) Get(id string) (Entry, bool) { e, ok := s.entries[id]; return e, ok }
@@ -72,7 +74,7 @@ func New(reader *statistics.Reader, items []Item, opts Options, logger *slog.Log
 	}
 	seen := make(map[string]bool, len(items))
 	for _, item := range items {
-		if item.ID == "" || len(item.ID) > 128 || seen[item.ID] || item.Encode == nil {
+		if item.ID == "" || len(item.ID) > 128 || seen[item.ID] || item.Encode == nil || (item.DayOffset != 0 && item.DayOffset != -1) {
 			return nil, errors.New("invalid cache item")
 		}
 		seen[item.ID] = true
@@ -120,7 +122,7 @@ func (c *Cache) refresh(ctx context.Context) error {
 	if len(c.items) == 0 {
 		return ErrNoItems
 	}
-	when := c.opts.Now().UTC().Format("2006-01-02")
+	when := c.opts.Now().UTC()
 	next := &Snapshot{entries: make(map[string]Entry, len(c.items))}
 	remaining := c.opts.MaxBytes
 	for _, item := range c.items {
@@ -137,10 +139,11 @@ func (c *Cache) refresh(ctx context.Context) error {
 	c.current.Store(next)
 	return nil
 }
-func (c *Cache) build(ctx context.Context, item Item, day string, max int) (Entry, error) {
+func (c *Cache) build(ctx context.Context, item Item, when time.Time, max int) (Entry, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.opts.ItemTimeout)
 	defer cancel()
-	s, err := c.reader.Read(ctx, statistics.Selection{Kind: item.Kind, Day: day, ModelID: item.ModelID, Tier: item.Tier})
+	day := when.AddDate(0, 0, item.DayOffset).Format("2006-01-02")
+	s, err := c.reader.Read(ctx, statistics.Selection{Kind: item.Kind, Day: day, ModelID: item.ModelID, Tier: item.Tier, Public: item.Public})
 	if err != nil {
 		return Entry{}, err
 	}
@@ -155,7 +158,7 @@ func (c *Cache) build(ctx context.Context, item Item, day string, max int) (Entr
 	if err := ctx.Err(); err != nil {
 		return Entry{}, err
 	}
-	return Entry{Kind: s.Kind, Start: s.Start, End: s.End, Content: buf.buf.String()}, nil
+	return Entry{Kind: s.Kind, Start: s.Start, End: s.End, GeneratedAt: when.Format(time.RFC3339Nano), Content: buf.buf.String()}, nil
 }
 
 type boundedBuffer struct {

@@ -31,11 +31,18 @@ type Selection struct {
 	Day     string
 	ModelID int64
 	Tier    models.Tier
+	Public  bool // 同一快照内读取资料并排除禁用身份。
+}
+
+type Profile struct {
+	DisplayName string
+	AvatarID    int64
 }
 
 type Snapshot struct {
 	Kind, Start, End string                    // End 为空表示累计周期无上界。
 	Rows             map[int64]reports.Metrics // client ID -> 原始统计
+	Profiles         map[int64]Profile
 }
 
 type Reader struct {
@@ -73,6 +80,13 @@ func (r *Reader) Read(ctx context.Context, s Selection) (Snapshot, error) {
 		result.Start, result.End = bounds.WeekStart, bounds.WeekEnd
 	case periods.Month:
 		result.Start, result.End = bounds.MonthStart, bounds.MonthEnd
+	case periods.Year:
+		d, _ := time.Parse("2006-01-02", s.Day)
+		result.Start = time.Date(d.Year(), 1, 1, 0, 0, 0, 0, time.UTC).Format("2006-01-02")
+		result.End = time.Date(d.Year()+1, 1, 1, 0, 0, 0, 0, time.UTC).Format("2006-01-02")
+		if len(result.End) != 10 {
+			return Snapshot{}, ErrInvalidSelection
+		}
 	case periods.All:
 		result.Start = periods.AllStart
 	default:
@@ -86,17 +100,38 @@ func (r *Reader) Read(ctx context.Context, s Selection) (Snapshot, error) {
 	}
 	defer tx.Rollback()
 	result.Rows = make(map[int64]reports.Metrics)
-	columns := `client_id,total_tokens,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,reasoning_tokens,request_count,success_count,ttft_sum_ms,ttft_samples,latency_sum_ms,latency_samples`
-	if err := r.merge(ctx, tx, result.Rows, `SELECT `+columns+` FROM period_stats WHERE kind=? AND start_day=? AND model_id=? AND tier=?`, s.Kind, result.Start, s.ModelID, s.Tier); err != nil {
+	if s.Public {
+		result.Profiles = make(map[int64]Profile)
+	}
+	columns := `s.client_id,s.total_tokens,s.input_tokens,s.output_tokens,s.cache_read_tokens,s.cache_write_tokens,s.reasoning_tokens,s.request_count,s.success_count,s.ttft_sum_ms,s.ttft_samples,s.latency_sum_ms,s.latency_samples`
+	join := ""
+	if s.Public {
+		columns += `,c.display_name,c.avatar_id`
+		join = ` JOIN clients c ON c.id=s.client_id AND c.disabled=0`
+	}
+	query := `SELECT ` + columns + ` FROM period_stats s` + join + ` WHERE s.kind=? AND s.model_id=? AND s.tier=?`
+	kind := s.Kind
+	if kind == periods.Year {
+		kind = periods.Month
+	}
+	args := []any{kind, s.ModelID, s.Tier}
+	if s.Kind == periods.Year {
+		query += ` AND s.start_day>=? AND s.start_day<?`
+		args = append(args, result.Start, result.End)
+	} else {
+		query += ` AND s.start_day=?`
+		args = append(args, result.Start)
+	}
+	if err := r.merge(ctx, tx, &result, query, args...); err != nil {
 		return Snapshot{}, err
 	}
-	query := `SELECT ` + columns + ` FROM daily_stats WHERE model_id=? AND tier=?`
-	args := []any{s.ModelID, s.Tier}
+	query = `SELECT ` + columns + ` FROM daily_stats s` + join + ` WHERE s.model_id=? AND s.tier=?`
+	args = []any{s.ModelID, s.Tier}
 	if s.Kind != periods.All {
-		query += ` AND day>=? AND day<?`
+		query += ` AND s.day>=? AND s.day<?`
 		args = append(args, result.Start, result.End)
 	}
-	if err := r.merge(ctx, tx, result.Rows, query, args...); err != nil {
+	if err := r.merge(ctx, tx, &result, query, args...); err != nil {
 		return Snapshot{}, err
 	}
 	if err := ctx.Err(); err != nil {
@@ -108,7 +143,7 @@ func (r *Reader) Read(ctx context.Context, s Selection) (Snapshot, error) {
 	return result, nil
 }
 
-func (r *Reader) merge(ctx context.Context, tx *sql.Tx, dest map[int64]reports.Metrics, query string, args ...any) error {
+func (r *Reader) merge(ctx context.Context, tx *sql.Tx, result *Snapshot, query string, args ...any) error {
 	rows, err := tx.QueryContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("query statistics: %w", err)
@@ -117,18 +152,26 @@ func (r *Reader) merge(ctx context.Context, tx *sql.Tx, dest map[int64]reports.M
 	for rows.Next() {
 		var id int64
 		var m reports.Metrics
-		if err := rows.Scan(&id, &m.TotalTokens, &m.InputTokens, &m.OutputTokens, &m.CacheReadTokens, &m.CacheWriteTokens, &m.ReasoningTokens, &m.RequestCount, &m.SuccessCount, &m.TTFTSumMS, &m.TTFTSamples, &m.LatencySumMS, &m.LatencySamples); err != nil {
+		var profile Profile
+		values := []any{&id, &m.TotalTokens, &m.InputTokens, &m.OutputTokens, &m.CacheReadTokens, &m.CacheWriteTokens, &m.ReasoningTokens, &m.RequestCount, &m.SuccessCount, &m.TTFTSumMS, &m.TTFTSamples, &m.LatencySumMS, &m.LatencySamples}
+		if result.Profiles != nil {
+			values = append(values, &profile.DisplayName, &profile.AvatarID)
+		}
+		if err := rows.Scan(values...); err != nil {
 			return fmt.Errorf("scan statistics: %w", err)
 		}
-		old, exists := dest[id]
-		if !exists && len(dest) >= r.maxCandidates {
+		old, exists := result.Rows[id]
+		if !exists && len(result.Rows) >= r.maxCandidates {
 			return ErrCapacity
 		}
 		merged, ok := reports.AddMetrics(old, m)
 		if !ok {
 			return ErrOverflow
 		}
-		dest[id] = merged
+		result.Rows[id] = merged
+		if result.Profiles != nil {
+			result.Profiles[id] = profile
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("iterate statistics: %w", err)

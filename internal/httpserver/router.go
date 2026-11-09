@@ -47,7 +47,7 @@ func NewRouterWithReadiness(logger *slog.Logger, ready func(context.Context) boo
 			c.JSON(http.StatusOK, gin.H{"status": "ready"})
 			return
 		}
-		c.JSON(http.StatusServiceUnavailable, gin.H{"status": "not_ready", "reason": "business_not_implemented"})
+		c.JSON(http.StatusServiceUnavailable, gin.H{"status": "not_ready", "reason": "initializing_or_unavailable"})
 	})
 	router.NoRoute(func(c *gin.Context) {
 		writeError(c, http.StatusNotFound, "not_found", "Not found")

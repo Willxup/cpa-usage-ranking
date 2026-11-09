@@ -10,6 +10,7 @@ const (
 	Day       = "day"
 	Week      = "week"
 	Month     = "month"
+	Year      = "year" // 查询视角，不是持久化表中的周期种类。
 	All       = "all"
 	AllStart  = "0001-01-01"
 	dayLayout = "2006-01-02"
