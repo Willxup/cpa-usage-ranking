@@ -129,6 +129,7 @@ func run(logger *slog.Logger) (err error) {
 	defer func() { stopCache(); <-cacheDone }()
 	ready := readiness.New(db, modelRegistry, catalog, cacheService)
 	router := httpserver.NewRouterWithReadiness(logger, ready.Ready)
+	httpserver.MountLeaderboards(router, cacheService)
 	if err := router.SetTrustedProxies(cfg.TrustedProxies); err != nil {
 		return fmt.Errorf("configure trusted proxies: %w", err)
 	}

@@ -1,4 +1,16 @@
-# Leaderboard calculations
+# Public leaderboards
+
+`GET /v1/leaderboards/{board}/{period}` reads only the latest complete published cache. The allowed boards are `overall`, `usage`, `cache`, `success`, `ttft`; periods are `today`, `yesterday`, `week`, `month`, `year`, `all`. No query parameters, arbitrary dates, model or tier selectors are accepted. Example:
+
+```json
+{"board":"usage","period":"today","start":"2026-12-31","end":"2027-01-01","generated_at":"2026-12-31T12:00:00Z","entries":[{"rank":1,"client_id":"42","display_name":"Example","avatar_id":1,"metric":"9007199254740993"}]}
+```
+
+`start` is inclusive and `end` exclusive, as UTC dates; `all` uses internal start `0001-01-01` and `end: null`. `generated_at` is the UTC start of the published build round, not a client's last report. For all boards, `client_id` and `metric` are decimal strings to preserve precision. The metric is overall points, total tokens, cache reuse percentage, conservative success **score in points**, or mean TTFT milliseconds respectively. Except for integer tokens, metrics have two decimal places. `rank` and `avatar_id` are JSON integers. Names are plain text; avatar IDs reference the [avatar catalog](avatar-catalog.md).
+
+A successful empty view returns `200` with `entries: []`. Before the first complete round, the response is `503` with `{"error":{"code":"leaderboard_unavailable","message":"Leaderboard cache is not ready"}}`. Invalid board, period or query parameters return `400` with `invalid_parameter`; unknown paths and methods retain JSON `404`/`405`. Later build failures retain the prior complete result and its original period/time; there is no cache-expiry SLA. No raw counts, score contributions, coverage, credentials, hashes or IP addresses are returned. `/readyz` independently checks database and catalogs as well as cache initialization.
+
+## Calculations
 
 The cache builds five views from all eligible clients: overall, token usage,
 cache reuse, conservative success score, and measured mean time to first token

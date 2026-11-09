@@ -86,6 +86,7 @@ Go 同域提供构建后的页面和 API。部署二进制、`config/models.json
 - `GET /readyz`：仅在数据库和目录已初始化且首轮真实缓存完整成功后返回 200；此前即使 `/healthz` 健康也返回 503。后续刷新失败保留上轮完整缓存，不额外规定缓存过期 SLA。
 - `POST /v1/clients/register`：受保护创建/安全重试，见[注册 API](docs/registration-api.md)。
 - `PUT /v1/reports/{utc_day}`：受保护的完整日快照，见[上报 API](docs/report-snapshots.md)。
+- `GET /v1/leaderboards/{board}/{period}`：固定公开缓存榜单，见[接口与评分说明](docs/leaderboards.md)。
 - `GET`/`HEAD /avatars/catalog.json` 及目录列出的 `/avatars/images/*` 图片。
 - 未知路由和不支持的方法返回 JSON 错误（404/405）。
 - 异常响应不暴露细节，日志不记录请求正文、请求头或 panic 值。

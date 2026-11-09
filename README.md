@@ -181,6 +181,7 @@ stop the process, replace the build, then restart.
   [registration API](docs/registration-api.md).
 - `PUT /v1/reports/{utc_day}`: protected full daily snapshot; see the
   [daily report API](docs/report-snapshots.md).
+- `GET /v1/leaderboards/{board}/{period}`: fixed public cache views; see the [leaderboard API and scoring](docs/leaderboards.md).
 - `GET`/`HEAD /avatars/catalog.json` and listed `/avatars/images/*` resources.
 - Unknown routes and unsupported methods return JSON errors (404/405).
 - Panic responses are generic; request bodies, headers and panic values are not logged.
