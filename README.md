@@ -81,10 +81,10 @@ See [third-party source notices](THIRD_PARTY_NOTICES.md) for its pinned source,
 local adaptations and MIT + Commons Clause license.
 
 The interface uses a light, wide layout with coral/violet accents and compact
-desktop sizing without page zoom; mobile sizing remains independent. The page reads the real cached overall view for today and does not fabricate summaries. Project icons and regeneration details
+desktop sizing without page zoom; mobile sizing remains independent. The page reads the real cached views and does not fabricate summaries. Project icons and regeneration details
 are documented in [Brand icons](docs/brand-icons.md).
 
-The responsive page has in-page navigation, loading, empty, error and retry states and a separate service-status panel. It does not simulate standings or usage totals. Names are rendered as text; avatars use the server catalog and its default, with a neutral fallback if loading fails. The check button calls the real
+The responsive page offers five boards and today/yesterday/current week/current month, defaulting to today; yearly and all-time data remain maintained by the backend but have no page controls. It has loading, empty, error and retry states and a separate service-status panel. During a switch or retry, any previous result retains its own board, period and cache-generation label. It does not simulate standings or usage totals. Names are rendered as text; avatars use the server catalog and its default, with a neutral fallback if loading fails. The check button calls the real
 `GET /healthz` endpoint on demand, validates the JSON contract, times out after
 8 seconds, supports retry and cancels requests on unmount. There is no polling.
 A successful check does not mark the ranking business as ready.

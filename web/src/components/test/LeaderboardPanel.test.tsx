@@ -27,6 +27,33 @@ describe('live leaderboard', () => {
     expect(screen.getByText(/缓存生成于 2026-12-31 12:00:00 UTC/)).toBeVisible()
   })
 
+  it('cancels superseded requests and never labels old data as the new board', async () => {
+    const pending = new Map<string, { resolve: (response: Response) => void; signal: AbortSignal }>()
+    const overall = { ...data, board: 'overall', entries: [{ ...data.entries[0], display_name: '旧总榜', metric: '12.34' }] }
+    const success = { ...overall, board: 'success', entries: [{ ...overall.entries[0], display_name: '新成功榜', metric: '20.65' }] }
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.includes('avatars')) return Promise.resolve(json(catalog))
+      if (url.includes('/overall/')) return Promise.resolve(json(overall))
+      return new Promise<Response>((resolve) => pending.set(url, { resolve, signal: init!.signal as AbortSignal }))
+    }))
+    const view = render(<LeaderboardPanel board="overall" period="today" />)
+    expect(await screen.findByText('旧总榜')).toBeVisible()
+    view.rerender(<LeaderboardPanel board="usage" period="today" />)
+    await waitFor(() => expect(pending.has('/v1/leaderboards/usage/today')).toBe(true))
+    expect(screen.getByRole('heading', { name: /今日 · 综合总榜/ })).toHaveTextContent('上次结果')
+    expect(screen.queryByRole('heading', { name: /今日 · 用量榜/ })).not.toBeInTheDocument()
+    view.rerender(<LeaderboardPanel board="success" period="today" />)
+    await waitFor(() => expect(pending.has('/v1/leaderboards/success/today')).toBe(true))
+    expect(pending.get('/v1/leaderboards/usage/today')!.signal.aborted).toBe(true)
+    pending.get('/v1/leaderboards/success/today')!.resolve(json(success))
+    expect(await screen.findByText('新成功榜')).toBeVisible()
+    pending.get('/v1/leaderboards/usage/today')!.resolve(json(data))
+    await waitFor(() => expect(screen.getByText('新成功榜')).toBeVisible())
+    expect(screen.queryByText('<script>alert(1)</script>')).not.toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: '成功率得分' })).toBeVisible()
+  })
+
   it('shows failure, permits retry and never invents empty results', async () => {
     let calls = 0
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {

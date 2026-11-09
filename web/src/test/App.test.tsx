@@ -24,6 +24,26 @@ describe('application shell', () => {
     expect(screen.queryByText('参与客户端')).not.toBeInTheDocument()
   })
 
+  it('offers only five boards and four periods, defaulting to today', async () => {
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('avatars')) return Promise.resolve(json(catalog))
+      const [, board, period] = url.match(/leaderboards\/([^/]+)\/([^/]+)/) ?? []
+      return Promise.resolve(json({ ...empty, board, period }))
+    }))
+    const user = userEvent.setup()
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: '今日 · 综合总榜' })).toBeVisible()
+    expect(screen.getByRole('button', { name: '今日' })).toHaveAttribute('aria-pressed', 'true')
+    for (const name of ['综合总榜', '用量榜', '缓存复用榜', '成功率榜', '首字响应榜']) expect(screen.getByRole('button', { name })).toBeEnabled()
+    for (const name of ['今日', '昨日', '本周', '本月']) expect(screen.getByRole('button', { name })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /年度|累计/ })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '成功率榜' }))
+    await user.click(screen.getByRole('button', { name: '昨日' }))
+    expect(await screen.findByRole('heading', { name: '昨日 · 成功率榜' })).toBeVisible()
+    expect(screen.getByRole('button', { name: '昨日' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
   it('keeps landmarks and manual liveness separate from readiness', async () => {
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => Promise.resolve(json(String(input) === '/healthz' ? { status: 'ok' } : String(input).includes('avatars') ? catalog : empty))))
     const user = userEvent.setup()

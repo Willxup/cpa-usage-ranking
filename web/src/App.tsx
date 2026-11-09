@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import type { Board, Period } from './api/leaderboards'
+import { boards, periods } from './leaderboardLabels'
 import { LeaderboardPanel } from './components/LeaderboardPanel'
 import { StatusPanel } from './components/StatusPanel'
 import { useHealth } from './hooks/useHealth'
@@ -5,6 +8,8 @@ import './styles/app.css'
 
 export default function App() {
   const health = useHealth()
+  const [board, setBoard] = useState<Board>('overall')
+  const [period, setPeriod] = useState<Period>('today')
   return (
     <div className="app-shell">
       <header className="header-wrap">
@@ -18,7 +23,11 @@ export default function App() {
           <div><p className="eyebrow">A CLEARER VIEW OF AI USAGE</p><h1 id="page-title">AI 用量排行榜</h1><p className="page-description">每一次调用，都将在这里被看见。</p></div>
         </section>
         <section id="ranking" className="ranking-section" aria-label="排行榜">
-          <LeaderboardPanel board="overall" period="today" />
+          <div className="ranking-toolbar">
+            <fieldset className="board-control"><legend className="sr-only">榜单类型</legend>{(Object.keys(boards) as Board[]).map((item) => <button key={item} type="button" aria-pressed={board === item} onClick={() => setBoard(item)}>{boards[item].label}</button>)}</fieldset>
+            <fieldset className="period-control"><legend className="sr-only">时间范围</legend>{(Object.keys(periods) as Period[]).map((item) => <button key={item} type="button" aria-pressed={period === item} onClick={() => setPeriod(item)}>{periods[item]}</button>)}</fieldset>
+          </div>
+          <LeaderboardPanel board={board} period={period} />
         </section>
         <section id="foundation" className="foundation" aria-labelledby="foundation-heading">
           <div className="foundation-copy"><span className="eyebrow">ABOUT THE RANKING</span><h2 id="foundation-heading">真实用量，清晰呈现。</h2><p>榜单来自已接纳的使用记录，按照 UTC 周期汇总。<br />排行不代表受控性能认证，也不验证自报数据的真实性。</p></div>

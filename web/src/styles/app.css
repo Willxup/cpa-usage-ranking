@@ -23,7 +23,11 @@
 .summary dd { margin: 0 0 8px; font-size: 43px; font-weight: 650; line-height: 1; }
 .summary dt { color: var(--muted); font-size: 15px; }
 .summary .violet { color: var(--electric); }
-.ranking-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.ranking-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 26px; }
+.board-control { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; border: 0; }
+.board-control button { min-height: 42px; padding: 8px 14px; border: 1px solid transparent; border-radius: 9px; color: var(--muted); background: transparent; font-size: 14px; }
+.board-control button[aria-pressed="true"] { border-color: #f5d9cb; color: var(--accent); background: #fff0e9; font-weight: 650; }
+.period-control button[aria-pressed="true"] { background: white; color: #633da0; font-weight: 650; box-shadow: 0 1px 4px #29203a14; }
 .board-message { color: var(--muted); font-size: 13px; line-height: 1.6; }
 .board-message:not(:empty) { margin-bottom: 14px; }
 .retry-button { min-height: 42px; margin-bottom: 16px; padding: 8px 18px; border: 1px solid #e3d5eb; border-radius: 9px; color: #62379f; background: #faf5ff; }
@@ -152,6 +156,7 @@
   .summary dd { margin-bottom: 6px; font-size: 34px; }
   .summary dt { font-size: 12px; }
   .ranking-toolbar { gap: 19px; }
+  .board-control button { min-height: 36px; padding: 7px 11px; font-size: 12px; }
   .period-control { padding: 3px; border-radius: 10px; }
   .period-control button { min-height: 34px; min-width: 75px; font-size: 12px; }
   .filter-controls { gap: 14px; }
@@ -202,6 +207,8 @@
   .summary dd { font-size: 32px; }
   .summary dt { font-size: 12px; }
   .ranking-toolbar { flex-direction: column; align-items: stretch; gap: 14px; }
+  .board-control { gap: 4px; }
+  .board-control button { min-height: 42px; padding-inline: 10px; font-size: 13px; }
   .period-control button { flex: 1; min-width: 0; }
   .filter-controls { gap: 12px; }
   .search-control { flex: 1; min-width: 0; padding-inline: 10px; }

@@ -56,6 +56,13 @@ test('supports normal tab navigation and keyboard-only health checks', async ({ 
     await page.keyboard.press('Tab')
     await expect(page.getByRole('link', { name, exact: true })).toBeFocused()
   }
+  for (const name of ['综合总榜', '用量榜', '缓存复用榜', '成功率榜', '首字响应榜', '今日', '昨日', '本周', '本月']) {
+    await page.keyboard.press('Tab')
+    await expect(page.getByRole('button', { name, exact: true })).toBeFocused()
+    if (name === '成功率榜' || name === '昨日') await page.keyboard.press('Space')
+  }
+  await expect(page.getByRole('button', { name: '成功率榜' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: '昨日' })).toHaveAttribute('aria-pressed', 'true')
   await page.keyboard.press('Tab')
   await expect(page.getByRole('button', { name: '检查服务连接' })).toBeFocused()
   await page.keyboard.press('Enter')
@@ -127,6 +134,8 @@ test.describe('touch interaction', () => {
   test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true })
   test('can check health without hover', async ({ page }) => {
     await page.goto('/')
+    await page.getByRole('button', { name: '昨日' }).tap()
+    await expect(page.getByRole('button', { name: '昨日' })).toHaveAttribute('aria-pressed', 'true')
     await page.getByRole('button', { name: '检查服务连接' }).tap()
     await expect(page.locator('#status').getByRole('status')).toContainText('服务在线')
   })

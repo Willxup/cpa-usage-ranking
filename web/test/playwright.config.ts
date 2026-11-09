@@ -33,6 +33,7 @@ export default defineConfig({
       RANKING_WEB_DIR: fileURLToPath(new URL('../dist', import.meta.url)),
       RANKING_MODELS_PATH: fileURLToPath(new URL('../../config/models.json', import.meta.url)),
       RANKING_SHUTDOWN_TIMEOUT: '5s',
+      RANKING_CACHE_REFRESH_INTERVAL: '200ms',
       RANKING_SQLITE_PATH: resolve(outputDir, '..', 'databases', String(port), 'ranking.db'),
     },
     reuseExistingServer: false,
