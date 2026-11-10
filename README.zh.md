@@ -15,7 +15,11 @@ go run ./cmd/ranking
 
 默认监听 `http://127.0.0.1:8080`。SIGINT/SIGTERM 停止新接入，并在配置的宽限期内等待进行中的请求完成；关停超时会关闭剩余连接并以失败状态退出。启动和关停事件以 JSON 写入 stderr。
 
-测试统一放在对应模块的 `test/` 目录，不与生产文件混放。
+测试统一放在对应模块的 `test/` 目录，不与生产文件混放。基于 SQLite 文件的 HTTP 上报生命周期回归覆盖注册、重试、修正、日结、缓存读取及重启恢复：
+
+```sh
+go test ./internal/httpserver/test -run '^TestCompleteIngestionLifecycle$'
+```
 
 ## 存储基础
 

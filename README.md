@@ -23,7 +23,13 @@ stop admission and drain active requests within the configured grace period.
 A shutdown timeout closes remaining connections and exits unsuccessfully.
 Startup and shutdown events are logged as JSON to stderr.
 
-Tests live in each module's `test/` directory, not beside production files.
+Tests live in each module's `test/` directory, not beside production files. The
+file-backed HTTP ingestion lifecycle regression covers registration, retries,
+corrections, settlement, cache reads and restart recovery:
+
+```sh
+go test ./internal/httpserver/test -run '^TestCompleteIngestionLifecycle$'
+```
 
 ## Storage foundation
 
