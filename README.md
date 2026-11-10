@@ -121,7 +121,7 @@ With Go, Node/npm and Make installed:
 make deps       # Go modules and frozen npm lockfile
 make verify     # formatting, vet, Go tests, web type/lint/tests, both builds
 make test-race  # Go concurrency checks
-make browser-install # install the single headless Chromium test browser
+make browser-install # optional: install a browser if none can be reused
 make verify-all      # verify + race + production browser smoke checks
 make run        # build and serve the frontend with Go on port 8080
 ```
@@ -143,6 +143,23 @@ file under a `databases/<port>/` sibling of the results directory, never the
 application's default database. A minimal Linux host may first need
 Playwright's Chromium system dependencies installed by its administrator.
 These smoke checks do not establish 100,000-client capacity.
+
+Playwright has no exact-version requirement (`@playwright/test: "*"`). The npm
+lockfile records the resolved packages for clean installs; it is not a runtime
+version check. Existing compatible dependencies can be reused without running
+`make deps` again. Browser tests do not install browsers automatically or require
+a project-specific browser revision. To reuse an existing Chromium executable:
+
+```sh
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium make test-browser
+```
+
+Alternatively, set `PLAYWRIGHT_CHROMIUM_CHANNEL=chrome` to use an installed
+Chrome channel. Set only one of these options. Without either, Playwright uses
+its normal browser lookup, including `PLAYWRIGHT_BROWSERS_PATH`. That cache-path
+setting alone does not make a different browser revision discoverable: use the
+executable-path option for that. Run `make browser-install` only when needed;
+compatibility must be verified with the actual installed runner and browser.
 
 ## Production frontend serving
 

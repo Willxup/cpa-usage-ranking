@@ -7,6 +7,9 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('RANKIN
 const baseURL = `http://127.0.0.1:${port}`
 const outputDir = process.env.PLAYWRIGHT_OUTPUT_DIR ?? fileURLToPath(new URL('./results', import.meta.url))
 const binary = resolve(process.env.RANKING_TEST_BINARY ?? fileURLToPath(new URL('../../bin/ranking', import.meta.url)))
+const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined
+const channel = process.env.PLAYWRIGHT_CHROMIUM_CHANNEL || undefined
+if (executablePath && channel) throw new Error('Choose PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH or PLAYWRIGHT_CHROMIUM_CHANNEL, not both')
 
 export default defineConfig({
   testDir: '.',
@@ -20,6 +23,8 @@ export default defineConfig({
   use: {
     baseURL,
     browserName: 'chromium',
+    channel,
+    launchOptions: executablePath ? { executablePath } : undefined,
     viewport: { width: 1440, height: 1000 },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',

@@ -58,7 +58,7 @@ npm --prefix web run build
 make deps       # Go 模块及 npm 锁定依赖
 make verify     # 格式、vet、Go 测试、前端类型/lint/测试，以及双端构建
 make test-race  # Go 并发检查
-make browser-install # 安装唯一的无头 Chromium 测试浏览器
+make browser-install # 可选：没有可复用浏览器时才安装
 make verify-all      # 基础检查 + race + 正式产物浏览器冒烟
 make run        # 构建后由 Go 在 8080 端口提供页面
 ```
@@ -66,6 +66,14 @@ make run        # 构建后由 Go 在 8080 端口提供页面
 `BIN_DIR` 默认 `bin`，`GO_TEST_FLAGS` 默认 `-p 2`，均可覆盖。构建不依赖本地秘密或内部规划文件。前端产物在 `web/dist/assets/third-party-notices.txt` 中包含 React Bits 来源及完整许可，部署时保留该文件。
 
 浏览器测试及配置位于 `web/test/`。`make test-browser` 构建并启动独立 Go 进程，使用回环端口 4187，验证桌面/手机布局、真实健康请求、键盘/触控、减少动效、失败重试、404 边界、66 张头像解码及真实注册/安全重试，然后停止进程；不会接管已有服务。端口占用时可覆盖 `RANKING_TEST_PORT`。产物默认在 `web/test/results/`，可用 `PLAYWRIGHT_OUTPUT_DIR`、`PLAYWRIGHT_BROWSERS_PATH` 调整产物及浏览器下载位置。浏览器检查使用结果目录旁 `databases/<port>/` 中的独立测试库，不访问应用默认数据库。精简 Linux 环境可能需要管理员先补齐 Playwright 的 Chromium 系统依赖。这些冒烟测试不代表已经验证十万客户端容量。
+
+Playwright 不再要求精确版本（`@playwright/test: "*"`）。npm 锁文件保留干净安装时的已解析依赖记录，不是运行时版本检查；已有兼容依赖可以直接复用，不必再次执行 `make deps`。浏览器测试不会自动安装浏览器，也不要求项目专属的浏览器 revision。复用已有 Chromium 可执行文件：
+
+```sh
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium make test-browser
+```
+
+也可以设置 `PLAYWRIGHT_CHROMIUM_CHANNEL=chrome` 复用已安装的 Chrome 通道，两项只选一项。不设置时沿用 Playwright 默认查找方式（包括 `PLAYWRIGHT_BROWSERS_PATH`）；仅改变缓存目录并不能发现不同 revision 的浏览器，跨 revision 复用应指定可执行文件。只有确实没有可用浏览器时才运行 `make browser-install`，兼容性以实际运行的工具和浏览器验证结果为准。
 
 ## 正式前端托管
 
