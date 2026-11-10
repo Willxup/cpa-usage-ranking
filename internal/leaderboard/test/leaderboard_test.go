@@ -2,7 +2,6 @@ package test
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"strconv"
 	"testing"
@@ -96,6 +95,17 @@ func TestCacheRationalHalfUpAndInt64Boundary(t *testing.T) {
 	}
 }
 
+func TestCacheHalfUpTiesUseDisplayedPrecision(t *testing.T) {
+	s := snapshot()
+	add(&s, 1, reports.Metrics{RequestCount: 1, TotalTokens: 800, InputTokens: 800, CacheReadTokens: 201})
+	add(&s, 2, reports.Metrics{RequestCount: 1, TotalTokens: 10000, InputTokens: 10000, CacheReadTokens: 2513})
+	add(&s, 3, reports.Metrics{RequestCount: 1, TotalTokens: 10000, InputTokens: 10000, CacheReadTokens: 2512})
+	rows := build(t, s)[leaderboard.Cache]
+	if rows[0].ClientID != "1" || rows[0].Metric != "25.13" || rows[1].Rank != 1 || rows[2].Rank != 3 || rows[2].Metric != "25.12" {
+		t.Fatal(rows)
+	}
+}
+
 func TestWilsonCoverageMedianAndRounding(t *testing.T) {
 	s := snapshot()
 	add(&s, 1, reports.Metrics{RequestCount: 1, SuccessCount: 1, TTFTSamples: 1, TTFTSumMS: 100})
@@ -181,5 +191,4 @@ func TestInvalidAndExtremeMeasurements(t *testing.T) {
 	if _, err := leaderboard.Build(ctx, s); err == nil {
 		t.Fatal("canceled build accepted")
 	}
-	_ = fmt.Sprint(b)
 }
