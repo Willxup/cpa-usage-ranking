@@ -38,7 +38,7 @@ performance is `1/(1 + mean / median_positive_mean)` multiplied by the
 fraction of requests with TTFT samples. If all measured means are zero, the
 performance factor is 0.5; no samples add no TTFT points. Each weighted
 contribution is rounded half-up to 0.01 points before summation; missing terms
-are not redistributed.
+are not redistributed. Cache ratios use exact integer arithmetic for half-up rounding, including at int64 boundaries.
 
 Usage requires positive tokens, cache requires positive input, and TTFT requires
 at least one sample; other eligible clients can still enter the overall and

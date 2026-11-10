@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/bits"
 	"sort"
 	"strconv"
 
@@ -85,6 +86,9 @@ func Build(ctx context.Context, s statistics.Snapshot) (map[string][]Entry, erro
 		if m.RequestCount == 0 {
 			continue
 		}
+		if m.CacheReadTokens > m.InputTokens {
+			return nil, statistics.ErrInvalidMetrics
+		}
 		c := &candidate{id: id, profile: p, metrics: m, derived: d, wilson: wilson(m.SuccessCount, m.RequestCount)}
 		all = append(all, c)
 		if m.TotalTokens > 0 {
@@ -115,7 +119,7 @@ func Build(ctx context.Context, s statistics.Snapshot) (map[string][]Entry, erro
 		}
 		c.score += int64(math.Round(3000 * c.wilson))
 		if d.CacheReadRate.Valid {
-			c.score += int64(math.Round(2000 * d.CacheReadRate.Value))
+			c.score += int64(roundRatio(m.CacheReadTokens, m.InputTokens, 2000))
 		}
 		if d.TTFTMeanMS.Valid {
 			performance := 0.5 // 所有测量均为零时使用中性参照。
@@ -141,7 +145,7 @@ func Build(ctx context.Context, s statistics.Snapshot) (map[string][]Entry, erro
 				if !c.derived.CacheReadRate.Valid {
 					continue
 				}
-				c.value = round2(c.derived.CacheReadRate.Value * 100)
+				c.value = float64(roundRatio(c.metrics.CacheReadTokens, c.metrics.InputTokens, 10000)) / 100
 			case Success:
 				c.value = round2(c.wilson * 100)
 			case TTFT:
@@ -205,6 +209,17 @@ func wilson(success, requests int64) float64 {
 	z2 := z * z
 	lower := (p + z2/(2*n) - z*math.Sqrt(p*(1-p)/n+z2/(4*n*n))) / (1 + z2/n)
 	return math.Max(0, math.Min(1, lower))
+}
+
+// 原始缓存计数是 int64；128 位中间值保留精确半分且不溢出。
+// 已验证 0 <= numerator <= denominator，因而商不超过 multiplier。
+func roundRatio(numerator, denominator int64, multiplier uint64) uint64 {
+	d := uint64(denominator)
+	hi, lo := bits.Mul64(uint64(numerator), multiplier)
+	lo, carry := bits.Add64(lo, d/2, 0)
+	hi += carry
+	result, _ := bits.Div64(hi, lo, d)
+	return result
 }
 
 // 排序与展示均使用同一个两位小数值；极大的有限 TTFT 避免乘法溢出。

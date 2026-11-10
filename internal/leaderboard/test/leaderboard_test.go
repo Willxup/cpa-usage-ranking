@@ -67,6 +67,35 @@ func TestLowSamplesMissingAndRealZero(t *testing.T) {
 	}
 }
 
+func TestCacheRationalHalfUpAndInt64Boundary(t *testing.T) {
+	s := snapshot()
+	add(&s, 1, reports.Metrics{RequestCount: 1, TotalTokens: 800, InputTokens: 800, CacheReadTokens: 201})
+	b := build(t, s)
+	// 201/800 的缓存贡献恰为 5.025 分，必须 half-up 为 5.03。
+	if got := b[leaderboard.Overall][0].Metric; got != "25.03" {
+		t.Fatal(got)
+	}
+	if got := b[leaderboard.Cache][0].Metric; got != "25.13" {
+		t.Fatal(got)
+	}
+	s = snapshot()
+	scale := int64(math.MaxInt64 / 800)
+	add(&s, 1, reports.Metrics{RequestCount: 1, TotalTokens: 800 * scale, InputTokens: 800 * scale, CacheReadTokens: 201 * scale})
+	b = build(t, s)
+	if b[leaderboard.Overall][0].Metric != "25.03" || b[leaderboard.Cache][0].Metric != "25.13" {
+		t.Fatal(b)
+	}
+	s = snapshot()
+	add(&s, 1, reports.Metrics{RequestCount: 1, TotalTokens: math.MaxInt64, InputTokens: math.MaxInt64, CacheReadTokens: math.MaxInt64})
+	b = build(t, s)
+	if got := b[leaderboard.Overall][0].Metric; got != "40.00" {
+		t.Fatal(got)
+	}
+	if got := b[leaderboard.Cache][0].Metric; got != "100.00" {
+		t.Fatal(got)
+	}
+}
+
 func TestWilsonCoverageMedianAndRounding(t *testing.T) {
 	s := snapshot()
 	add(&s, 1, reports.Metrics{RequestCount: 1, SuccessCount: 1, TTFTSamples: 1, TTFTSumMS: 100})
