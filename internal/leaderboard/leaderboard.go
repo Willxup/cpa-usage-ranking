@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/big"
 	"math/bits"
 	"sort"
 	"strconv"
@@ -108,6 +109,10 @@ func Build(ctx context.Context, s statistics.Snapshot) (map[string][]Entry, erro
 			median = lower + (median-lower)/2
 		}
 	}
+	var reference *big.Rat
+	if median > 0 {
+		reference = new(big.Rat).SetFloat64(median)
+	}
 	for _, c := range all {
 		m, d := c.metrics, c.derived
 		if m.TotalTokens > 0 {
@@ -122,11 +127,7 @@ func Build(ctx context.Context, s statistics.Snapshot) (map[string][]Entry, erro
 			c.score += int64(roundRatio(m.CacheReadTokens, m.InputTokens, 2000))
 		}
 		if d.TTFTMeanMS.Valid {
-			performance := 0.5 // 所有测量均为零时使用中性参照。
-			if median > 0 {
-				performance = 1 / (1 + d.TTFTMeanMS.Value/median)
-			}
-			c.score += int64(math.Round(1000 * performance * d.TTFTCoverage.Value))
+			c.score += responseContribution(reference, d.TTFTMeanMS.Value, m.TTFTSamples, m.RequestCount)
 		}
 	}
 	if err := ctx.Err(); err != nil {
@@ -211,7 +212,31 @@ func wilson(success, requests int64) float64 {
 	return math.Max(0, math.Min(1, lower))
 }
 
-// 原始缓存计数是 int64；128 位中间值保留精确半分且不溢出。
+// 以已计算的有限 float64 均值为输入，用有理数合并表现和精确覆盖率，
+// 避免多次浮点乘除将恰好半分的贡献舍低。无正参照时取中性 0.5。
+func responseContribution(reference *big.Rat, mean float64, samples, requests int64) int64 {
+	if reference == nil {
+		return int64(roundRatio(samples, requests, 500))
+	}
+	if mean == 0 {
+		return int64(roundRatio(samples, requests, 1000))
+	}
+	measured := new(big.Rat).SetFloat64(mean)
+	if measured.Cmp(reference) == 0 {
+		return int64(roundRatio(samples, requests, 500))
+	}
+	divisor := new(big.Rat).Add(reference, measured)
+	points := new(big.Rat).Quo(reference, divisor)
+	points.Mul(points, new(big.Rat).SetFrac(big.NewInt(samples), big.NewInt(requests)))
+	points.Mul(points, big.NewRat(1000, 1))
+	// 非负数 half-up：floor((2*numerator + denominator)/(2*denominator))。
+	numerator := new(big.Int).Lsh(points.Num(), 1)
+	numerator.Add(numerator, points.Denom())
+	denominator := new(big.Int).Lsh(points.Denom(), 1)
+	return numerator.Quo(numerator, denominator).Int64()
+}
+
+// 原始计数是 int64；128 位中间值保留精确半分且不溢出。
 // 已验证 0 <= numerator <= denominator，因而商不超过 multiplier。
 func roundRatio(numerator, denominator int64, multiplier uint64) uint64 {
 	d := uint64(denominator)

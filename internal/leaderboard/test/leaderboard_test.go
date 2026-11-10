@@ -106,6 +106,24 @@ func TestCacheHalfUpTiesUseDisplayedPrecision(t *testing.T) {
 	}
 }
 
+func TestTTFTContributionHalfUpAtExactRationalBoundary(t *testing.T) {
+	s := snapshot()
+	// 正中位数为 1ms，候选均值 2ms、覆盖 3/80：10×(1/3)×(3/80)=0.125。
+	add(&s, 1, reports.Metrics{RequestCount: 80, TTFTSamples: 3, TTFTSumMS: 6})
+	add(&s, 2, reports.Metrics{RequestCount: 1, TTFTSamples: 1, TTFTSumMS: 1})
+	add(&s, 3, reports.Metrics{RequestCount: 1, TTFTSamples: 1, TTFTSumMS: 1})
+	if got := find(t, build(t, s)[leaderboard.Overall], 1).Metric; got != "0.13" {
+		t.Fatal(got)
+	}
+	// 中性零参照和 2^53 以上计数也不能把精确半分舍低。
+	s = snapshot()
+	scale := int64(math.MaxInt64 / 80)
+	add(&s, 1, reports.Metrics{RequestCount: 80 * scale, TTFTSamples: 74 * scale})
+	if got := find(t, build(t, s)[leaderboard.Overall], 1).Metric; got != "4.63" {
+		t.Fatal(got)
+	}
+}
+
 func TestWilsonCoverageMedianAndRounding(t *testing.T) {
 	s := snapshot()
 	add(&s, 1, reports.Metrics{RequestCount: 1, SuccessCount: 1, TTFTSamples: 1, TTFTSumMS: 100})
