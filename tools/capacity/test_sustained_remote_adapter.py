@@ -186,6 +186,35 @@ class RemotePreflightTest(unittest.TestCase):
         (adapter.session_dir/'remote-samples.jsonl').write_text(json.dumps(row)+'\n')
         self.assertIn('file-descriptor', adapter.guard()['tool_failure'])
 
+    def test_generator_cpu_tool_limits_remain_while_local_ssh_is_diagnostic(self):
+        adapter = RemoteAdapter(self.config, self.fake)
+        adapter.session = SimpleNamespace(poll=lambda: None)
+        adapter.session_dir = self.root/'local-cpu-session'
+        adapter.session_dir.mkdir()
+        worker = {'pid': 123, 'ppid': 122, 'start_ticks': 456, 'nofile': [32768, 65536],
+                  'fd': 10, 'cpu_ticks': 1}
+        own_pid = os.getpid()
+        own_ticks = int((Path('/proc')/str(own_pid)/'stat').read_text().rsplit(')', 1)[1].split()[19])
+        adapter.session_ready = {'worker': dict(worker), 'adjustment': {'after': [{'nofile': [32768, 65536]}]},
+                                 'master': {'pid': own_pid, 'start_ticks': own_ticks}}
+        row = {'observed_local_unix_ns': time.time_ns(), 'worker': worker, 'clock_ticks_per_second': 100,
+               'guard': {'units': {adapter.spec.watcher: 'active', adapter.spec.service: 'active'},
+                         'watch_age_s': 1, 'disk_free_gib': 14}}
+        (adapter.session_dir/'remote-samples.jsonl').write_text(json.dumps(row)+'\n')
+        adapter.service_expected = True
+        adapter.driver = SimpleNamespace(proc=SimpleNamespace(pid=own_pid, poll=lambda: None))
+        adapter.cpu_checks['generator'].observe = mock.Mock(return_value=True)
+        self.assertIn('local generator sustained', adapter.guard()['tool_failure'])
+        adapter.cpu_checks['generator'].observe.return_value = False
+        adapter.cpu_checks['local_combined'].observe = mock.Mock(return_value=True)
+        self.assertIn('generator and local SSH sustained', adapter.guard()['tool_failure'])
+        adapter.cpu_checks['local_combined'].observe.return_value = False
+        adapter.cpu_checks['local_ssh'].observe = mock.Mock(return_value=True)
+        result = adapter.guard()
+        self.assertTrue(result['healthy'])
+        self.assertNotIn('tool_failure', result)
+        self.assertIn('local_ssh', (adapter.run_dir/'cpu-warnings.jsonl').read_text())
+
     def test_deploy_handles_absent_private_sustained_parent(self):
         adapter = RemoteAdapter(self.config, self.fake)
         with mock.patch.object(self.fake, 'run', return_value=SimpleNamespace(returncode=0, stdout='', stderr='')) as run:

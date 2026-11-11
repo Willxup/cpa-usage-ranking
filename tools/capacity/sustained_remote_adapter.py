@@ -474,10 +474,11 @@ class RemoteAdapter:
                 hz = os.sysconf('SC_CLK_TCK')
                 when = local['time_ns']/1e9
                 cores = max(1, len(os.sched_getaffinity(0)))
-                self._cpu_warning('generator', self.cpu_checks['generator'].observe(when, local['cpu_ticks'], hz, cores))
+                if self.cpu_checks['generator'].observe(when, local['cpu_ticks'], hz, cores):
+                    return {'healthy': True, 'tool_failure': 'local generator sustained near CPU allocation'}
                 self._cpu_warning('local_ssh', self.cpu_checks['local_ssh'].observe(when, local['ssh_master_cpu_ticks'], hz, 1))
-                self._cpu_warning('local_combined', self.cpu_checks['local_combined'].observe(
-                    when, local['cpu_ticks']+local['ssh_master_cpu_ticks'], hz, cores))
+                if self.cpu_checks['local_combined'].observe(when, local['cpu_ticks']+local['ssh_master_cpu_ticks'], hz, cores):
+                    return {'healthy': True, 'tool_failure': 'generator and local SSH sustained near CPU allocation'}
                 self.last_local_sample = time.monotonic()
             return {'healthy': True, 'cache_generation': g.get('cache_generated_at'),
                     'observed_unix_ns': row['observed_local_unix_ns'], 'remote_sample': row}

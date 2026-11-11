@@ -159,11 +159,13 @@ additional protections, not real-time scheduling guarantees.
 
 The controller conservatively refuses to attribute an upper bound to the server
 when its resource forecast fails, a forwarding worker reaches 90% of its file
-limit, or connection/write waiting stays at the local in-flight bound for a
-minute. Sustained high generator or SSH CPU is recorded as a diagnostic warning,
-not by itself proof that the input or transport is invalid; actual arrival,
-lag, transport, file, memory, disk and host-protection checks still apply.
-These are **tool validity** checks, not product latency or throughput SLOs.
+limit, connection/write waiting stays at the local in-flight bound for a minute,
+or the generator or combined local generator/SSH path sustains at least 95% of
+its allocated CPU for approximately one minute. Sustained SSH worker or local
+SSH master CPU alone is recorded as a diagnostic warning, not by itself proof
+that the input or transport is invalid; actual arrival, lag, transport, file,
+memory, disk and host-protection checks still apply. These are **tool validity**
+checks, not product latency or throughput SLOs.
 They can stop a run without a capacity result. Both local and remote free space and memory must still be
 rechecked; the journal limit is not a disk quota. Memory forecasts reserve the
 remaining estimated footprint: the still-live, pidfd-identified local driver's
