@@ -32,6 +32,12 @@ class ToolLimit(ControllerError):
     pass
 
 
+class ResourceForecastLimit(ToolLimit):
+    def __init__(self, result):
+        self.result = result
+        super().__init__('local or remote resource forecast insufficient: '+repr(result))
+
+
 class GoAssessment:
     def __init__(self, executable, command_log):
         self.executable = str(executable)
@@ -119,7 +125,7 @@ class Controller:
         result = self.adapter.preflight_stage(rate, phase, self.budget.state)
         self.emit('resource_preflight', phase=phase, rate=rate, result=result)
         if not isinstance(result, dict) or result.get('ok') is not True:
-            raise ToolLimit('local or remote resource forecast insufficient: '+repr(result))
+            raise ResourceForecastLimit(result)
 
     def await_paused_driver(self):
         # Large clean journals may take longer than one sample interval to
@@ -196,28 +202,61 @@ class Controller:
                 raise ControllerError('task preflight did not prove its safety prerequisites')
             self.budget.state['preflight'] = preflight
             self.budget.save()
-            if self.budget.state['status'] == 'new':
-                self.budget.state['plan'] = {'current': 100, 'lower': 0, 'upper': 0,
-                                             'uncertain_repeats': 0, 'done': False}
-                self.budget.state['stage_index'] = 0
-                self.adapter.prepare_phase('search')
+            if self.budget.state['status'] in ('new', 'reviewed_search_ready'):
+                reviewed = self.budget.state['status'] == 'reviewed_search_ready'
+                if not reviewed:
+                    self.budget.state['plan'] = {'current': 100, 'lower': 0, 'upper': 0,
+                                                 'uncertain_repeats': 0, 'done': False}
+                    self.budget.state['stage_index'] = 0
+                self.adapter.prepare_phase('resumed-search' if reviewed else 'search')
                 self.budget.mark_loading('search')
-                self.driver = self.adapter.start_driver('search', self.budget.clock()+7200*NS, resume=False)
-                self.await_paused_driver()
+                self.driver = self.adapter.start_driver('search', self.budget.clock()+7200*NS, resume=reviewed)
+                paused = self.await_paused_driver()
+                if reviewed:
+                    if tuple(paused.get(k) for k in ('produced', 'confirmed', 'pending', 'in_flight')) != (188920, 163994, 24926, 0):
+                        raise ControllerError('reviewed journal replay did not preserve the audited debt')
+                    self.emit('reviewed_replay', sample=paused)
                 deadline = self.budget.begin('search')
                 self.driver.arm(deadline)  # before the first arrival command
                 while True:
                     p = self.budget.state['plan']
                     name = 'search-%03d' % self.budget.state['stage_index']
-                    result = self.stage(name, p['current'], 180)
-                    self.budget.state['plan'] = result['plan']
-                    self.budget.state['stage_index'] += 1
+                    try:
+                        result = self.stage(name, p['current'], 180)
+                    except ResourceForecastLimit as exc:
+                        issues = set(exc.result.get('issues', [])) if isinstance(exc.result, dict) else set()
+                        allowed = {'journal_budget_insufficient', 'local_disk_insufficient',
+                                   'remote_disk_insufficient', 'local_memory_insufficient'}
+                        if not p.get('lower') or not issues or not issues.issubset(allowed):
+                            raise
+                        # No new stage command was issued. Preserve the prior
+                        # candidate and attempt the one confirmation instead
+                        # of presenting the forecast as a product upper bound.
+                        p['done'], p['reason'] = True, 'next search resource forecast insufficient'
+                        step = {'action': 'transition_to_confirmation', 'rate': p['lower'], 'reason': p['reason']}
+                        self.emit('forecast_confirmation_fallback', issues=sorted(issues), rate=p['lower'])
+                    else:
+                        self.budget.state['plan'] = result['plan']
+                        self.budget.state['stage_index'] += 1
+                        step = result['step']
+                        # The old 800-TPS observation was incomplete, not an
+                        # upper bound. If 600 passes, retest 800 before doubling.
+                        plan = self.budget.state['plan']
+                        if (reviewed and name == 'search-004' and step.get('action') == 'stage' and
+                                plan.get('current') == 1200 and plan.get('lower') == 600 and not plan.get('upper')):
+                            plan['current'] = 800
+                            step = {'action': 'stage', 'rate': 800, 'reason': 'repeat incomplete 800 TPS reference'}
+                            self.emit('reviewed_probe', rate=800, old_reference_is_not_upper=True)
                     self.budget.save()
-                    step = result['step']
                     if step['action'] == 'stage':
-                        if self.budget.state['active']['deadline_ns'] - self.budget.clock() < 181*NS:
+                        if self.budget.state['active']['deadline_ns'] - self.budget.clock() >= 181*NS:
+                            continue
+                        plan = self.budget.state['plan']
+                        if not plan.get('lower'):
                             raise BudgetError('insufficient search time for another complete stage')
-                        continue
+                        plan['done'], plan['reason'] = True, 'search deadline reserved for confirmation'
+                        step = {'action': 'transition_to_confirmation', 'rate': plan['lower'], 'reason': plan['reason']}
+                        self.budget.save()
                     stopped = self.driver.stop()
                     self.driver.close()
                     self.driver = None
@@ -359,6 +398,7 @@ def main(argv=None):
     parser.add_argument('--config', required=True, help='private fixed JSON config')
     parser.add_argument('--execute-remote', action='store_true', help='run the authorized remote test')
     parser.add_argument('--handoff-after-transition', action='store_true', help='stop at a clean planned transition')
+    parser.add_argument('--reviewed-checkpoint', help='one explicitly audited C54 checkpoint archive directory')
     args = parser.parse_args(argv)
     config = json.loads(Path(args.config).read_text())
     spec = validate_config(config)
@@ -383,13 +423,21 @@ def main(argv=None):
     # One anchor for the entire authorized C54 task, not one per run folder or
     # task ID. A different config cannot silently reset spent time or protection.
     anchor = Path('/root/.cache/agent-cache/cpa-usage-ranking/stage-i-c54/sustained-20261113-r1/formal-budget-state.json')
+    adapter = None
     try:
-        budget = Budget(anchor, config_hash)
+        if args.reviewed_checkpoint:
+            from sustained_reviewed_checkpoint import ReviewedCheckpoint
+            adapter = RemoteAdapter(config)
+            reviewed = ReviewedCheckpoint(config, args.reviewed_checkpoint, adapter)
+            budget = Budget(anchor, config_hash, reviewed=reviewed)
+        else:
+            budget = Budget(anchor, config_hash)
     except BaseException as exc:
         print('C54 budget unavailable; no load started: '+repr(exc), file=sys.stderr, flush=True)
         return 130 if isinstance(exc, KeyboardInterrupt) else 1
     try:
-        adapter = RemoteAdapter(config)
+        if adapter is None:
+            adapter = RemoteAdapter(config)
         result = Controller(budget, adapter, GoAssessment(config['capacity_binary'], adapter.run_dir/'assessment-commands.jsonl'),
                             adapter.run_dir/'controller-events.jsonl',
                             handoff_after_transition=args.handoff_after_transition).run()

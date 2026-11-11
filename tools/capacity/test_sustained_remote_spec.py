@@ -22,14 +22,19 @@ class SpecTest(unittest.TestCase):
     def test_search_and_confirmation_unit_keep_original_bounds(self):
         search = self.spec.service_args('search')
         confirmation = self.spec.service_args('confirmation')
+        resumed = self.spec.service_args('resumed-search')
         for item in ('CPUQuota=200%', 'CPUWeight=50', 'MemoryHigh=768M', 'MemoryMax=1G',
                      'MemorySwapMax=0', 'OOMPolicy=stop', 'RuntimeMaxSec=45min',
                      'TimeoutStopSec=10s', 'BindsTo='+self.spec.watcher, 'After='+self.spec.watcher):
             self.assertIn(item, search)
             self.assertIn(item, confirmation)
+            self.assertIn(item, resumed)
         self.assertIn('direct-paced-copy.py', search[-1])
         self.assertIn('/usr/bin/env -i ', search[-1])
         self.assertNotIn('direct-paced-copy.py', confirmation[-1])
+        self.assertNotIn('direct-paced-copy.py', resumed[-1])
+        self.assertIn('backlog-resumed-search.jsonl', resumed[-1])
+        self.assertIn('test ! -s /root/task/new/data/ranking.sqlite-wal', resumed[-1])
         self.assertIn('test ! -s /root/task/new/data/ranking.sqlite-wal', confirmation[-1])
         watch = self.spec.watch_args()
         self.assertIn('RuntimeMaxSec=2h', watch)

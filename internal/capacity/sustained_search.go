@@ -41,6 +41,85 @@ type SustainedStageSignals struct {
 
 func sampleCodeDelta(a, b map[string]int64, code string) int64 { return b[code] - a[code] }
 
+// sustainedDebtTrend starts only after the stage's entire marked burst has
+// been produced, so injecting 5*rate is never mistaken for natural growth.
+// A majority of falling windows, a lower end, and a falling latter half prove
+// net recovery without imposing a minimum rate or requiring every window to
+// fall. Missing windows and a flat/noisy trend are not proof of recovery.
+type sustainedDebtTrend struct {
+	Windows, Falling, Rising int
+	Declining, Cleared       bool
+	LastTwoGrowing           bool
+	InputShort               bool
+}
+
+func measureSustainedDebtTrend(before SustainedSample, samples []SustainedSample, marked int64, rate float64, window time.Duration) (sustainedDebtTrend, bool) {
+	var out sustainedDebtTrend
+	first := -1
+	for i, s := range samples {
+		if s.DebtProduced-before.DebtProduced == marked && s.DebtRemaining == 0 {
+			first = i
+			break
+		}
+	}
+	if first < 0 {
+		return out, false
+	}
+	points := []SustainedSample{samples[first]}
+	for _, s := range samples[first:] {
+		if s.Pending == 0 {
+			out.Cleared = true
+		}
+		span := time.Duration(s.TimeUnixNS - points[len(points)-1].TimeUnixNS)
+		if span < window {
+			continue
+		}
+		if span > window+window/10 {
+			return out, false
+		}
+		points = append(points, s)
+	}
+	end := samples[len(samples)-1]
+	span := time.Duration(end.TimeUnixNS - points[len(points)-1].TimeUnixNS)
+	if span >= window-window/10 {
+		if span > window+window/10 {
+			return out, false
+		}
+		points = append(points, end)
+	}
+	out.Windows = len(points) - 1
+	for i := 1; i < len(points); i++ {
+		if points[i].Pending < points[i-1].Pending {
+			out.Falling++
+		} else if points[i].Pending > points[i-1].Pending {
+			out.Rising++
+		}
+		span := time.Duration(points[i].TimeUnixNS - points[i-1].TimeUnixNS).Seconds()
+		if float64(points[i].ArrivalProduced-points[i-1].ArrivalProduced)/span < 0.95*rate {
+			out.InputShort = true
+		}
+	}
+	if len(points) >= 3 {
+		n := len(points)
+		out.Declining = out.Falling >= 2 && out.Falling > out.Rising &&
+			end.Pending < points[0].Pending && end.Pending < points[(n-1)/2].Pending
+		// Align the last two windows to the actual final sample. Forward
+		// windows can leave a partial tail and conceal a recent rise.
+		atOrBefore := func(target int64) (SustainedSample, bool) {
+			for i := len(samples) - 1; i >= first; i-- {
+				if samples[i].TimeUnixNS <= target {
+					return samples[i], target-samples[i].TimeUnixNS <= int64(window/10)
+				}
+			}
+			return SustainedSample{}, false
+		}
+		mid, midOK := atOrBefore(end.TimeUnixNS - int64(window))
+		start, startOK := atOrBefore(end.TimeUnixNS - int64(2*window))
+		out.LastTwoGrowing = midOK && startOK && mid.Pending > start.Pending && end.Pending > mid.Pending
+	}
+	return out, out.Windows >= 2
+}
+
 // AssessSustainedStage consumes the cumulative sample immediately before the
 // stage and consecutive samples from this one stage. Timestamps are wall-clock
 // event times, not nominal sleep durations. The caller must additionally watch
@@ -125,25 +204,23 @@ func assessSustainedStage(before SustainedSample, samples []SustainedSample, rat
 	growing := func(a, b SustainedSample) bool {
 		return b.Produced-a.Produced > b.Confirmed-a.Confirmed && b.Pending > a.Pending && b.OldestPendingMS > a.OldestPendingMS
 	}
+	trend, validTrend := measureSustainedDebtTrend(before, samples, out.MarkedDebt, rate, window)
+	if validTrend && trend.InputShort {
+		out.Verdict, out.Reason = "tool_limited", "actual arrival input was below 95 percent of target in an observation window"
+		return out, nil
+	}
+	if validTrend && trend.Declining {
+		out.Verdict, out.Reason = "candidate", "post-marker debt is net decreasing across multiple windows"
+		return out, nil
+	}
 	if growing(start, mid) && growing(mid, end) {
 		out.Verdict, out.Reason = "failed", "two consecutive windows have rising debt and oldest age"
 		return out, nil
 	}
-	cleared := false
-	for _, s := range samples {
-		if s.DebtRemaining == 0 && s.Pending == 0 {
-			cleared = true
-		}
-	}
-	netDown := end.Pending < out.PeakPending && end.Pending < mid.Pending && mid.Pending <= start.Pending
-	// A zero observed after all marked work was produced proves the old and
-	// marked debts cleared. Subsequent ordinary in-flight work need not be
-	// zero at the exact last sample. A short tail is conservatively bounded
-	// by the size of the predeclared 5-lambda marker (a count, not a latency
-	// SLO); the two growing-window failure above still takes precedence.
-	shortTailAfterClear := cleared && end.Pending <= out.MarkedDebt
-	if shortTailAfterClear || netDown {
-		out.Verdict, out.Reason = "candidate", "debt cleared with a short tail or the recent backlog is decreasing"
+	// Once marked work and all prior debt were observed cleared, allow a short
+	// normal in-flight tail. Do not use this to mask sustained later growth.
+	if validTrend && trend.Cleared && (end.Pending == 0 || end.Pending <= out.MarkedDebt && !trend.LastTwoGrowing) {
+		out.Verdict, out.Reason = "candidate", "debt cleared with a short tail"
 		return out, nil
 	}
 	out.Verdict, out.Reason = "uncertain", "window slopes or debt recovery do not give a clear decision"

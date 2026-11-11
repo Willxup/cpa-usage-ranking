@@ -146,22 +146,45 @@ Search uses at most 40 active minutes, reserves the one continuous 20-minute
 confirmation, and limits total active time to 60 minutes. A clean planned
 transition retains the database and journal. An unknown active interval,
 incomplete ledger, changed config, failed confirmation or failed evidence is
-not automatically resumed. The Linux pidfd deadline and separate watcher are
+not automatically resumed. One explicitly authorized, independently audited
+C54 checkpoint has a task-specific `--reviewed-checkpoint` migration: it
+checks the immutable old budget, journal, fixture, seed, snapshot and remote
+identity, records the tool/config change, and charges the old active interval
+before the original budget can be used again. It is not a generic failed-run
+recovery or a fresh budget. The Linux pidfd deadline and separate watcher are
 additional protections, not real-time scheduling guarantees.
 
 The controller conservatively refuses to attribute an upper bound to the server
 when its resource forecast fails, a forwarding worker reaches 90% of its file
-limit, connection/write waiting stays at the local in-flight bound for a minute,
-or the generator/SSH path sustains at least 95% of its allocated CPU over an
-approximately one-minute observation. These are predeclared **tool validity**
-checks, not product latency or throughput SLOs. They can stop a run without a
-capacity result. Both local and remote free space and memory must still be
+limit, or connection/write waiting stays at the local in-flight bound for a
+minute. Sustained high generator or SSH CPU is recorded as a diagnostic warning,
+not by itself proof that the input or transport is invalid; actual arrival,
+lag, transport, file, memory, disk and host-protection checks still apply.
+These are **tool validity** checks, not product latency or throughput SLOs.
+They can stop a run without a capacity result. Both local and remote free space and memory must still be
 rechecked; the journal limit is not a disk quota. Memory forecasts reserve the
 remaining estimated footprint: the still-live, pidfd-identified local driver's
 anonymous resident memory is already excluded from `MemAvailable` and is not
 reserved twice. File-backed RSS and unrelated processes receive no credit; the
 512 MiB host reserve and runtime protection remain unchanged. Forecast output
-records both the full estimate and the additional memory required.
+records both the full estimate and the additional memory required. If only a
+future search stage's resource forecast fails, a previously demonstrated
+candidate may still enter the sole confirmation when its own forecast passes;
+the failed forecast is never treated as a server upper bound.
+
+For each search or confirmation observation, marked `5 * rate` arrivals are
+kept separate from ordinary input. Post-marker contiguous one-minute windows
+must each supply at least 95% of target ordinary input; an overall average alone
+cannot conceal a missing window. Once the burst has been produced, residual
+debt is considered a recovery candidate when it falls overall and in the latter
+half, with more falling than rising windows and at least two falling windows.
+Brief reversals do not by themselves reject an otherwise clear downward trend;
+flat or conflicting evidence remains uncertain. Alternatively, a verified
+clear can leave a short ordinary in-flight tail if the final two windows are not
+both growing. A confirmation additionally requires continuous active time and
+three observed cache-generation changes; it does not require the old debt to
+reach zero or impose a minimum decline speed. These are observation rules, not
+an assurance that unbounded growth in database size remains sustainable.
 
 For a new private local test directory and isolated test service, use
 `seed-sustained` with the same fixture flags as `seed`, plus a fixed

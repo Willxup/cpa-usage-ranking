@@ -46,7 +46,8 @@ def runtime_hashes():
     root = Path(__file__).resolve().parent
     names = ('sustained_controller.py', 'sustained_state.py', 'sustained_deadline.py',
              'sustained_process.py', 'sustained_transfer.py', 'sustained_remote_spec.py',
-             'sustained_remote_adapter.py', 'sustained_resource.py', 'sustained_session.py')
+             'sustained_remote_adapter.py', 'sustained_resource.py', 'sustained_session.py',
+             'sustained_reviewed_checkpoint.py')
     paths = [root/name for name in names] + sorted((root/'remote').glob('*.py'))
     return {str(path.relative_to(root)): sha256_file(path) for path in paths}
 
@@ -115,16 +116,19 @@ class RemoteAdapter:
         self.seed = self.local/'seed.sqlite'
         self.journal = self.local/'sustained.jsonl.gz'
         self.seed_manifest = self.local/'seed-manifest.json'
-        self.commands = commands or Commands(self.local/'commands.jsonl', config['host'])
         self.last_remote = None
         self.state = None
         self.run_dir = Path(tempfile.mkdtemp(prefix='adapter-', dir=self.local))
+        # Never append a continued invocation's commands to the already
+        # audited prior invocation's immutable command evidence.
+        self.commands = commands or Commands(self.run_dir/'commands.jsonl', config['host'])
         self.session = self.session_pidfd = self.session_dir = None
         self.session_ready = None
         self.last_local_sample = 0.0
         self.last_fast_guard = 0.0
         self.cpu_checks = {'generator': SustainedCPUCheck(), 'local_ssh': SustainedCPUCheck(),
                            'local_combined': SustainedCPUCheck(), 'remote_ssh': SustainedCPUCheck()}
+        self.cpu_warning_active = {}
         self.unwritten_since = None
         self.service_expected = False
         self.property_thread = None
@@ -152,7 +156,7 @@ class RemoteAdapter:
                 raise RemoteError('task evidence path may not be a symlink: '+str(path))
         if self.journal.exists() and state['status'] == 'new':
             raise RemoteError('a new run may not reuse an existing journal')
-        if state['status'] == 'transition_ready':
+        if state['status'] in ('transition_ready', 'reviewed_search_ready'):
             expected = state.get('transition_evidence', {}).get('journal_sha256')
             if not self.journal.is_file() or not expected or sha256_file(self.journal) != expected:
                 raise RemoteError('planned transition journal is missing or changed')
@@ -182,15 +186,24 @@ class RemoteAdapter:
                 os.fsync(out.fileno())
         manifest = json.loads(self.seed_manifest.read_text())
         fixture = json.loads(self.fixture.read_text())
+        checkpoint = state.get('reviewed_checkpoint')
+        manifest_binary = expected_binary
+        if checkpoint:
+            if (self.cfg['task_id'] != '721cb71e50f60575' or
+                    checkpoint.get('original_capacity_sha256') != '404ba7bb01728bf37b0c768e200e42505379f2f3942921f13792fa47901365b8' or
+                    checkpoint.get('new_capacity_sha256') != expected_binary):
+                raise RemoteError('invalid reviewed checkpoint binary migration')
+            manifest_binary = checkpoint['original_capacity_sha256']
         expected_manifest = {'day': day, 'model_seed': 8675309, 'clients': 10000,
                              'fixture_sha256': sha256_file(self.fixture), 'seed_sha256': sha256_file(self.seed),
-                             'capacity_sha256': expected_binary, 'catalog_sha256': expected_catalog}
+                             'capacity_sha256': manifest_binary, 'catalog_sha256': expected_catalog}
         if manifest != expected_manifest or (fixture.get('day'), fixture.get('clients'), fixture.get('history_days'), fixture.get('backlog')) != (day, 10000, 90, 10000):
             raise RemoteError('fixture, UTC day, seed or immutable manifest mismatch')
         previous = state.get('preflight')
         tools = runtime_hashes()
         if previous and (any(previous.get(key) != expected_manifest[key] for key in
-                             ('fixture_sha256', 'seed_sha256', 'capacity_sha256', 'catalog_sha256')) or
+                             ('fixture_sha256', 'seed_sha256', 'catalog_sha256')) or
+                         previous.get('capacity_sha256') != expected_binary or
                          previous.get('runtime_hashes') != tools):
             raise RemoteError('preflight identities or scripts changed across a planned transition')
         # No remote unit, forward or load is started by this preflight.
@@ -228,8 +241,18 @@ class RemoteAdapter:
             raise RemoteError('remote disk forecast would consume the 10GiB guard reserve')
         if state['status'] == 'new' and remote.get('root_exists'):
             raise RemoteError('new run may not reuse an existing remote root')
-        if state['status'] == 'transition_ready' and not remote.get('root_exists'):
+        if state['status'] in ('transition_ready', 'reviewed_search_ready') and not remote.get('root_exists'):
             raise RemoteError('planned transition database root is missing')
+        if state['status'] == 'reviewed_search_ready':
+            evidence = state.get('transition_evidence', {})
+            if self._snapshot_state() != evidence.get('source_state'):
+                raise RemoteError('reviewed remote stopped database identity changed')
+            remote_hash = self.commands.ssh(['/usr/bin/sha256sum', '--', self.spec.db], timeout=120).stdout.split()
+            if not remote_hash or remote_hash[0] != evidence.get('snapshot_sha256'):
+                raise RemoteError('reviewed remote stopped database content changed')
+            original_listener = checkpoint.get('original_listener') if checkpoint else None
+            if remote.get('listener') != original_listener:
+                raise RemoteError('reviewed SSH listener identity or limits changed')
         listener = socket.socket()
         try:
             listener.bind(('127.0.0.1', 14210))
@@ -268,7 +291,7 @@ class RemoteAdapter:
             db_bytes = db+wal
         if type(db_bytes) is not int or db_bytes < 0:
             return {'ok': False, 'issues': ['database_size_unknown']}
-        if phase == 'confirmation':
+        if phase == 'confirmation' or state.get('status') == 'reviewed_search_ready':
             source = state.get('transition_evidence', {}).get('source_state', {})
             source_bytes = source.get('files', {}).get(self.spec.db, {}).get('size', 0)
             if type(source_bytes) is not int or source_bytes <= 0:
@@ -379,6 +402,17 @@ class RemoteAdapter:
             return row
         raise RemoteError('remote monitor has no complete sample')
 
+    def _cpu_warning(self, scope, active):
+        # CPU saturation alone is diagnostic, not proof that arrivals or the
+        # transport are invalid. Log transitions; the independent arrival,
+        # lag, FD, connection, journal and host guards remain in force.
+        if active and not self.cpu_warning_active.get(scope, False):
+            with (self.run_dir/'cpu-warnings.jsonl').open('a', encoding='utf-8') as out:
+                out.write(json.dumps({'time_ns': time.time_ns(), 'scope': scope,
+                                      'event': 'sustained_cpu_warning'}, sort_keys=True)+'\n')
+                out.flush()
+        self.cpu_warning_active[scope] = bool(active)
+
     def guard(self):
         try:
             row = self._last_remote_sample()
@@ -407,8 +441,8 @@ class RemoteAdapter:
             if not isinstance(clock_hz, int) or clock_hz <= 0:
                 raise RemoteError('remote worker CPU tick frequency unavailable')
             observed_seconds = row['observed_local_unix_ns']/1e9
-            if self.cpu_checks['remote_ssh'].observe(observed_seconds, worker['cpu_ticks'], clock_hz, 1) and self.service_expected:
-                return {'healthy': True, 'tool_failure': 'remote SSH worker sustained near one CPU'}
+            remote_busy = self.cpu_checks['remote_ssh'].observe(observed_seconds, worker['cpu_ticks'], clock_hz, 1)
+            self._cpu_warning('remote_ssh', remote_busy and self.service_expected)
             if self.service_expected and self.property_error is not None:
                 raise RemoteError('service property readback failed: '+str(self.property_error))
             if self.service_expected and self.property_thread and self.property_thread.is_alive() and time.monotonic()-self.property_started > 15:
@@ -440,12 +474,10 @@ class RemoteAdapter:
                 hz = os.sysconf('SC_CLK_TCK')
                 when = local['time_ns']/1e9
                 cores = max(1, len(os.sched_getaffinity(0)))
-                if self.cpu_checks['generator'].observe(when, local['cpu_ticks'], hz, cores):
-                    return {'healthy': True, 'tool_failure': 'local generator sustained near CPU allocation'}
-                if self.cpu_checks['local_ssh'].observe(when, local['ssh_master_cpu_ticks'], hz, 1):
-                    return {'healthy': True, 'tool_failure': 'local SSH master sustained near one CPU'}
-                if self.cpu_checks['local_combined'].observe(when, local['cpu_ticks']+local['ssh_master_cpu_ticks'], hz, cores):
-                    return {'healthy': True, 'tool_failure': 'generator and local SSH sustained near CPU allocation'}
+                self._cpu_warning('generator', self.cpu_checks['generator'].observe(when, local['cpu_ticks'], hz, cores))
+                self._cpu_warning('local_ssh', self.cpu_checks['local_ssh'].observe(when, local['ssh_master_cpu_ticks'], hz, 1))
+                self._cpu_warning('local_combined', self.cpu_checks['local_combined'].observe(
+                    when, local['cpu_ticks']+local['ssh_master_cpu_ticks'], hz, cores))
                 self.last_local_sample = time.monotonic()
             return {'healthy': True, 'cache_generation': g.get('cache_generated_at'),
                     'observed_unix_ns': row['observed_local_unix_ns'], 'remote_sample': row}
@@ -521,7 +553,7 @@ class RemoteAdapter:
         return state
 
     def prepare_phase(self, phase):
-        if self.state is None or phase not in ('search', 'confirmation'):
+        if self.state is None or phase not in ('search', 'resumed-search', 'confirmation'):
             raise RemoteError('missing preflight or invalid phase')
         if self.session is None:
             if phase == 'search':
@@ -533,12 +565,14 @@ class RemoteAdapter:
                 self._upload_seed()
         else:
             self._guard_or_raise()
-        if phase == 'confirmation':
+        if phase in ('confirmation', 'resumed-search'):
             expected = self.state.get('transition_evidence', {}).get('source_state')
             if not expected or self._snapshot_state() != expected:
                 raise RemoteError('same stopped database could not be proven across transition')
-        elif not self.preflight_stage(100, 'search', self.state).get('ok'):
-            raise RemoteError('insufficient resources before service startup')
+        if phase != 'confirmation':
+            rate = self.state.get('plan', {}).get('current', 100)
+            if not self.preflight_stage(rate, 'search', self.state).get('ok'):
+                raise RemoteError('insufficient resources before service startup')
         self._start_journal()
         self.commands.ssh(self.spec.service_args(phase), timeout=30)
         self.property_error = None

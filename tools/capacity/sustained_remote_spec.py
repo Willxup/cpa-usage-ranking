@@ -67,7 +67,7 @@ class RemoteSpec:
         return {k: {'expected': v, 'actual': data.get(k)} for k, v in expected.items() if data.get(k) != v}
 
     def service_args(self, phase):
-        if phase not in ('search', 'confirmation'):
+        if phase not in ('search', 'resumed-search', 'confirmation'):
             raise ValueError('unknown service phase')
         properties = {
             'CPUQuota': '200%', 'CPUWeight': '50', 'MemoryHigh': '768M',

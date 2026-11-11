@@ -193,6 +193,35 @@ class ControllerTest(unittest.TestCase):
         self.assertGreaterEqual(self.budget.state['confirm_ns'], 1200*NS)
         self.assertLessEqual(sum(self.budget.elapsed()), 3600*NS)
 
+    def test_reviewed_resume_replays_original_debt_without_resetting_search_budget(self):
+        adapter = FakeAdapter(self.clock, mode=lambda stage, rate: 'failed' if stage != 'confirmation' and rate > 400 else 'candidate')
+        adapter.sample.update({'produced': 188920, 'confirmed': 163994, 'pending': 24926,
+                               'arrival_produced': 181420, 'debt_produced': 7500,
+                               'oldest_pending_ms': 1000000, 'active_seconds': 611})
+        self.budget.state.update({'status': 'reviewed_search_ready', 'search_ns': 612018194623,
+                                  'reviewed_checkpoint': {'verified': True},
+                                  'plan': {'current': 600, 'lower': 400, 'upper': 0,
+                                           'uncertain_repeats': 0, 'done': False}, 'stage_index': 4})
+        result = self.run_controller(adapter)
+        self.assertEqual(adapter.commands[0]['rate'], 600)
+        self.assertNotIn(100, [c['rate'] for c in adapter.commands])
+        self.assertEqual(result['verdict'], 'confirmed')
+        self.assertGreater(self.budget.state['search_ns'], 612018194623)
+        self.assertTrue(self.budget.state['confirm_started'])
+        self.assertEqual(sum(c['stage'] == 'confirmation' for c in adapter.commands), 1)
+        self.assertIn('reviewed_replay', (self.path/'events.jsonl').read_text())
+
+    def test_next_stage_forecast_limit_preserves_confirmation_without_upper(self):
+        adapter = FakeAdapter(self.clock, mode=lambda stage, rate: 'candidate')
+        adapter.preflight_stage = lambda rate, phase, state: (
+            {'ok': False, 'issues': ['journal_budget_insufficient']} if phase == 'search' and rate == 200
+            else {'ok': True})
+        result = self.run_controller(adapter)
+        self.assertEqual([c['rate'] for c in adapter.commands], [100, 100])
+        self.assertEqual(result['verdict'], 'confirmed')
+        self.assertEqual(self.budget.state['plan']['upper'], 0)
+        self.assertIn('forecast_confirmation_fallback', (self.path/'events.jsonl').read_text())
+
     def test_planned_handoff_reopens_same_budget_and_preserves_debt(self):
         adapter = FakeAdapter(self.clock)
         controller = Controller(self.budget, adapter, self.assess, self.path/'events.jsonl', handoff_after_transition=True)

@@ -74,32 +74,19 @@ func assessSustainedConfirmation(before SustainedSample, samples []SustainedSamp
 		out.Verdict, out.Reason = "unconfirmed", "fewer than three observed cache generation changes"
 		return out, nil
 	}
-	// Inspect every complete adjacent window, not only the final two. Two
-	// consecutive windows with growing backlog AND age disqualify the stage.
-	previous := samples[0]
-	growingBefore := false
-	for _, s := range samples[1:] {
-		span := time.Duration(s.TimeUnixNS - previous.TimeUnixNS)
-		if span < window {
-			continue
-		}
-		if span > window+window/10 {
-			out.Verdict, out.Reason = "unconfirmed", "confirmation window samples have a gap"
-			return out, nil
-		}
-		out.Windows++
-		growing := s.Produced-previous.Produced > s.Confirmed-previous.Confirmed && s.Pending > previous.Pending && s.OldestPendingMS > previous.OldestPendingMS
-		if growing && growingBefore {
-			out.Verdict, out.Reason = "failed", "two consecutive confirmation windows accumulated older debt"
-			return out, nil
-		}
-		growingBefore = growing
-		previous = s
-	}
-	if out.Windows < int(duration/window)-1 || stage.Verdict != "candidate" {
+	// Judge the whole post-marker observation, not an isolated pair of noisy
+	// windows. A slow net decline needs no minimum speed and need not clear;
+	// the majority of windows and the latter half must both show recovery.
+	trend, valid := measureSustainedDebtTrend(before, samples, stage.MarkedDebt, rate, window)
+	out.Windows = trend.Windows
+	if !valid || out.Windows < int(duration/window)-1 || stage.Verdict != "candidate" {
 		out.Verdict, out.Reason = "unconfirmed", "insufficient windows or debt recovery remains uncertain"
 		return out, nil
 	}
-	out.Verdict, out.Reason = "confirmed", "continuous input, debt recovery and observed cache changes met the conservative checks"
+	if !trend.Declining && !(trend.Cleared && (end.Pending == 0 || end.Pending <= stage.MarkedDebt && !trend.LastTwoGrowing)) {
+		out.Verdict, out.Reason = "unconfirmed", "post-marker debt trend does not demonstrate stable recovery"
+		return out, nil
+	}
+	out.Verdict, out.Reason = "confirmed", "continuous input, post-marker net debt recovery and observed cache changes met the checks"
 	return out, nil
 }

@@ -27,7 +27,7 @@ class BudgetError(RuntimeError):
 
 
 class Budget:
-    def __init__(self, path, config_hash, clock=boot_clock_ns, boot=boot_id):
+    def __init__(self, path, config_hash, clock=boot_clock_ns, boot=boot_id, reviewed=None):
         self.path = Path(path)
         self.clock, self.boot = clock, boot
         self.lock = open(str(self.path)+'.lock', 'a+', encoding='utf-8')
@@ -35,7 +35,16 @@ class Budget:
             os.chmod(self.lock.name, 0o600)
             fcntl.flock(self.lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             if self.path.exists():
-                self.state = json.loads(self.path.read_text())
+                raw = self.path.read_bytes()
+                self.state = json.loads(raw)
+                if reviewed is not None:
+                    from sustained_reviewed_checkpoint import ReviewedCheckpoint
+                    if type(reviewed) is not ReviewedCheckpoint:
+                        raise BudgetError('only the explicit reviewed checkpoint is supported')
+                    self.state = reviewed.migrate(self.state, raw, config_hash, self.clock, self.boot)
+                    self.validate()
+                    self.save()
+                    return
                 if self.state.get('version') != 1 or self.state.get('config_hash') != config_hash:
                     raise BudgetError('state/config mismatch; no automatic restart')
                 if self.state.get('active') is not None:
@@ -48,6 +57,8 @@ class Budget:
                 if self.state.get('status') != 'transition_ready':
                     raise BudgetError('state is not a clean planned transition')
             else:
+                if reviewed is not None:
+                    raise BudgetError('reviewed recovery requires the original budget anchor')
                 self.state = {'version': 1, 'config_hash': config_hash, 'status': 'new',
                               'search_ns': 0, 'confirm_ns': 0, 'confirm_started': False,
                               'host_protections': 0, 'active': None, 'history': []}
@@ -116,9 +127,10 @@ class Budget:
 
     def mark_loading(self, phase):
         s = self.state
-        if s['active'] is not None or s['status'] not in ('new', 'transition_ready'):
+        if s['active'] is not None or s['status'] not in ('new', 'transition_ready', 'reviewed_search_ready'):
             raise BudgetError('cannot start paused driver from this state')
-        if phase == 'search' and (s['status'] != 'new' or s['confirm_started']):
+        if phase == 'search' and (s['status'] not in ('new', 'reviewed_search_ready') or s['confirm_started'] or
+                                  s['status'] == 'reviewed_search_ready' and not s.get('reviewed_checkpoint')):
             raise BudgetError('search driver cannot be restarted here')
         if phase == 'confirmation' and (s['status'] != 'transition_ready' or s['confirm_started']):
             raise BudgetError('confirmation driver cannot be started here')

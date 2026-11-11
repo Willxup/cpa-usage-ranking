@@ -87,6 +87,20 @@ func TestSustainedClearDoesNotMaskTwoGrowingWindows(t *testing.T) {
 	}
 }
 
+func TestSustainedClearDoesNotMaskRisingDebtWithFlatAge(t *testing.T) {
+	before, samples := stageSamples("candidate")
+	for i := 3; i < len(samples); i++ {
+		pending := int64(i - 3)
+		samples[i].Pending = pending
+		samples[i].Confirmed = samples[i].Produced - pending
+		samples[i].OldestPendingMS = 1000 // age alone does not certify recovery
+	}
+	got, err := assessSustainedStage(before, samples, 10, SustainedStageSignals{}, 3*time.Second, time.Second)
+	if err != nil || got.Verdict == "candidate" {
+		t.Fatalf("prior clear masked rising debt with flat age: %+v %v", got, err)
+	}
+}
+
 // The fixed 95% gate is intentionally conservative at the initial rate:
 // E[A]=18000 and the one-sided Poisson Chernoff bound is exp(-22.5).
 // Lower rates can have substantially more stochastic variance; the result is
