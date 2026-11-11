@@ -31,6 +31,9 @@ corrections, settlement, cache reads and restart recovery:
 go test ./internal/httpserver/test -run '^TestCompleteIngestionLifecycle$'
 ```
 
+For isolated synthetic fixtures and bounded HTTP load, see the optional
+[capacity test tool](docs/capacity-tool.md). Never target a production service.
+
 ## Storage foundation
 
 Startup opens `data/ranking.db` (override `RANKING_SQLITE_PATH`) before accepting

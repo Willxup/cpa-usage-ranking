@@ -21,6 +21,8 @@ go run ./cmd/ranking
 go test ./internal/httpserver/test -run '^TestCompleteIngestionLifecycle$'
 ```
 
+隔离合成夹具和有界 HTTP 负载可使用可选的[容量测试工具](docs/capacity-tool.md)；不要将其指向生产服务。
+
 ## 存储基础
 
 启动时在监听 HTTP 之前打开 `data/ranking.db`，可通过 `RANKING_SQLITE_PATH` 覆盖。自动创建缺失的父目录和迁移版本表，启用 WAL、FULL 同步和外键。每个迁移版本的变更与成功记录在同一事务中提交，失败回滚该版本，已完成版本不重复执行；版本 1 建立 `clients` 身份与资料表，版本 2 建立稳定标准模型 ID 字典，启动时以事务登记当前目录的标准名称；版本 3–4 增加持久封窗水位和日快照表，版本 5 增加已结周期统计；不填充模拟参与者。连接或迁移失败直接退出，不自动修复或回退。关停先排空 HTTP，再关闭有界读写连接池，业务就绪还要求真实缓存完整构建成功。具体约定见 [SQLite 存储说明](docs/storage.md)和[客户端存储说明](docs/client-storage.md)。
