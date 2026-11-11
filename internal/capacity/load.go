@@ -35,14 +35,26 @@ type LoadOptions struct {
 	Ledger   string
 }
 type Receipt struct {
-	ID            int     `json:"id"`
-	Day           string  `json:"day"`
-	Revision      int64   `json:"revision"`
-	Changed       int     `json:"changed"`
-	Status        int     `json:"status"`
-	Confirmed     bool    `json:"confirmed"`
-	LatencyMS     float64 `json:"latency_ms"`
-	StartedUnixMS int64   `json:"started_unix_ms"`
+	ID              int     `json:"id"`
+	Day             string  `json:"day"`
+	Revision        int64   `json:"revision"`
+	Changed         int     `json:"changed"`
+	Status          int     `json:"status"`
+	Confirmed       bool    `json:"confirmed"`
+	LatencyMS       float64 `json:"latency_ms"`
+	StartedUnixMS   int64   `json:"started_unix_ms"`
+	TaskID          string  `json:"task_id,omitempty"`
+	Attempt         int     `json:"attempt,omitempty"`
+	Source          string  `json:"source,omitempty"`
+	PlannedUnixNS   int64   `json:"planned_unix_ns,omitempty"`
+	StartedUnixNS   int64   `json:"started_unix_ns,omitempty"`
+	GetConnUnixNS   int64   `json:"get_conn_unix_ns,omitempty"`
+	GotConnUnixNS   int64   `json:"got_conn_unix_ns,omitempty"`
+	WroteUnixNS     int64   `json:"wrote_unix_ns,omitempty"`
+	CompletedUnixNS int64   `json:"completed_unix_ns,omitempty"`
+	RetryAfter      string  `json:"retry_after,omitempty"`
+	Error           string  `json:"error,omitempty"`
+	ErrorDetail     string  `json:"error_detail,omitempty"`
 }
 type Summary struct {
 	Scheduled        int         `json:"scheduled"`
@@ -251,8 +263,8 @@ func openReadDB(path string) (*sql.DB, error) {
 
 // Verify checks every touched identity/day against its attempted snapshots.
 // A 4xx response is a definite rejection; a 5xx, transport failure or invalid
-// success body can be an ambiguous commit. Revisions must not be reused for
-// an identity/day, so a rejected attempt cannot mask an earlier acceptance.
+// success body can be an ambiguous commit. Repeated revisions are accepted only
+// as explicitly numbered attempts of the same logical task and same content.
 func Verify(ctx context.Context, f Fixture, path string, ledgers []string) (map[string]int, error) {
 	if err := f.Validate(); err != nil {
 		return nil, err
@@ -266,7 +278,19 @@ func Verify(ctx context.Context, f Fixture, path string, ledgers []string) (map[
 		id  int
 		day string
 	}
-	attempts := map[key]map[int64]Receipt{}
+	type attemptGroup struct {
+		changed   int
+		taskID    string
+		numbers   map[int]bool
+		rejected  int
+		plausible bool // confirmation or an ambiguous attempt could have committed
+	}
+	type taskIdentity struct {
+		key      key
+		revision int64
+	}
+	attempts := map[key]map[int64]*attemptGroup{}
+	taskIDs := map[string]taskIdentity{}
 	confirmed := map[key]int64{}
 	for _, name := range ledgers {
 		file, err := os.Open(name)
@@ -285,14 +309,40 @@ func Verify(ctx context.Context, f Fixture, path string, ledgers []string) (map[
 				return nil, errors.New("invalid ledger receipt")
 			}
 			k := key{r.ID, r.Day}
+			if r.TaskID != "" {
+				identity := taskIdentity{k, r.Revision}
+				if old, ok := taskIDs[r.TaskID]; ok && old != identity {
+					file.Close()
+					return nil, errors.New("task ID reused for a different identity/day/revision")
+				}
+				taskIDs[r.TaskID] = identity
+			}
 			if attempts[k] == nil {
-				attempts[k] = map[int64]Receipt{}
+				attempts[k] = map[int64]*attemptGroup{}
 			}
-			if _, ok := attempts[k][r.Revision]; ok {
+			group := attempts[k][r.Revision]
+			if group == nil {
+				group = &attemptGroup{changed: r.Changed, taskID: r.TaskID, numbers: map[int]bool{}}
+				attempts[k][r.Revision] = group
+			} else if r.TaskID == "" || group.taskID == "" || r.TaskID != group.taskID || r.Changed != group.changed {
 				file.Close()
-				return nil, errors.New("reused identity/day revision in ledgers")
+				return nil, errors.New("reused identity/day revision with different or missing task/content")
 			}
-			attempts[k][r.Revision] = r
+			if r.TaskID != "" {
+				if r.Attempt < 1 || group.numbers[r.Attempt] {
+					file.Close()
+					return nil, errors.New("invalid or duplicated task attempt number")
+				}
+				group.numbers[r.Attempt] = true
+			} else if r.Attempt != 0 {
+				file.Close()
+				return nil, errors.New("attempt number requires task ID")
+			}
+			if r.Status >= 400 && r.Status < 500 {
+				group.rejected++
+			} else {
+				group.plausible = true
+			}
 			if r.Confirmed && r.Revision > confirmed[k] {
 				confirmed[k] = r.Revision
 			}
@@ -305,6 +355,15 @@ func Verify(ctx context.Context, f Fixture, path string, ledgers []string) (map[
 	}
 	if len(attempts) == 0 {
 		return nil, errors.New("verify received no receipts")
+	}
+	for _, versions := range attempts {
+		for _, group := range versions {
+			for n := 1; n <= len(group.numbers); n++ {
+				if !group.numbers[n] {
+					return nil, errors.New("incomplete task attempt history")
+				}
+			}
+		}
 	}
 	db, err := readDB(path)
 	if err != nil {
@@ -326,7 +385,7 @@ func Verify(ctx context.Context, f Fixture, path string, ledgers []string) (map[
 		rows   map[int64]reports.Metrics
 	}
 	expectedVersions := map[version]expected{}
-	result := map[string]int{"checked": 0, "unconfirmed_commits": 0, "unchanged_at_seed": 0, "rejections_checked": 0, "rejections_superseded": 0}
+	result := map[string]int{"checked": 0, "unconfirmed_commits": 0, "unchanged_at_seed": 0, "rejections_checked": 0, "rejections_superseded": 0, "rejections_mixed": 0}
 	for k, versions := range attempts {
 		var revision int64
 		var digest []byte
@@ -336,28 +395,32 @@ func Verify(ctx context.Context, f Fixture, path string, ledgers []string) (map[
 		if revision < confirmed[k] {
 			return nil, fmt.Errorf("lost confirmation for synthetic client %d", k.id)
 		}
-		for attemptedRevision, receipt := range versions {
-			if receipt.Status < 400 || receipt.Status >= 500 {
+		for attemptedRevision, group := range versions {
+			if group.rejected == 0 {
 				continue
 			}
 			switch {
-			case revision == attemptedRevision:
+			case revision == attemptedRevision && !group.plausible:
 				return nil, fmt.Errorf("explicitly rejected revision committed for synthetic client %d", k.id)
+			case revision == attemptedRevision:
+				// The same content also had a confirmed or ambiguous attempt.
+				// Its final presence cannot prove that the 4xx wrote anything.
+				result["rejections_mixed"] += group.rejected
 			case revision < attemptedRevision:
-				result["rejections_checked"]++
+				result["rejections_checked"] += group.rejected
 			default:
 				// A later commit hides whether this rejected revision briefly
 				// committed; do not count it as a verified rejection.
-				result["rejections_superseded"]++
+				result["rejections_superseded"] += group.rejected
 			}
 		}
 		changed := 2
 		if revision != 1 {
-			r, ok := versions[revision]
+			group, ok := versions[revision]
 			if !ok {
 				return nil, fmt.Errorf("unattempted revision for synthetic client %d", k.id)
 			}
-			changed = r.Changed
+			changed = group.changed
 			if revision > confirmed[k] {
 				result["unconfirmed_commits"]++
 			}

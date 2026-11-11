@@ -17,7 +17,7 @@ import (
 
 func run(ctx context.Context, args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: ranking-capacity seed|load|inspect|verify|probe [flags]")
+		return fmt.Errorf("usage: ranking-capacity seed|load|burst|inspect|verify|probe [flags]")
 	}
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	db := flags.String("db", "", "synthetic SQLite path (seed requires a NEW file)")
@@ -37,6 +37,15 @@ func run(ctx context.Context, args []string) error {
 	both := flags.Bool("both-days", false, "alternate today/yesterday for each identity")
 	ledger := flags.String("ledger", "", "NEW JSONL receipt path")
 	ledgers := flags.String("ledgers", "", "comma-separated complete receipt history for verify")
+	events := flags.String("events", "", "NEW burst logical-task events JSONL path")
+	samples := flags.String("samples", "", "NEW burst one-second samples JSONL path")
+	cycle := flags.Duration("cycle", 10*time.Minute, "burst background cycle for each identity")
+	requestTimeout := flags.Duration("request-timeout", 20*time.Second, "burst per-attempt timeout")
+	retrySpread := flags.Duration("retry-spread", time.Minute, "burst additional retry jitter spread")
+	maxRetryDelay := flags.Duration("max-retry-delay", 2*time.Minute, "burst maximum retry delay")
+	maxAttempts := flags.Int("max-attempts", 30, "burst maximum attempts per logical task")
+	queue := flags.Int("queue-per-client", 16, "burst bounded pending queue per identity")
+	maxPending := flags.Int("max-pending", 0, "burst total pending task limit (0 selects 4*clients)")
 	if err := flags.Parse(args[1:]); err != nil {
 		return err
 	}
@@ -69,6 +78,15 @@ func run(ctx context.Context, args []string) error {
 			return e
 		}
 		value, err = capacity.Load(ctx, f, capacity.LoadOptions{URL: *base, RPS: *rate, Duration: *duration, Workers: *workers, Offset: *offset, Revision: *revision, Changed: *changed, BothDays: *both, Ledger: *ledger})
+	case "burst":
+		f, e := capacity.ReadFixture(*fixture)
+		if e != nil {
+			return e
+		}
+		if *maxPending == 0 {
+			*maxPending = 4 * f.Clients
+		}
+		value, err = capacity.Burst(ctx, f, capacity.BurstOptions{URL: *base, Duration: *duration, Cycle: *cycle, RequestTimeout: *requestTimeout, RetrySpread: *retrySpread, MaxRetryDelay: *maxRetryDelay, MaxAttempts: *maxAttempts, QueuePerClient: *queue, MaxPending: *maxPending, Changed: *changed, Ledger: *ledger, Events: *events, Samples: *samples})
 	case "inspect":
 		value, err = capacity.Inspect(ctx, *db)
 	case "verify":
