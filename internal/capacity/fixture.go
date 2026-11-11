@@ -122,6 +122,18 @@ func history(f Fixture, skipNewest bool) map[periodKey]int {
 // Seed exclusively creates a new SQLite file. Historical periods are synthetic
 // prefill, NOT evidence of settlement; Backlog creates actual pending work.
 func Seed(ctx context.Context, path, catalogPath string, clients, historyDays, backlog int, day string) (Fixture, error) {
+	return seed(ctx, path, catalogPath, clients, historyDays, backlog, day, nil)
+}
+
+// SeedSustained creates the same synthetic historical shape and real closed-day
+// backlog as Seed, but uses the reproducible variable-size model for both open
+// days. The model seed is not a credential; the fixture's credential seed is
+// independently generated and must remain private.
+func SeedSustained(ctx context.Context, path, catalogPath string, clients, historyDays, backlog int, day string, modelSeed uint64) (Fixture, error) {
+	return seed(ctx, path, catalogPath, clients, historyDays, backlog, day, &modelSeed)
+}
+
+func seed(ctx context.Context, path, catalogPath string, clients, historyDays, backlog int, day string, modelSeed *uint64) (Fixture, error) {
 	f := Fixture{Clients: clients, Day: day, HistoryDays: historyDays, Backlog: backlog}
 	catalog, err := models.Load(catalogPath)
 	if err != nil {
@@ -140,6 +152,17 @@ func Seed(ctx context.Context, path, catalogPath string, clients, historyDays, b
 	f.Seed = hex.EncodeToString(raw)
 	if err = f.Validate(); err != nil {
 		return f, err
+	}
+	var synthetic *SustainedModel
+	if modelSeed != nil {
+		names := make([]string, 0, len(catalog.List()))
+		for _, model := range catalog.List() {
+			names = append(names, model.Name)
+		}
+		synthetic, err = NewSustainedModel(day, names, clients, *modelSeed)
+		if err != nil {
+			return f, err
+		}
 	}
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if err != nil {
@@ -233,11 +256,41 @@ func Seed(ctx context.Context, path, catalogPath string, clients, historyDays, b
 				}
 				for age := 0; age < days; age++ {
 					date := now.AddDate(0, 0, -age).Format(time.DateOnly)
-					if _, e = rs.ExecContext(ctx, date, id, digest[:], now.UnixMilli()); e != nil {
+					dayDigest, dayRows, dayKeys := digest, rows, keys
+					if synthetic != nil && age < 2 {
+						initial, x := synthetic.Initial(id, date)
+						if x != nil {
+							return x
+						}
+						r, x := reports.Decode(initial)
+						if x != nil {
+							return x
+						}
+						p, x := reports.Prepare(r)
+						if x != nil {
+							return x
+						}
+						dayDigest = p.Digest()
+						dayRows, x = p.Aggregate(registry)
+						if x != nil {
+							return x
+						}
+						dayKeys = make([]reports.Key, 0, len(dayRows))
+						for k := range dayRows {
+							dayKeys = append(dayKeys, k)
+						}
+						sort.Slice(dayKeys, func(i, j int) bool {
+							if dayKeys[i].ModelID != dayKeys[j].ModelID {
+								return dayKeys[i].ModelID < dayKeys[j].ModelID
+							}
+							return dayKeys[i].Tier < dayKeys[j].Tier
+						})
+					}
+					if _, e = rs.ExecContext(ctx, date, id, dayDigest[:], now.UnixMilli()); e != nil {
 						return e
 					}
-					for _, k := range keys {
-						args := append([]any{date, id, k.ModelID, k.Tier}, metricValues(rows[k], 1)...)
+					for _, k := range dayKeys {
+						args := append([]any{date, id, k.ModelID, k.Tier}, metricValues(dayRows[k], 1)...)
 						if _, e = ds.ExecContext(ctx, args...); e != nil {
 							return e
 						}

@@ -115,6 +115,163 @@ backlog and resource/cache measurements. Ensure the load generator and its
 network path can actually produce the desired wave before interpreting a
 capacity result.
 
+## Experimental random sustained driver
+
+`seed-sustained` and `sustained` are experimental building blocks. Invoking
+these commands alone does **not** start a watchdog, enforce the search budget,
+select stages, manage service transitions or prove a continuous confirmation.
+Local mock results are not capacity measurements.
+
+The task-specific C54 controller in `tools/capacity/sustained_controller.py`
+connects these commands to the search/confirmation logic, a persistent budget,
+the isolated service and watchdog, an exclusive SSH forward, stopped-database
+snapshots and local verification. It is designed for the explicitly authorized
+C54 environment, not arbitrary hosts or production databases. Its default is a
+local dry-run: no SSH, service, watchdog, tunnel or load is started. Remote
+execution requires a private fixed JSON config and an explicit opt-in:
+
+```sh
+python3 tools/capacity/sustained_controller.py --config /private/task/config.json
+# Only after the operator has reviewed the config and approved the remote run:
+python3 tools/capacity/sustained_controller.py --config /private/task/config.json --execute-remote
+```
+
+The config fixes the task ID, task-owned local/remote directories and unit names,
+local/remote binary and catalog paths and SHA-256 hashes, original seven-container
+baseline hash, and local safety limits. The current controller accepts only the
+authorized `lax-racknerd` C54 task paths and `127.0.0.1:14210` → SSH →
+`127.0.0.1:4210`; it does not change production defaults or network policy.
+A single task-wide budget file persists independently of the run directory.
+Search uses at most 40 active minutes, reserves the one continuous 20-minute
+confirmation, and limits total active time to 60 minutes. A clean planned
+transition retains the database and journal. An unknown active interval,
+incomplete ledger, changed config, failed confirmation or failed evidence is
+not automatically resumed. The Linux pidfd deadline and separate watcher are
+additional protections, not real-time scheduling guarantees.
+
+The controller conservatively refuses to attribute an upper bound to the server
+when its resource forecast fails, a forwarding worker reaches 90% of its file
+limit, connection/write waiting stays at the local in-flight bound for a minute,
+or the generator/SSH path sustains at least 95% of its allocated CPU over an
+approximately one-minute observation. These are predeclared **tool validity**
+checks, not product latency or throughput SLOs. They can stop a run without a
+capacity result. Both local and remote free space and memory must still be
+rechecked; the journal limit is not a disk quota.
+
+For a new private local test directory and isolated test service, use
+`seed-sustained` with the same fixture flags as `seed`, plus a fixed
+`--model-seed`. It seeds variable-size today/yesterday snapshots and the same
+synthetic historical shape/closed-day backlog. Save the stopped seed database
+unchanged for later reconstruction; use a separate copy for the test service.
+The manifest is private and contains the seed of the synthetic bearer secrets.
+The synthetic population starts with `--clients` stock identities; it is not a
+limit on later registrations.
+
+Start `sustained` with a private new `--journal`, `--fixture`, formal
+`--models`, matching `--model-seed`, fixed `--arrival-seed`, and a numeric
+loopback `--url`. It starts paused and reads one JSON command per input line:
+
+```json
+{"operation":"stage","stage":"example","rate":100}
+{"operation":"pause"}
+{"operation":"resume"}
+{"operation":"stop"}
+```
+
+A `stage` starts a reproducible Poisson clock and adds `round(5 * rate)`
+separately marked tasks. `pause` stops creation and dispatch without deleting
+queued work; already in-flight requests can finish. `resume` continues that
+stage without injecting another marked debt. `stop`, end of input, or a signal
+cancels in-flight attempts and closes the journal, retaining ambiguous and
+unconfirmed work. Restart with the same options, the same untouched fixture
+and database, and `--resume`; the driver initially remains paused. Do not
+replace the journal or use a different one to reset its active-time budget.
+A malformed, truncated, unclean, or failed journal is **not** automatically
+repaired or resumed. If a scheduled arrival cannot be materialized within a
+local safety limit, the journal records the boundary when possible and remains
+unclean; the run is tool-limited, not evidence of a server limit.
+
+A **new** journal whose path ends in `.gz` is written as a streaming gzip JSONL
+file. Each clean invocation writes a complete gzip member; resuming appends a
+new member without rewriting previous evidence. Replay and `verify-sustained`
+auto-detect both the original plain JSONL and gzip, check gzip trailers, and
+reject an incomplete final JSONL record. Do not rename a journal between the
+plain and `.gz` formats when resuming. Compression is lossless; it does not
+remove request bodies, deltas or attempts. `--max-journal-bytes` applies to the
+physical compressed bytes for gzip files and the physical bytes for plain
+files; buffering and attempts already in flight can exceed this safety bound,
+so it is **not** a filesystem quota. Estimate free space separately and retain
+disk headroom. Compression also consumes generator CPU and must not be mistaken
+for a server bottleneck.
+
+Optionally supply a new private `--samples` JSONL path to the sustained driver
+for a small live cumulative-sample stream. Immediately before a stage or resume,
+the driver emits a `boundary: "before_stage"` sample: it accounts for all old
+arrivals due at the recorded boundary, and the following stage samples contain
+the same `stage_start_unix_ns`. The authoritative full journal remains required
+for replay and verification; missing or stale live samples invalidate an
+observation. Sample output failure cancels the driver. A different new sample
+path is required on each invocation.
+
+Each task is a frozen full snapshot and independently reconstructible per-row
+delta. Approximately 1% of tasks introduce a new identity through real
+registration; that task is counted as pending while registration is outstanding.
+About 10% of identities are hot and receive half of existing-identity selections.
+Client classes are 60/30/10 percent light/medium/heavy, with 1–4/5–16/17–48
+model-tier pairs respectively. Task days are approximately 90/10 today/yesterday;
+calls per update are 80% 1–3, 18% 4–20 and 2% 21–100. Model selection and
+service tiers are skewed toward hot models and default tier respectively; see
+`internal/capacity/sustained_model.go` for the fixed, versioned draw sequence.
+These are synthetic assumptions, not a measured production distribution.
+
+The private JSONL journal contains stage commands, planned/created tasks,
+complete synthetic bodies and delta records, attempt starts and finishes,
+sanitized error codes, and one-second cumulative samples. It contains no
+bearer secret or Authorization header, but still reveals detailed test data.
+`produced - confirmed` includes unsent, registration-dependent, retrying and
+in-flight tasks; only a correct matching acknowledgement counts as confirmed.
+Retries preserve identity, day, revision and body and respect `Retry-After`.
+The default local bounds are 200,000 pending tasks, 4,096 in-flight attempts,
+30 attempts per task, a 4 GiB journal and a one-hour cumulative active-time
+ceiling. Bound exhaustion is a tool limitation, not an application ceiling.
+The journal is read sequentially with bounded individual records; completed
+snapshots are not accumulated per task. Replay and verification still retain
+active identities, per-day state, outstanding tasks and each identity/day's
+latest confirmed snapshot, so their memory grows with those quantities and is
+not bounded by a constant independent of workload.
+UTC rollover stops the driver instead of inventing a reporting window. Resource,
+SSH, cache, settlement and host safety observations require separate tooling.
+
+After stopping the isolated service, obtain a consistent final SQLite snapshot
+with no nonempty WAL, retain the closed seed database and journal, and use a
+**new** reconstruction path:
+
+```sh
+/private/test/ranking-capacity verify-sustained \
+  --fixture /private/test/fixture.json --models config/models.json \
+  --model-seed 1 --seed-db /private/test/seed.sqlite \
+  --db /private/test/final.sqlite --journal /private/test/sustained.jsonl \
+  --expected-db /private/test/reconstructed.sqlite
+```
+
+This mode independently accumulates journal deltas and compares versions,
+digests and all twelve daily and period metrics against the stopped database;
+ambiguous commits and registrations are counted separately. Its result does
+not establish capacity or replace independent inspection of the raw evidence.
+
+After full verification, `summarize-sustained --journal ... --models ...` reads
+the same plain or gzip journal sequentially and reports per-created-stage body
+size, model-row count, changed-row count, confirmation delay, identities touched,
+today/yesterday split, model/tier calls and attempt counts. A task confirmed in
+a later stage remains attributed to its creation stage; use cumulative live
+samples and stage assessments for actual time-window arrival and confirmation
+rates. Nearest-rank body percentiles are upper bounds in 16-byte buckets;
+confirmation-delay bounds use 10ms/100ms/1s buckets, and `-1` explicitly means
+more than one hour. Outstanding IDs are limited by `--max-pending`; identity
+bitmaps and stage groups are capped at two million identities and 32 stages.
+A bound failure is a tool limitation, not a server limit. This summary does not
+replace the full database verifier.
+
 ## Offline checks
 
 Stop the test service and preserve a consistent SQLite database, including any
