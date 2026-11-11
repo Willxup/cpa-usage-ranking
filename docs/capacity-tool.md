@@ -156,7 +156,12 @@ or the generator/SSH path sustains at least 95% of its allocated CPU over an
 approximately one-minute observation. These are predeclared **tool validity**
 checks, not product latency or throughput SLOs. They can stop a run without a
 capacity result. Both local and remote free space and memory must still be
-rechecked; the journal limit is not a disk quota.
+rechecked; the journal limit is not a disk quota. Memory forecasts reserve the
+remaining estimated footprint: the still-live, pidfd-identified local driver's
+anonymous resident memory is already excluded from `MemAvailable` and is not
+reserved twice. File-backed RSS and unrelated processes receive no credit; the
+512 MiB host reserve and runtime protection remain unchanged. Forecast output
+records both the full estimate and the additional memory required.
 
 For a new private local test directory and isolated test service, use
 `seed-sustained` with the same fixture flags as `seed`, plus a fixed

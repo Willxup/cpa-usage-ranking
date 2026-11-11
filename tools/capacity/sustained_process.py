@@ -68,12 +68,32 @@ class LocalDriver:
                                          text=True, start_new_session=True)
             self.pidfd = os.pidfd_open(self.proc.pid)
             child = proc_info(self.proc.pid)
+            self.start_ticks = child['start_ticks']
             self.event('driver_start', pid=self.proc.pid, start_ticks=child['start_ticks'],
                        returncode=None, stderr_path=str(self.stderr_path))
             self.arm(deadline_ns)
         except BaseException:
             self.terminate()
             raise
+
+    def resident_anon_bytes(self):
+        """Credit only anonymous RAM of this still-live, pidfd-pinned driver."""
+        if self.proc is None or self.pidfd is None:
+            raise ProcessError('driver memory identity unavailable')
+        if select.select([self.pidfd], [], [], 0)[0]:
+            raise ProcessError('driver exited during memory observation')
+        child = proc_info(self.proc.pid)
+        if (child['start_ticks'] != self.start_ticks or child['ppid'] != os.getpid() or
+                child['uid'] != os.getuid()):
+            raise ProcessError('driver memory identity changed')
+        lines = (Path('/proc')/str(self.proc.pid)/'status').read_text().splitlines()
+        values = [line.split()[1:] for line in lines if line.startswith('RssAnon:')]
+        if len(values) != 1 or len(values[0]) != 2 or values[0][1] != 'kB':
+            raise ProcessError('driver anonymous memory unavailable')
+        resident = int(values[0][0])*1024
+        if resident < 0 or select.select([self.pidfd], [], [], 0)[0]:
+            raise ProcessError('driver exited or invalid memory observation')
+        return resident
 
     def arm(self, deadline_ns):
         # A bootstrap watchdog protects the paused replay process; a second,

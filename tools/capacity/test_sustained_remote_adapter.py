@@ -116,6 +116,24 @@ class RemotePreflightTest(unittest.TestCase):
         self.assertFalse(result['ok'])
         self.assertIn('utc_day_changed', result['issues'])
 
+    def test_stage_forecast_credits_only_the_owned_active_driver(self):
+        adapter = RemoteAdapter(self.config, self.fake)
+        adapter.preflight({'status': 'new'})
+        idle = adapter.preflight_stage(100, 'search', {'status': 'new'})
+        self.assertEqual(idle['estimates']['driver_owned_anon_bytes'], 0)
+        resident = mock.Mock(return_value=384 << 20)
+        adapter.driver = SimpleNamespace(resident_anon_bytes=resident, proc=SimpleNamespace(poll=lambda: None))
+        running = adapter.preflight_stage(100, 'search', {'status': 'new'})
+        resident.assert_called_once_with()
+        self.assertEqual(running['estimates']['driver_owned_anon_bytes'], 384 << 20)
+        self.assertEqual(idle['estimates']['memory_need_bytes'], running['estimates']['memory_need_bytes'])
+        resident.side_effect = RuntimeError('memory identity unavailable')
+        with self.assertRaisesRegex(RuntimeError, 'memory identity unavailable'):
+            adapter.preflight_stage(100, 'search', {'status': 'new'})
+        adapter.driver.proc.poll = lambda: 0
+        stopped = adapter.preflight_stage(100, 'search', {'status': 'new'})
+        self.assertEqual(stopped['estimates']['driver_owned_anon_bytes'], 0)
+
     def test_guard_requires_fresh_owned_worker_and_real_cache_observation(self):
         adapter = RemoteAdapter(self.config, self.fake)
         adapter.session = SimpleNamespace(poll=lambda: None)

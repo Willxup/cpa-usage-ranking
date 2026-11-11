@@ -277,11 +277,15 @@ class RemoteAdapter:
         if phase == 'confirmation' and db_bytes == 0:
             return {'ok': False, 'issues': ['database_size_unknown']}
         basis = max(self.seed.stat().st_size, db_bytes)
+        owned_anon = 0
+        if self.driver is not None and self.driver.proc is not None and self.driver.proc.poll() is None:
+            owned_anon = self.driver.resident_anon_bytes()
         return forecast(int(rate), phase, journal_bytes=self.journal.stat().st_size if self.journal.exists() else 0,
                         max_journal_bytes=int(self.cfg.get('max_journal_bytes', 4 << 30)),
                         local_free=shutil.disk_usage(self.local).free,
                         remote_free=int(data['free']), local_mem_available=mem,
-                        pending_limit=int(self.cfg.get('max_pending', 200000)), seed_bytes=basis)
+                        pending_limit=int(self.cfg.get('max_pending', 200000)), seed_bytes=basis,
+                        local_owned_anon=owned_anon)
 
     def _deploy(self):
         root = self.spec.root

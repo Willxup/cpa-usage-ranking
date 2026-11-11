@@ -36,9 +36,9 @@ class SustainedCPUCheck:
 
 
 def forecast(rate, phase, *, journal_bytes, max_journal_bytes, local_free,
-             remote_free, local_mem_available, pending_limit, seed_bytes):
+             remote_free, local_mem_available, pending_limit, seed_bytes, local_owned_anon=0):
     values = (rate, journal_bytes, max_journal_bytes, local_free, remote_free,
-              local_mem_available, pending_limit, seed_bytes)
+              local_mem_available, pending_limit, seed_bytes, local_owned_anon)
     if any(type(x) is not int or x < 0 for x in values) or not 1 <= rate <= 100000 or not 1 <= pending_limit <= 1000000:
         raise ValueError('invalid resource forecast input')
     if phase == 'search':
@@ -60,9 +60,16 @@ def forecast(rate, phase, *, journal_bytes, max_journal_bytes, local_free,
     # Pending jobs + model state at roughly twice the measured live heap,
     # plus explicit network/process overhead and a 512MiB host reserve.
     mem_need = 2*(pending_limit*PENDING_HEAP_PER_TASK + 128*MIB) + 256*MIB + 512*MIB
+    # MemAvailable already excludes the active driver's anonymous resident
+    # memory. Reserve only the remaining estimated process footprint, while
+    # always leaving the full host reserve. Never credit file-backed RSS or
+    # another process. This remains an estimate, not an allocation guarantee.
+    mem_additional = max(0, mem_need-512*MIB-local_owned_anon) + 512*MIB
     estimates = {'tasks': tasks, 'journal_growth_bytes': journal_growth,
                  'journal_tail_bytes': journal_tail, 'local_other_bytes': local_other,
-                 'remote_other_bytes': remote_other, 'memory_need_bytes': mem_need}
+                 'remote_other_bytes': remote_other, 'memory_need_bytes': mem_need,
+                 'driver_owned_anon_bytes': local_owned_anon,
+                 'memory_additional_bytes': mem_additional}
     issues = []
     if journal_bytes + journal_growth + journal_tail > max_journal_bytes:
         issues.append('journal_budget_insufficient')
@@ -70,7 +77,7 @@ def forecast(rate, phase, *, journal_bytes, max_journal_bytes, local_free,
         issues.append('local_disk_insufficient')
     if remote_other > remote_free:
         issues.append('remote_disk_insufficient')
-    if mem_need > local_mem_available:
+    if mem_additional > local_mem_available:
         issues.append('local_memory_insufficient')
     return {'ok': not issues, 'issues': issues, 'estimates': estimates,
             'limitations': 'preflight estimate, not a filesystem quota or a measured capacity bound'}
