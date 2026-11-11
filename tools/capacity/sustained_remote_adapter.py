@@ -718,7 +718,10 @@ class RemoteAdapter:
     def _snapshot(self, label):
         self._guard_or_raise()
         before = self._snapshot_state()
-        dest = self.local/(label+'-snapshot.sqlite')
+        # Each invocation has its own evidence namespace. A preserved abort
+        # snapshot from an earlier segment must never block or be overwritten
+        # by the stopped snapshot for a later segment of the same task.
+        dest = self.run_dir/(label+'-snapshot.sqlite')
         if any(Path(str(dest)+suffix).exists() or Path(str(dest)+suffix).is_symlink() for suffix in ('', '-wal', '-shm')):
             raise RemoteError('snapshot destination or sidecar already exists')
         self._copy_remote(self.spec.db, dest, 'snapshot-'+label)
@@ -729,7 +732,7 @@ class RemoteAdapter:
         return {'source_state': before, 'snapshot_path': str(dest), 'snapshot_sha256': sha256_file(dest)}
 
     def _verify_snapshot(self, label, snapshot):
-        expected = self.local/(label+'-expected.sqlite')
+        expected = self.run_dir/(label+'-expected.sqlite')
         if any(Path(str(expected)+suffix).exists() or Path(str(expected)+suffix).is_symlink() for suffix in ('', '-wal', '-shm')):
             raise RemoteError('reconstruction database or sidecar already exists')
         self.transfer_index += 1

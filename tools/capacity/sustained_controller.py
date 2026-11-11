@@ -170,6 +170,8 @@ class Controller:
         samples = []
         while True:
             s = self.next_sample(confirmation)
+            if s.get('stage') == name and s.get('target_rate') == 0:
+                raise ControllerError('driver stopped during active stage; inspect its stderr and final journal')
             if s.get('stage') != name or s.get('target_rate') != rate:
                 raise ControllerError('unexpected stage/target in sample stream')
             if s.get('stage_start_unix_ns') != start:

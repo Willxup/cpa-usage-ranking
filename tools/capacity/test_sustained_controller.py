@@ -280,6 +280,21 @@ class ControllerTest(unittest.TestCase):
         self.assertIsNotNone(self.budget.state['active'])
         self.assertEqual(self.budget.state['status'], 'failed')
 
+    def test_stopped_sample_exposes_driver_failure_instead_of_stage_mismatch(self):
+        adapter = FakeAdapter(self.clock)
+        controller = Controller(self.budget, adapter, self.assess, self.path/'events.jsonl')
+        driver = FakeDriver(adapter)
+        original = driver.next_sample
+        def stopped_sample(timeout=5):
+            sample = original(timeout)
+            if sample.get('boundary') != 'before_stage':
+                sample['target_rate'] = 0
+            return sample
+        driver.next_sample = stopped_sample
+        controller.driver = driver
+        with self.assertRaisesRegex(ControllerError, 'driver stopped during active stage'):
+            controller.stage('search-000', 100, 180)
+
     def test_sample_timeout_and_cancel_stop_and_cleanup(self):
         for failure in ('timeout', 'cancel'):
             with self.subTest(failure=failure):

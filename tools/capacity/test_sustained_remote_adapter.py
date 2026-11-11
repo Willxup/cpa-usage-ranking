@@ -264,7 +264,44 @@ class RemotePreflightTest(unittest.TestCase):
             with self.assertRaisesRegex(RemoteError, 'source changed'):
                 adapter._snapshot('changed')
         # The partial evidence is preserved, not silently removed.
-        self.assertTrue((self.root/'changed-snapshot.sqlite').exists())
+        self.assertTrue((adapter.run_dir/'changed-snapshot.sqlite').exists())
+
+    def test_snapshots_are_separate_per_invocation_and_never_overwrite(self):
+        old = self.root/'abort-snapshot.sqlite'
+        old.write_bytes(b'old audited snapshot')
+        adapter = RemoteAdapter(self.config, self.fake)
+        source = {'files': {adapter.spec.db: {'size': 4, 'inode': 22, 'mtime_ns': 33}}}
+        def copy(source_path, target, label):
+            Path(target).write_bytes(b'data')
+        with mock.patch.object(adapter, '_guard_or_raise'), \
+             mock.patch.object(adapter, '_snapshot_state', side_effect=[source, source]), \
+             mock.patch.object(adapter, '_copy_remote', side_effect=copy):
+            result = adapter._snapshot('abort')
+        self.assertEqual(Path(result['snapshot_path']), adapter.run_dir/'abort-snapshot.sqlite')
+        self.assertEqual(old.read_bytes(), b'old audited snapshot')
+        with mock.patch.object(adapter, '_guard_or_raise'), \
+             mock.patch.object(adapter, '_snapshot_state', return_value=source):
+            with self.assertRaisesRegex(RemoteError, 'destination or sidecar already exists'):
+                adapter._snapshot('abort')
+        self.assertEqual((adapter.run_dir/'abort-snapshot.sqlite').read_bytes(), b'data')
+
+    def test_reconstruction_path_is_separate_per_invocation(self):
+        adapter = RemoteAdapter(self.config, self.fake)
+        old = self.root/'abort-expected.sqlite'
+        old.write_bytes(b'old reconstruction')
+        snapshot = {'snapshot_path': 'mock-snapshot'}
+        responses = iter([{'produced': 12, 'confirmed': 10, 'pending': 2},
+                          {'produced': 12, 'confirmed': 10, 'pending': 2}])
+        def run(argv, *args, **kwargs):
+            if argv[1] == 'verify-sustained':
+                self.assertEqual(argv[argv.index('--expected-db')+1], str(adapter.run_dir/'abort-expected.sqlite'))
+            out = adapter.run_dir/('mock-output-%s.json' % argv[1])
+            out.write_text(json.dumps(next(responses)))
+            return out, adapter.run_dir/'mock-stderr'
+        with mock.patch('sustained_remote_adapter.guarded_command', side_effect=run):
+            result, _ = adapter._verify_snapshot('abort', snapshot)
+        self.assertEqual(result['pending'], 2)
+        self.assertEqual(old.read_bytes(), b'old reconstruction')
 
     def test_transition_preserves_same_database_and_verifies_ledger(self):
         adapter = RemoteAdapter(self.config, self.fake)

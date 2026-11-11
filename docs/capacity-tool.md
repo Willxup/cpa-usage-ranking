@@ -151,7 +151,10 @@ C54 checkpoint has a task-specific `--reviewed-checkpoint` migration: it
 checks the immutable old budget, journal, fixture, seed, snapshot and remote
 identity, records the tool/config change, and charges the old active interval
 before the original budget can be used again. It is not a generic failed-run
-recovery or a fresh budget. The Linux pidfd deadline and separate watcher are
+recovery or a fresh budget. Each controller invocation stores its snapshots and
+reconstruction databases in its own private adapter directory; previous
+snapshots are neither overwritten nor treated as the current stopped database.
+The Linux pidfd deadline and separate watcher are
 additional protections, not real-time scheduling guarantees.
 
 The controller conservatively refuses to attribute an upper bound to the server
