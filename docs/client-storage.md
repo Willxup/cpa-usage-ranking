@@ -1,8 +1,9 @@
 # Client identity and profile storage
 
-This is a **storage layer**, not a registration or authentication API. The
-application applies schema version 1 at startup; it does not create sample
-clients, issue credentials, expose profile endpoints or mark the service ready.
+The `internal/clients` repository persists client identities and profiles in the
+`clients` table introduced by schema version 1. Startup applies the complete
+migration catalog; it does not create sample clients. Registration,
+authentication and readiness checks are separate from this storage layer.
 
 ## Stored fields
 

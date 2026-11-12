@@ -26,7 +26,8 @@ raw totals combine finalized monthly sums and all unsettled daily sums of that
 calendar year in one SQLite read snapshot; there is no year table. Cumulative
 statistics remain persisted and maintained. Profiles, disabled state and raw
 statistics are read in the same snapshot before scoring; disabled clients are
-excluded from all references. Daily and weekly retention is unchanged.
+excluded from all references. Daily and weekly retention follows the
+[daily report storage rules](report-snapshots.md).
 
 Overall has at most 100 points: usage 40, success 30, cache 20, TTFT 10.
 Positive token totals use their mid-percentile among positive totals (equal

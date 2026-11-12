@@ -38,11 +38,11 @@ treated as authentication success.
 routes. `AuthenticatedClient` reads the middleware-established client; handlers
 must use its ID, never a body/query/path `client_id` as authorization. Rejections
 are safe JSON: 401 `invalid_credential` (with `WWW-Authenticate: Bearer`),
-403 `client_disabled`, or generic 500 for storage failures. This is not a session
-system and adds no `/me`, login, administration, reporting or profile-edit API.
-Tests use a test-only write route with real SQLite to prove that another
-client's request-supplied ID cannot select the mutation target.
+403 `client_disabled`, or generic 500 for storage failures. Authentication does
+not issue sessions or provide login, credential recovery or profile-edit endpoints.
+Authenticated reporting is documented in the [daily report API](report-snapshots.md).
 
-Authentication describes state when checked. A future queued report writer
-must recheck disabled status inside its write transaction; no queue is created
-at this stage. The registration creation switch is separate from authentication.
+Authentication describes state when checked. The report writer rechecks client
+existence and disabled status inside its write transaction, so admission does
+not authorize a later write by a client that has since been disabled. The
+registration creation switch is separate from authentication.

@@ -50,6 +50,6 @@ profanity filter, CAPTCHA or account recovery. Display names must be rendered
 as escaped plain text, not interpreted as HTML or automatically made into links;
 normalization itself does not perform HTML escaping.
 
-Tests are in `internal/profiles/test/` and do not require a database, frontend
-build or local planning files. Registration HTTP validation has separate real
-HTTP/SQLite tests; no profile-edit route or account UI is added.
+Unit tests are in `internal/profiles/test/` and do not require a database or
+frontend build. Registration HTTP validation has separate real HTTP/SQLite tests.
+The service does not expose a profile-edit route or account UI.

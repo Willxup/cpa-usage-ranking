@@ -24,8 +24,8 @@ no MIT/CC0 or other stock-image license is asserted.
   missing resources and traversal paths return JSON 404, never a directory
   listing or SPA page. `/assets/` remains the frontend's separate namespace.
 
-No external resource directory, old repository or planning files are needed at
-runtime. Adding assets requires updating the production catalog and rebuilding.
+Avatar assets are embedded; no external asset directory is required at runtime.
+Adding assets requires updating the production catalog and rebuilding.
 There is no avatar selection UI or management API.
 
 ## Directory format

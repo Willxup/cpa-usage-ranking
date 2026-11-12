@@ -6,7 +6,8 @@ it sends real authenticated writes and can overload its target. The tool does
 not enforce host resource budgets or protect other services; arrange external
 limits, monitoring, a stop mechanism and sufficient disk space first. Treat
 results as specific to the fixture, load schedule and measured environment, not
-as an unconditional client-capacity guarantee.
+as an unconditional client-capacity guarantee. See the [500 TPS benchmark](benchmark.md)
+for a measured workload, environment and result limitations.
 
 ## Fixture and load
 
@@ -122,90 +123,15 @@ these commands alone does **not** start a watchdog, enforce the search budget,
 select stages, manage service transitions or prove a continuous confirmation.
 Local mock results are not capacity measurements.
 
-The task-specific C54 controller in `tools/capacity/sustained_controller.py`
-connects these commands to the search/confirmation logic, a persistent budget,
-the isolated service and watchdog, an exclusive SSH forward, stopped-database
-snapshots and local verification. It is designed for the explicitly authorized
-C54 environment, not arbitrary hosts or production databases. Its default is a
-local dry-run: no SSH, service, watchdog, tunnel or load is started. Remote
-execution requires a private fixed JSON config and an explicit opt-in:
+This guide covers the standalone CLI. Provision an isolated service, resource
+limits, monitoring and a reliable stop mechanism separately. Environment-specific
+remote orchestration and checkpoint-recovery scripts are not a portable deployment
+or general-purpose recovery interface. A generator, transport, memory or evidence
+limit must not be reported as an application capacity limit.
 
-```sh
-python3 tools/capacity/sustained_controller.py --config /private/task/config.json
-# Only after the operator has reviewed the config and approved the remote run:
-python3 tools/capacity/sustained_controller.py --config /private/task/config.json --execute-remote
-```
-
-The config fixes the task ID, task-owned local/remote directories and unit names,
-local/remote binary and catalog paths and SHA-256 hashes, original seven-container
-baseline hash, and local safety limits. The current controller accepts only the
-authorized `lax-racknerd` C54 task paths and `127.0.0.1:14210` → SSH →
-`127.0.0.1:4210`; it does not change production defaults or network policy.
-A single task-wide budget file persists independently of the run directory.
-Search uses at most 40 active minutes, reserves the one continuous 20-minute
-confirmation, and limits total active time to 60 minutes. A clean planned
-transition retains the database and journal. An unknown active interval,
-incomplete ledger, changed config, failed confirmation or failed evidence is
-not automatically resumed. One explicitly authorized, independently audited
-C54 checkpoint has a task-specific `--reviewed-checkpoint` migration: it
-checks the immutable old budget, journal, fixture, seed, snapshot and remote
-identity, records the tool/config change, and charges the old active interval
-before the original budget can be used again. It is not a generic failed-run
-recovery or a fresh budget. A second explicitly audited C54 checkpoint permits
-only the recorded 30→512 sustained retry-limit migration, and, if the resource
-forecast requires it, the recorded 125000→100000 local pending safety limit.
-The original gzip prefix and 30-attempt header remain intact; a new journal
-record binds the exact old prefix, old budget/config/binary, new config/binary,
-and the approved transition before another attempt. Replay, summary and
-verification of the migrated journal require the same explicit
-`--reviewed-retry-migration` manifest and reject a changed prefix, mismatched
-manifest or unapproved migration; other journal options remain fixed. Attempts and frozen identities/bodies are never reset.
-For the specific later C54 clean transition, an explicitly authorized
-`--reviewed-pending-migration` records a separate 125000→100000 pending-limit
-decrease after the third closed journal segment. It binds that exact prefix,
-old and new config/binary hashes, both budget identities and all retained
-counts; the retry manifest remains required, as does the pending manifest for
-replay, summary and verification. No other header setting is ignored, and this
-local tool limit is not a service capacity result.
-For the exhausted head, the migration restores the original capped backoff and
-Retry-After from the terminal finish before attempt 31 can start; offline elapsed
-time does not consume the active-load budget. This is not permission to resume arbitrary failed runs or to change production
-retry policy. The second reviewed checkpoint restricts newly searched stages
-to 500–600 TPS; if the new 500 stage fails, it may proceed to the sole
-confirmation at the already observed 400 candidate rather than search outside
-that range. Each controller invocation stores its snapshots and
-reconstruction databases in its own private adapter directory; previous
-snapshots are neither overwritten nor treated as the current stopped database.
-The Linux pidfd deadline and separate watcher are
-additional protections, not real-time scheduling guarantees.
-
-The controller conservatively refuses to attribute an upper bound to the server
-when its resource forecast fails, a forwarding worker reaches 90% of its file
-limit, connection/write waiting stays at the local in-flight bound for a minute,
-or the generator or combined local generator/SSH path sustains at least 95% of
-its allocated CPU for approximately one minute. Sustained SSH worker or local
-SSH master CPU alone is recorded as a diagnostic warning, not by itself proof
-that the input or transport is invalid; actual arrival, lag, transport, file,
-memory, disk and host-protection checks still apply. These are **tool validity**
-checks, not product latency or throughput SLOs.
-They can stop a run without a capacity result. Both local and remote free space and memory must still be
-rechecked; the journal limit is not a disk quota. Memory forecasts reserve the
-remaining estimated footprint: the still-live, pidfd-identified local driver's
-anonymous resident memory is already excluded from `MemAvailable` and is not
-reserved twice. File-backed RSS and unrelated processes receive no credit; the
-512 MiB host reserve and runtime protection remain unchanged. Forecast output
-records both the full estimate and the additional memory required. If only a
-future search stage's resource forecast fails, a previously demonstrated
-candidate may still enter the sole confirmation when its own forecast passes;
-the failed forecast is never treated as a server upper bound. A specific clean,
-verified C54 transition that stopped before confirmation solely due to a local
-memory forecast can be reviewed without resetting its budget or journal; no
-other failed state is accepted. While the task is stopped, the reviewed recovery
-may wait a bounded time for a transient memory forecast miss and must recheck
-the remote identity and stopped snapshot afterward. Before starting confirmation,
-transient local memory forecast misses are also rechecked for a bounded time
-while the driver remains paused; a real protection, different forecast failure,
-or timeout still stops.
+`assess-sustained` evaluates supplied stage and confirmation observations; it
+does not generate traffic or establish host safety. Its recovery criteria are
+measurement rules, not product latency or error-rate SLOs.
 
 For each search or confirmation observation, marked `5 * rate` arrivals are
 kept separate from ordinary input. Post-marker contiguous one-minute windows
@@ -296,10 +222,12 @@ in-flight tasks; only a correct matching acknowledgement counts as confirmed.
 Retries preserve identity, day, revision and body and respect `Retry-After`.
 The default local bounds are 200,000 pending tasks, 4,096 in-flight attempts,
 30 attempts per task, a 4 GiB journal and a one-hour cumulative active-time
-ceiling. The opt-in sustained CLI accepts up to 512 attempts; changing a prior
-journal's limit requires an explicit approved migration, not a new header or
-reset counter. The exponential backoff cap and Retry-After remain unchanged.
-Bound exhaustion is a tool limitation, not an application ceiling.
+ceiling. For a new journal, the opt-in sustained CLI accepts up to 512 attempts
+per task, including the first attempt. Use the same limits when resuming; editing
+the journal header or resetting attempt counters is not supported by this
+standalone workflow. Exponential backoff with jitter is capped at 15 seconds,
+unless `Retry-After` requires a longer wait. Bound exhaustion is a tool limitation,
+not an application ceiling.
 The journal is read sequentially with bounded individual records; completed
 snapshots are not accumulated per task. Replay and verification still retain
 active identities, per-day state, outstanding tasks and each identity/day's

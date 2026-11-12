@@ -43,9 +43,8 @@ explicitly free. A missing tier does not inherit the default tier. Values are
 kept as strings, without floating-point conversion. Prices are references only:
 there is no cost calculation, billing, price history or synchronization.
 
-The shipped catalog and `config/model-sources.json` are copied from an earlier
-catalog exercise. The sources file preserves its historical provenance and
-claims; **prices were not independently reverified for this delivery** and are
-not a statement of current live prices. Actual pricing can depend on date, plan,
-region, context length and other conditions; consult providers before relying
-on it. Only `models.json` is loaded by the service.
+`config/model-sources.json` records source references and dates for the shipped
+catalog. Reference prices are **not independently verified live quotes** and may
+be outdated. Actual pricing can depend on date, plan, region, context length and
+other conditions; consult providers before relying on it. Only `models.json`
+is loaded by the service.
