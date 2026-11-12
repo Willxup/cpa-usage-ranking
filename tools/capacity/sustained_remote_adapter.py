@@ -199,6 +199,12 @@ class RemoteAdapter:
                         sha256_file(retry_path) != checkpoint['retry_manifest_sha256'] or
                         json.loads(retry_path.read_text()) != checkpoint.get('retry_manifest')):
                     raise RemoteError('reviewed retry migration manifest changed')
+            if checkpoint.get('pending_manifest_sha256'):
+                pending_path = Path(self.cfg.get('pending_migration', ''))
+                if (pending_path.is_symlink() or not pending_path.is_file() or
+                        sha256_file(pending_path) != checkpoint['pending_manifest_sha256'] or
+                        json.loads(pending_path.read_text()) != checkpoint.get('pending_manifest')):
+                    raise RemoteError('reviewed pending migration manifest changed')
             manifest_binary = checkpoint['original_capacity_sha256']
         expected_manifest = {'day': day, 'model_seed': 8675309, 'clients': 10000,
                              'fixture_sha256': sha256_file(self.fixture), 'seed_sha256': sha256_file(self.seed),
@@ -662,6 +668,8 @@ class RemoteAdapter:
 
     def _check_retry_manifest(self):
         if not self.cfg.get('retry_migration'):
+            if self.cfg.get('pending_migration'):
+                raise RemoteError('pending migration requires the reviewed retry migration')
             return
         checkpoint = (self.state or {}).get('reviewed_checkpoint', {})
         path = Path(self.cfg['retry_migration'])
@@ -669,6 +677,12 @@ class RemoteAdapter:
                 sha256_file(path) != checkpoint['retry_manifest_sha256'] or
                 json.loads(path.read_text()) != checkpoint.get('retry_manifest')):
             raise RemoteError('reviewed retry manifest changed or is not bound to budget')
+        if self.cfg.get('pending_migration'):
+            path = Path(self.cfg['pending_migration'])
+            if (path.is_symlink() or not path.is_file() or not checkpoint.get('pending_manifest_sha256') or
+                    sha256_file(path) != checkpoint['pending_manifest_sha256'] or
+                    json.loads(path.read_text()) != checkpoint.get('pending_manifest')):
+                raise RemoteError('reviewed pending manifest changed or is not bound to budget')
 
     def start_driver(self, phase, deadline, resume):
         self._check_retry_manifest()
@@ -684,6 +698,7 @@ class RemoteAdapter:
                                   max_journal_bytes=int(self.cfg.get('max_journal_bytes', 4 << 30)),
                                   max_attempts=int(self.cfg.get('max_attempts', 30)),
                                   retry_migration=self.cfg.get('retry_migration'),
+                                  pending_migration=self.cfg.get('pending_migration'),
                                   external_guard=self._driver_liveness)
         self.driver.start(deadline)
         return self.driver
@@ -762,6 +777,8 @@ class RemoteAdapter:
                 '--db', snapshot['snapshot_path'], '--journal', str(self.journal), '--expected-db', str(expected)]
         if self.cfg.get('retry_migration'):
             argv.extend(['--reviewed-retry-migration', self.cfg['retry_migration']])
+        if self.cfg.get('pending_migration'):
+            argv.extend(['--reviewed-pending-migration', self.cfg['pending_migration']])
         out, _ = guarded_command(argv, self.run_dir, 'verify-'+label+'-%d' % self.transfer_index,
                                  self._guard_or_raise, self.commands.record, timeout=1800)
         result = json.loads(out.read_text())
@@ -772,6 +789,8 @@ class RemoteAdapter:
                 '--models', str(self.catalog), '--max-pending', str(self.cfg.get('max_pending', 200000))]
         if self.cfg.get('retry_migration'):
             args.extend(['--reviewed-retry-migration', self.cfg['retry_migration']])
+        if self.cfg.get('pending_migration'):
+            args.extend(['--reviewed-pending-migration', self.cfg['pending_migration']])
         summary_path, _ = guarded_command(args, self.run_dir, 'summary-'+label+'-%d' % self.transfer_index,
                                           self._guard_or_raise, self.commands.record, timeout=1800)
         summary = json.loads(summary_path.read_text())

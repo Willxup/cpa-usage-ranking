@@ -67,16 +67,20 @@ func RunSustained(ctx context.Context, f Fixture, o SustainedOptions, commands <
 	state := newSustainedState(model, o.ArrivalSeed)
 	header := sustainedHeaderFor(f, o)
 	compressed := strings.HasSuffix(o.Journal, ".gz")
-	if o.RetryMigrationPath != "" && !o.Resume {
-		return result, errors.New("reviewed retry migration requires a closed journal resume")
+	if (o.RetryMigrationPath != "" || o.PendingMigrationPath != "") && !o.Resume {
+		return result, errors.New("reviewed migration requires a closed journal resume")
 	}
 	migration, err := loadSustainedRetryMigration(o.RetryMigrationPath, file)
 	if err != nil {
 		return result, err
 	}
-	needsMigration := false
+	pendingMigration, err := loadSustainedPendingMigration(o.PendingMigrationPath, file)
+	if err != nil {
+		return result, err
+	}
+	needsMigration, needsPendingMigration := false, false
 	if o.Resume {
-		if err = restoreSustained(file, header, state, compressed, migration, &needsMigration); err != nil {
+		if err = restoreSustained(file, header, state, compressed, migration, pendingMigration, &needsMigration, &needsPendingMigration); err != nil {
 			return result, err
 		}
 	}
@@ -110,6 +114,17 @@ func RunSustained(ctx context.Context, f Fixture, o SustainedOptions, commands <
 				return result, err
 			}
 			// Record the approved boundary before any command can start input.
+			if err = journal.flush(); err != nil {
+				return result, err
+			}
+			if err = file.Sync(); err != nil {
+				return result, err
+			}
+		}
+		if needsPendingMigration {
+			if err = journal.write(sustainedRecord{Kind: "pending_migration", TimeUnixNS: time.Now().UnixNano(), PendingMigration: pendingMigration}); err != nil {
+				return result, err
+			}
 			if err = journal.flush(); err != nil {
 				return result, err
 			}

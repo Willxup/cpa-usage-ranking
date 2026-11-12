@@ -338,7 +338,15 @@ class RemotePreflightTest(unittest.TestCase):
         payload = {'approval': 'explicit-test'}
         manifest.write_text(json.dumps(payload))
         adapter.cfg['retry_migration'] = str(manifest)
-        adapter.state = {'reviewed_checkpoint': {'retry_manifest_sha256': digest(manifest), 'retry_manifest': payload}}
+        pending = self.root/'pending-manifest.json'
+        pending_payload = {'approval': 'explicit-pending-test'}
+        pending.write_text(json.dumps(pending_payload))
+        adapter.cfg['pending_migration'] = str(pending)
+        adapter.state = {'reviewed_checkpoint': {'retry_manifest_sha256': digest(manifest), 'retry_manifest': payload,
+                                                'pending_manifest_sha256': digest(pending), 'pending_manifest': pending_payload}}
+        with mock.patch('sustained_remote_adapter.LocalDriver') as driver:
+            adapter.start_driver('confirmation', 1000, True)
+            self.assertEqual(driver.call_args.kwargs['pending_migration'], str(pending))
         responses = iter([{'produced': 12, 'confirmed': 10, 'pending': 2},
                           {'produced': 12, 'confirmed': 10, 'pending': 2}])
         commands = []
@@ -353,6 +361,11 @@ class RemotePreflightTest(unittest.TestCase):
         self.assertEqual(len(commands), 2)
         for argv in commands:
             self.assertEqual(argv[argv.index('--reviewed-retry-migration')+1], str(manifest))
+            self.assertEqual(argv[argv.index('--reviewed-pending-migration')+1], str(pending))
+        pending.write_text(json.dumps({'approval': 'changed'}))
+        with self.assertRaisesRegex(RemoteError, 'pending manifest changed'):
+            adapter.start_driver('confirmation', 1000, True)
+        pending.write_text(json.dumps(pending_payload))
         manifest.write_text(json.dumps({'approval': 'changed'}))
         with self.assertRaisesRegex(RemoteError, 'manifest changed'):
             adapter._verify_snapshot('changed', {'snapshot_path': 'mock'})

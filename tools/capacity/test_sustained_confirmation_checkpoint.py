@@ -1,4 +1,5 @@
 """Only the specific clean forecast-stop transition can retain confirmation."""
+import copy
 import hashlib
 import json
 import os
@@ -18,7 +19,7 @@ class ConfirmationCheckpointTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory(dir=os.environ['TMPDIR'])
         self.root = Path(self.tmp.name)
         self.task = self.root/'task'
-        self.archive = self.task/'retry-resume'
+        self.archive = self.task/'retry-resume-20261113-01'
         self.archive.mkdir(parents=True, mode=0o700)
         self.adapter_dir = self.task/'adapter-8qvek47s'
         self.adapter_dir.mkdir()
@@ -83,9 +84,10 @@ class ConfirmationCheckpointTest(unittest.TestCase):
         self.adapter.spec.db = '/approved/stopped-db'
         self.adapter.commands.ssh.return_value = SimpleNamespace(stdout=cp.CONFIRM_SNAPSHOT_SHA+'  db\n')
         self.adapter.preflight_stage.return_value = {'ok': True}
+        self.expected_raw_sha = cp.CONFIRM_BUDGET_SHA
         real_sha = hashlib.sha256
         def sha(data=b''):
-            if data == self.raw: return mock.Mock(hexdigest=lambda: cp.CONFIRM_BUDGET_SHA)
+            if data == self.raw: return mock.Mock(hexdigest=lambda: self.expected_raw_sha)
             return real_sha(data)
         self.patches = [mock.patch.object(cp, 'TASK', self.task),
                         mock.patch.object(cp, 'file_sha', side_effect=lambda p: self.hashes[Path(p)]),
@@ -137,6 +139,66 @@ class ConfirmationCheckpointTest(unittest.TestCase):
         self.adapter.preflight_stage.return_value = {'ok': False, 'issues': ['local_memory_insufficient']}
         with mock.patch.object(cp, 'CONFIRM_PREFLIGHT_WAIT', 0):
             with self.assertRaises(BudgetError): self.open()
+        self.assertEqual(self.anchor.read_bytes(), self.raw)
+
+    def pending_case(self):
+        archive = self.task/'pending-100k-20261113-01'
+        archive.mkdir(mode=0o700)
+        (archive/'budget-before-reservation.json').write_bytes(self.raw)
+        (self.task/'sustained.jsonl.gz').write_bytes(b'audited synthetic prefix')
+        self.hashes[archive/'budget-before-reservation.json'] = cp.CONFIRM_BUDGET_SHA
+        self.hashes[archive/'journal-before-pending-migration.jsonl.gz'] = cp.CONFIRM_JOURNAL_SHA
+        binary = archive/'ranking-capacity-v5'
+        self.hashes[binary] = 'b'*64
+        self.hashes[archive/'pending-migration.json'] = 'c'*64
+        config = {**self.config, 'capacity_binary': str(binary), 'capacity_sha256': 'b'*64,
+                  'max_pending': 100000, 'pending_migration': str(archive/'pending-migration.json')}
+        reservation = {'approval': 'c54-721cb71e50f60575-pending-125000-to-100000',
+                       'previous_budget_sha256': cp.CONFIRM_BUDGET_SHA, 'previous_journal_sha256': cp.CONFIRM_JOURNAL_SHA,
+                       'previous_config_hash': cp.CONFIRM_CONFIG_HASH, 'previous_snapshot_sha256': cp.CONFIRM_SNAPSHOT_SHA,
+                       'previous_max_pending': 125000, 'next_max_pending': 100000, 'max_attempts': 512,
+                       'existing_pending': 16330, 'search_ns': 1095787699798, 'confirm_started': False, 'confirm_rate': 500}
+        state = copy.deepcopy(self.state)
+        state['status'] = 'pending_limit_migration_reserved'
+        state['pending_limit_migration_reservation'] = reservation
+        state['history'].append({'event': 'approved_pending_limit_migration_reserved', **reservation})
+        self.raw = json.dumps(state).encode()
+        self.expected_raw_sha = cp.PENDING_RESERVED_SHA
+        self.anchor.write_bytes(self.raw)
+        new_hash = 'd'*64
+        manifest = {'approval': reservation['approval'], 'previous_journal_sha256': cp.CONFIRM_JOURNAL_SHA,
+                    'previous_journal_bytes': (self.task/'sustained.jsonl.gz').stat().st_size,
+                    'previous_budget_sha256': cp.CONFIRM_BUDGET_SHA, 'reserved_budget_sha256': cp.PENDING_RESERVED_SHA,
+                    'previous_config_hash': cp.CONFIRM_CONFIG_HASH, 'next_config_hash': new_hash,
+                    'previous_binary_sha256': self.config['capacity_sha256'], 'next_binary_sha256': 'b'*64,
+                    'previous_max_pending': 125000, 'next_max_pending': 100000, 'max_attempts': 512,
+                    'produced': 456569, 'confirmed': 440239, 'pending': 16330}
+        (archive/'pending-migration.json').write_text(json.dumps(manifest))
+        return archive, config, new_hash
+
+    def test_exact_pending_decrease_preserves_budget_and_debt(self):
+        archive, config, new_hash = self.pending_case()
+        reviewed = cp.ReviewedCheckpoint(config, archive, self.adapter, kind='pending')
+        with mock.patch.object(cp, 'canonical_config', side_effect=lambda x: new_hash if x.get('max_pending') == 100000 else cp.CONFIRM_CONFIG_HASH):
+            self.budget = Budget(self.anchor, new_hash, lambda: 1000, lambda: 'test-boot', reviewed=reviewed)
+        b = self.budget.state
+        self.assertEqual((b['status'], b['search_ns'], b['confirm_ns'], b['confirm_started']),
+                         ('transition_ready', 1095787699798, 0, False))
+        self.assertEqual(b['transition_evidence']['verification']['pending'], 16330)
+        self.assertEqual(b['config_hash'], new_hash)
+        self.assertEqual(b['reviewed_checkpoint']['pending_manifest_sha256'], 'c'*64)
+        self.assertEqual(b['reviewed_checkpoint']['pending_manifest']['max_attempts'], 512)
+
+    def test_pending_decrease_rejects_other_config_or_low_memory(self):
+        archive, config, new_hash = self.pending_case()
+        reviewed = cp.ReviewedCheckpoint({**config, 'max_in_flight': 3000}, archive, self.adapter, kind='pending')
+        with mock.patch.object(cp, 'canonical_config', side_effect=lambda x: new_hash if x.get('max_pending') == 100000 else cp.CONFIRM_CONFIG_HASH):
+            with self.assertRaises(BudgetError): Budget(self.anchor, new_hash, lambda: 1000, lambda: 'test-boot', reviewed=reviewed)
+        self.assertEqual(self.anchor.read_bytes(), self.raw)
+        reviewed = cp.ReviewedCheckpoint(config, archive, self.adapter, kind='pending')
+        self.adapter.preflight_stage.return_value = {'ok': False, 'issues': ['local_memory_insufficient']}
+        with mock.patch.object(cp, 'canonical_config', side_effect=lambda x: new_hash if x.get('max_pending') == 100000 else cp.CONFIRM_CONFIG_HASH):
+            with self.assertRaises(BudgetError): Budget(self.anchor, new_hash, lambda: 1000, lambda: 'test-boot', reviewed=reviewed)
         self.assertEqual(self.anchor.read_bytes(), self.raw)
 
     def test_transient_memory_forecast_waits_and_rechecks_remote_before_save(self):

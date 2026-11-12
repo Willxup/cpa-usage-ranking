@@ -160,6 +160,13 @@ and the approved transition before another attempt. Replay, summary and
 verification of the migrated journal require the same explicit
 `--reviewed-retry-migration` manifest and reject a changed prefix, mismatched
 manifest or unapproved migration; other journal options remain fixed. Attempts and frozen identities/bodies are never reset.
+For the specific later C54 clean transition, an explicitly authorized
+`--reviewed-pending-migration` records a separate 125000→100000 pending-limit
+decrease after the third closed journal segment. It binds that exact prefix,
+old and new config/binary hashes, both budget identities and all retained
+counts; the retry manifest remains required, as does the pending manifest for
+replay, summary and verification. No other header setting is ignored, and this
+local tool limit is not a service capacity result.
 For the exhausted head, the migration restores the original capped backoff and
 Retry-After from the terminal finish before attempt 31 can start; offline elapsed
 time does not consume the active-load budget. This is not permission to resume arbitrary failed runs or to change production

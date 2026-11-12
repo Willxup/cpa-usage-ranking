@@ -26,6 +26,7 @@ CONFIRM_BUDGET_SHA = 'aef1d32c67ba9ee27c6a024a0c62ccdfa1d6d358f1b95e4e878911fa20
 CONFIRM_JOURNAL_SHA = '190c540a1b691be86e8d3f4183ceaf362c22cdd42fe8fe6ab5586d48ed6018f1'
 CONFIRM_SNAPSHOT_SHA = '7d594c6162e37d7a314b6a9431ef5fe8b31dc26315e9c3c5f0cbb5898f7db5f2'
 CONFIRM_CONFIG_HASH = 'ef9b5227da220e555079b1dd2d09bacd11b2af3e80ffafa75da796ea8e72cd5b'
+PENDING_RESERVED_SHA = '76f82e013e26318ee23f7161e3e40187ac927f7e95dcede9c85f4e115199af9d'
 CONFIRM_PREFLIGHT_WAIT = 180  # idle-only; no formal arrivals or budget reset
 
 
@@ -47,7 +48,7 @@ def canonical_config(config):
 class ReviewedCheckpoint:
     """Migrate only the specific parent-audited failed/active checkpoint."""
     def __init__(self, config, archive_dir, adapter, kind='original'):
-        if kind not in ('original', 'retry', 'confirmation'):
+        if kind not in ('original', 'retry', 'confirmation', 'pending'):
             raise BudgetError('unknown reviewed checkpoint kind')
         self.config = dict(config)
         self.archive_dir = Path(archive_dir)
@@ -60,7 +61,7 @@ class ReviewedCheckpoint:
         for pid in (3184171, 3184172, 3184214, 3184226, 3184364, 3184406, 3184407, 3184415,
                     3236214, 3236217, 3236271, 3236283, 3236348, 3236349, 3236365,
                     3244196, 3244210, 3246156, 3285924, 3285927, 3285966, 3285978,
-                    3286037, 3286038, 3286079, 3299724, 3339803):
+                    3286037, 3286038, 3286079, 3299724, 3339803, 3353045):
             if (Path('/proc')/str(pid)).exists():
                 raise BudgetError('prior task PID exists; ownership cannot be assumed: '+str(pid))
         for proc in Path('/proc').iterdir():
@@ -72,7 +73,8 @@ class ReviewedCheckpoint:
                 continue
             except PermissionError as exc:
                 raise BudgetError('cannot inspect controller process ownership') from exc
-            if (any(Path(x).name in ('sustained_controller.py', 'sustained_session.py', 'sustained_deadline.py') for x in args) or
+            if (any(Path(x).name in ('sustained_controller.py', 'sustained_session.py', 'sustained_deadline.py',
+                                      'wait-for-confirmation-memory.py', 'launch-confirmation-v2.sh') for x in args) or
                 any(Path(x).name.startswith('ranking-capacity') for x in args) and
                 any(x in ('sustained', 'verify-sustained', 'summarize-sustained') for x in args) or
                 any(Path(x).name == 'ssh' for x in args) and any('14210:127.0.0.1:4210' in x for x in args)):
@@ -81,7 +83,7 @@ class ReviewedCheckpoint:
     def migrate(self, state, raw, new_config_hash, clock, boot):
         if self.kind == 'retry':
             return self._migrate_retry(state, raw, new_config_hash, clock, boot)
-        if self.kind == 'confirmation':
+        if self.kind in ('confirmation', 'pending'):
             return self._migrate_confirmation(state, raw, new_config_hash, clock, boot)
         if hashlib.sha256(raw).hexdigest() != OLD_BUDGET_SHA:
             raise BudgetError('reviewed original budget hash does not match')
@@ -340,8 +342,37 @@ class ReviewedCheckpoint:
         # Only this clean, verified planned transition failed before the one
         # confirmation was begun, solely because a local forecast was low.
         # It is not permission to recover any active/unknown/confirmed failure.
-        if hashlib.sha256(raw).hexdigest() != CONFIRM_BUDGET_SHA:
-            raise BudgetError('confirmation transition budget hash differs')
+        pending = self.kind == 'pending'
+        reserved_state = state
+        if pending:
+            if hashlib.sha256(raw).hexdigest() != PENDING_RESERVED_SHA or file_sha(self.archive_dir/'budget-before-reservation.json') != CONFIRM_BUDGET_SHA:
+                raise BudgetError('pending reservation or original budget hash differs')
+            original = json.loads((self.archive_dir/'budget-before-reservation.json').read_text())
+            reservation = state.get('pending_limit_migration_reservation', {})
+            if (reservation.get('approval') != 'c54-721cb71e50f60575-pending-125000-to-100000' or
+                    reservation.get('previous_budget_sha256') != CONFIRM_BUDGET_SHA or
+                    reservation.get('previous_journal_sha256') != CONFIRM_JOURNAL_SHA or
+                    reservation.get('previous_config_hash') != CONFIRM_CONFIG_HASH or
+                    reservation.get('previous_snapshot_sha256') != CONFIRM_SNAPSHOT_SHA or
+                    (reservation.get('previous_max_pending'), reservation.get('next_max_pending'), reservation.get('max_attempts'),
+                     reservation.get('existing_pending'), reservation.get('search_ns'), reservation.get('confirm_started'),
+                     reservation.get('confirm_rate')) != (125000, 100000, 512, 16330, 1095787699798, False, 500)):
+                raise BudgetError('pending reservation does not match the explicit approval')
+            expected = copy.deepcopy(original)
+            expected['status'] = 'pending_limit_migration_reserved'
+            expected['pending_limit_migration_reservation'] = reservation
+            events = state.get('history', [])
+            if not events or events[-1].get('event') != 'approved_pending_limit_migration_reserved':
+                raise BudgetError('pending reservation history missing')
+            expected['history'].append(events[-1])
+            if expected != state:
+                raise BudgetError('pending reservation changed unrelated budget fields')
+            state = original
+            prior_archive = TASK/'retry-resume-20261113-01'
+        else:
+            if hashlib.sha256(raw).hexdigest() != CONFIRM_BUDGET_SHA:
+                raise BudgetError('confirmation transition budget hash differs')
+            prior_archive = self.archive_dir
         if (self.config.get('task_id') != '721cb71e50f60575' or Path(self.config.get('local_task_dir', '')) != TASK or
                 self.archive_dir.is_symlink() or not self.archive_dir.is_dir() or
                 not self.archive_dir.resolve().is_relative_to(TASK.resolve()) or
@@ -349,8 +380,8 @@ class ReviewedCheckpoint:
             raise BudgetError('confirmation transition archive or task differs')
         adapter_dir = TASK/'adapter-8qvek47s'
         checks = {
-            self.archive_dir/'confirmation-transition-budget.json': CONFIRM_BUDGET_SHA,
-            self.archive_dir/'confirmation-transition-journal.jsonl.gz': CONFIRM_JOURNAL_SHA,
+            prior_archive/'confirmation-transition-budget.json': CONFIRM_BUDGET_SHA,
+            prior_archive/'confirmation-transition-journal.jsonl.gz': CONFIRM_JOURNAL_SHA,
             TASK/'sustained.jsonl.gz': CONFIRM_JOURNAL_SHA,
             adapter_dir/'transition-snapshot.sqlite': CONFIRM_SNAPSHOT_SHA,
             adapter_dir/'abort-snapshot.sqlite': CONFIRM_SNAPSHOT_SHA,
@@ -362,18 +393,43 @@ class ReviewedCheckpoint:
             adapter_dir/'verify-transition-3.stdout': '40007481fd6eac9d9d5fc329a719ca5791ceb6bda6d26c5c83e6de0a26061e91',
             adapter_dir/'summary-transition-4.stdout': 'a1121b543a48a636e0b3f37ab4bfb27cda2d65be6a06b084d8f69bb71ee4c113',
             TASK/'session-xb45svmp/session-events.jsonl': 'defebcbaab266ce416a5c1971af0d8e0bc0b9ed3309e9a995b7ffb1dd7059f41',
-            self.archive_dir/'retry-controller.rc': '4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865',
-            self.archive_dir/'retry-controller.stderr': '1f1bfc9e12f04991ac17fd263de1334a2720d8b91546c3b6212eb2d27b5643db',
-            self.archive_dir/'config-retry.json': '4a601676bb22bb93768c34459bf3d34a7f4d6ab454f40d8e71d371f48746b6c0',
-            self.archive_dir/'retry-migration.json': 'c8b7f6e39305ff8ad49baa8449c85cfcc58a2d930be7de44e0bad183c233b295',
+            prior_archive/'retry-controller.rc': '4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865',
+            prior_archive/'retry-controller.stderr': '1f1bfc9e12f04991ac17fd263de1334a2720d8b91546c3b6212eb2d27b5643db',
+            prior_archive/'config-retry.json': '4a601676bb22bb93768c34459bf3d34a7f4d6ab454f40d8e71d371f48746b6c0',
+            prior_archive/'retry-migration.json': 'c8b7f6e39305ff8ad49baa8449c85cfcc58a2d930be7de44e0bad183c233b295',
             TASK/'seed.sqlite': '70f4535010e15ebeaa9763ce4b2d9cb0d65a8cb9f81bd9b06e7f99c32d64ff61',
             TASK/'fixture.json': '33084756ddd509800083285fd70d196ff7be525e79048e1829cf541a8f3589c4',
         }
+        if pending:
+            checks[self.archive_dir/'journal-before-pending-migration.jsonl.gz'] = CONFIRM_JOURNAL_SHA
         for path, expected in checks.items():
             if file_sha(path) != expected:
                 raise BudgetError('confirmation transition evidence hash mismatch: '+str(path))
-        if (canonical_config(self.config) != CONFIRM_CONFIG_HASH or new_config_hash != CONFIRM_CONFIG_HASH or
-                json.loads((self.archive_dir/'config-retry.json').read_text()) != self.config or
+        old_config = json.loads((prior_archive/'config-retry.json').read_text())
+        if canonical_config(old_config) != CONFIRM_CONFIG_HASH or canonical_config(self.config) != new_config_hash:
+            raise BudgetError('confirmation configuration hash changed')
+        pending_manifest = None
+        if pending:
+            if (set(self.config) != set(old_config) | {'pending_migration'} or
+                    any(self.config.get(k) != v for k, v in old_config.items()
+                        if k not in ('capacity_binary', 'capacity_sha256', 'max_pending')) or
+                    self.config.get('max_pending') != 100000 or self.config.get('max_attempts') != 512 or
+                    Path(self.config['capacity_binary']).parent != self.archive_dir or
+                    Path(self.config['pending_migration']) != self.archive_dir/'pending-migration.json' or
+                    file_sha(self.config['capacity_binary']) != self.config['capacity_sha256']):
+                raise BudgetError('unapproved configuration change during pending migration')
+            pending_manifest = json.loads((self.archive_dir/'pending-migration.json').read_text())
+            expected_manifest = {'approval': 'c54-721cb71e50f60575-pending-125000-to-100000',
+                'previous_journal_sha256': CONFIRM_JOURNAL_SHA,
+                'previous_journal_bytes': (TASK/'sustained.jsonl.gz').stat().st_size,
+                'previous_budget_sha256': CONFIRM_BUDGET_SHA, 'reserved_budget_sha256': PENDING_RESERVED_SHA,
+                'previous_config_hash': CONFIRM_CONFIG_HASH, 'next_config_hash': new_config_hash,
+                'previous_binary_sha256': old_config['capacity_sha256'], 'next_binary_sha256': self.config['capacity_sha256'],
+                'previous_max_pending': 125000, 'next_max_pending': 100000, 'max_attempts': 512,
+                'produced': 456569, 'confirmed': 440239, 'pending': 16330}
+            if pending_manifest != expected_manifest:
+                raise BudgetError('pending migration manifest differs from exact approved boundary')
+        elif (new_config_hash != CONFIRM_CONFIG_HASH or old_config != self.config or
                 file_sha(Path(self.config['capacity_binary'])) != self.config['capacity_sha256'] or
                 self.config.get('capacity_sha256') != 'a56cfa16fba285e31e4d364138d6569838ecea682e8096e0964a5291302b3f1b' or
                 self.config.get('max_attempts') != 512 or self.config.get('max_pending') != 125000):
@@ -418,8 +474,14 @@ class ReviewedCheckpoint:
         listener = state['preflight']['remote']['listener']
         if listener != {'comm': 'sshd', 'pid': 881, 'start_ticks': 686, 'nofile': [1024, 524288]}:
             raise BudgetError('original SSH listener baseline differs')
-        new = copy.deepcopy(state)
+        new = copy.deepcopy(reserved_state if pending else state)
         checkpoint = new['reviewed_checkpoint']
+        if pending:
+            checkpoint['previous_capacity_sha256'] = old_config['capacity_sha256']
+            checkpoint['new_capacity_sha256'] = self.config['capacity_sha256']
+            checkpoint['pending_manifest_sha256'] = file_sha(self.archive_dir/'pending-migration.json')
+            checkpoint['pending_manifest'] = pending_manifest
+            new['config_hash'] = new_config_hash
         checkpoint['previous_confirmation_forecast_budget_sha256'] = CONFIRM_BUDGET_SHA
         checkpoint['previous_confirmation_runtime_hashes'] = state['preflight']['runtime_hashes']
         new['status'] = 'transition_ready'
@@ -436,7 +498,7 @@ class ReviewedCheckpoint:
         # The task is stopped with no active load. A momentary local memory
         # forecast miss may clear without changing any limit; wait only a
         # bounded interval, then rerun the remote identity/snapshot checks.
-        end = time.monotonic()+CONFIRM_PREFLIGHT_WAIT
+        end = time.monotonic()+(0 if pending else CONFIRM_PREFLIGHT_WAIT)
         waited = False
         while True:
             forecast = self.adapter.preflight_stage(500, 'confirmation', new)
@@ -465,5 +527,8 @@ class ReviewedCheckpoint:
         new['history'].append({'event': 'reviewed_clean_confirmation_transition', 'at_ns': clock(),
                                'previous_budget_sha256': CONFIRM_BUDGET_SHA, 'journal_sha256': CONFIRM_JOURNAL_SHA,
                                'snapshot_sha256': CONFIRM_SNAPSHOT_SHA, 'search_ns': 1095787699798,
-                               'confirm_ns': 0, 'confirm_rate': 500, 'previous_forecast': 'local_memory_insufficient'})
+                               'confirm_ns': 0, 'confirm_rate': 500, 'previous_forecast': 'local_memory_insufficient',
+                               **({'reserved_budget_sha256': PENDING_RESERVED_SHA, 'old_config_hash': CONFIRM_CONFIG_HASH,
+                                   'new_config_hash': new_config_hash, 'old_max_pending': 125000, 'new_max_pending': 100000,
+                                   'pending_manifest_sha256': checkpoint['pending_manifest_sha256']} if pending else {})})
         return new

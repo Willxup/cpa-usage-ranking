@@ -385,7 +385,7 @@ def validate_config(config):
                 'application_remote', 'catalog_remote', 'web_remote', 'capacity_binary',
                 'catalog_local', 'capacity_sha256', 'catalog_sha256', 'application_sha256',
                 'baseline_containers_sha256'}
-    optional = {'max_pending', 'max_in_flight', 'max_journal_bytes', 'max_attempts', 'retry_migration'}
+    optional = {'max_pending', 'max_in_flight', 'max_journal_bytes', 'max_attempts', 'retry_migration', 'pending_migration'}
     if not isinstance(config, dict) or set(config)-required-optional or required-set(config):
         raise ValueError('config contains missing or unknown fields')
     token = config['task_id']
@@ -428,6 +428,11 @@ def validate_config(config):
           not Path(migration).is_absolute() or Path(migration).is_symlink() or not Path(migration).is_file() or
           not Path(migration).resolve().is_relative_to(local.resolve())):
         raise ValueError('invalid reviewed C54 retry migration')
+    pending = config.get('pending_migration')
+    if pending is not None and (migration is None or attempts != 512 or config.get('max_pending') != 100000 or
+            token != '721cb71e50f60575' or not isinstance(pending, str) or not Path(pending).is_absolute() or
+            Path(pending).is_symlink() or not Path(pending).is_file() or not Path(pending).resolve().is_relative_to(local.resolve())):
+        raise ValueError('invalid reviewed C54 pending migration')
     return spec
 
 
@@ -450,6 +455,7 @@ def main(argv=None):
     checkpoints.add_argument('--reviewed-checkpoint', help='first explicitly audited C54 checkpoint archive directory')
     checkpoints.add_argument('--reviewed-retry-checkpoint', help='second explicitly audited C54 retry checkpoint archive directory')
     checkpoints.add_argument('--reviewed-confirmation-checkpoint', help='specific clean C54 confirmation transition after a resource forecast miss')
+    checkpoints.add_argument('--reviewed-pending-checkpoint', help='specific authorized 125000-to-100000 C54 pending limit transition')
     args = parser.parse_args(argv)
     config = json.loads(Path(args.config).read_text())
     spec = validate_config(config)
@@ -476,11 +482,12 @@ def main(argv=None):
     anchor = Path('/root/.cache/agent-cache/cpa-usage-ranking/stage-i-c54/sustained-20261113-r1/formal-budget-state.json')
     adapter = None
     try:
-        if args.reviewed_checkpoint or args.reviewed_retry_checkpoint or args.reviewed_confirmation_checkpoint:
+        if args.reviewed_checkpoint or args.reviewed_retry_checkpoint or args.reviewed_confirmation_checkpoint or args.reviewed_pending_checkpoint:
             from sustained_reviewed_checkpoint import ReviewedCheckpoint
             adapter = RemoteAdapter(config)
-            kind = 'confirmation' if args.reviewed_confirmation_checkpoint else ('retry' if args.reviewed_retry_checkpoint else 'original')
-            archive = args.reviewed_confirmation_checkpoint or args.reviewed_retry_checkpoint or args.reviewed_checkpoint
+            kind = ('pending' if args.reviewed_pending_checkpoint else 'confirmation' if args.reviewed_confirmation_checkpoint
+                    else 'retry' if args.reviewed_retry_checkpoint else 'original')
+            archive = args.reviewed_pending_checkpoint or args.reviewed_confirmation_checkpoint or args.reviewed_retry_checkpoint or args.reviewed_checkpoint
             reviewed = ReviewedCheckpoint(config, archive, adapter, kind=kind)
             budget = Budget(anchor, config_hash, reviewed=reviewed)
         else:

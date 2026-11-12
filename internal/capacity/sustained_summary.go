@@ -125,16 +125,27 @@ func SummarizeSustained(path string, models []string, maxPending int, migrationP
 		return out, err
 	}
 	defer file.Close()
-	if len(migrationPaths) > 1 {
-		return out, errors.New("at most one reviewed retry manifest is allowed")
+	if len(migrationPaths) > 2 {
+		return out, errors.New("at most one reviewed retry and pending manifest are allowed")
 	}
-	var migrationPath string
-	if len(migrationPaths) == 1 {
+	var migrationPath, pendingPath string
+	if len(migrationPaths) >= 1 {
 		migrationPath = migrationPaths[0]
+	}
+	if len(migrationPaths) == 2 {
+		pendingPath = migrationPaths[1]
 	}
 	authorized, err := loadSustainedRetryMigration(migrationPath, file)
 	if err != nil {
 		return out, err
+	}
+	pendingAuthorized, err := loadSustainedPendingMigration(pendingPath, file)
+	if err != nil {
+		return out, err
+	}
+	if pendingAuthorized != nil && (authorized == nil || authorized.NextPending != pendingAuthorized.PreviousPending || authorized.NextAttempts != pendingAuthorized.MaxAttempts ||
+		authorized.NextConfigHash != pendingAuthorized.PreviousConfigHash || authorized.NextBinarySHA != pendingAuthorized.PreviousBinarySHA) {
+		return out, errors.New("pending summary manifest does not follow retry manifest")
 	}
 	source, _, err := sustainedJournalReader(file)
 	if err != nil {
@@ -151,7 +162,7 @@ func SummarizeSustained(path string, models []string, maxPending int, migrationP
 	current, lineNo, lastKind := -1, 0, ""
 	endCount, attemptLimit := 0, 0
 	var header *sustainedHeader
-	migrated := false
+	migrated, pendingMigrated := false, false
 	var lastSequence int64
 	var today, yesterday string
 	for {
@@ -299,6 +310,16 @@ func SummarizeSustained(path string, models []string, maxPending int, migrationP
 				return out, err
 			}
 			attemptLimit, migrated = m.NextAttempts, true
+		case "pending_migration":
+			m := r.PendingMigration
+			if pendingMigrated || !migrated || previousKind != "end" || endCount != 3 || m == nil || pendingAuthorized == nil || *m != *pendingAuthorized ||
+				out.Produced != m.Produced || out.Confirmed != m.Confirmed || int64(len(pending)) != m.Pending {
+				return out, errors.New("invalid summary pending migration boundary")
+			}
+			if err := m.validate(file); err != nil {
+				return out, err
+			}
+			pendingMigrated = true
 		case "sample", "recover":
 		default:
 			return out, fmt.Errorf("unsupported summary record %q", r.Kind)
@@ -306,6 +327,9 @@ func SummarizeSustained(path string, models []string, maxPending int, migrationP
 	}
 	if authorized != nil && !migrated {
 		return out, errors.New("authorized summary retry migration record missing")
+	}
+	if pendingAuthorized != nil && !pendingMigrated {
+		return out, errors.New("authorized summary pending migration record missing")
 	}
 	if lineNo == 0 || lastKind != "end" {
 		return out, errors.New("summary journal not cleanly closed")

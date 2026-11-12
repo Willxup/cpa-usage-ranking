@@ -24,7 +24,7 @@ class LocalDriver:
     def __init__(self, executable, fixture, catalog, journal, directory, url, *,
                  resume=False, model_seed=8675309, arrival_seed=20261113,
                  max_pending=200000, max_in_flight=4096, max_journal_bytes=4 << 30,
-                 max_attempts=30, retry_migration=None, external_guard=None):
+                 max_attempts=30, retry_migration=None, pending_migration=None, external_guard=None):
         self.directory = Path(directory)
         self.directory.mkdir(mode=0o700, parents=True, exist_ok=False)
         self.journal = Path(journal)
@@ -42,6 +42,8 @@ class LocalDriver:
                      '--active-budget', '1h']
         if retry_migration:
             self.args.extend(['--reviewed-retry-migration', str(retry_migration)])
+        if pending_migration:
+            self.args.extend(['--reviewed-pending-migration', str(pending_migration)])
         if resume:
             self.args.append('--resume')
         self.proc = self.watch = None

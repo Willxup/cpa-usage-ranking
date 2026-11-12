@@ -18,10 +18,10 @@ import (
 )
 
 type SustainedVerifyOptions struct {
-	SeedDB, FinalDB, Journal, ExpectedDB string
-	RetryMigrationPath                   string
-	Models                               []string
-	ModelSeed                            uint64
+	SeedDB, FinalDB, Journal, ExpectedDB     string
+	RetryMigrationPath, PendingMigrationPath string
+	Models                                   []string
+	ModelSeed                                uint64
 }
 
 func noLiveWAL(path string) error {
@@ -79,6 +79,14 @@ func readSustainedJournal(path string, f Fixture, o SustainedVerifyOptions, stat
 	if err != nil {
 		return err
 	}
+	pendingAuthorized, err := loadSustainedPendingMigration(o.PendingMigrationPath, file)
+	if err != nil {
+		return err
+	}
+	if pendingAuthorized != nil && (authorized == nil || authorized.NextPending != pendingAuthorized.PreviousPending || authorized.NextAttempts != pendingAuthorized.MaxAttempts ||
+		authorized.NextConfigHash != pendingAuthorized.PreviousConfigHash || authorized.NextBinarySHA != pendingAuthorized.PreviousBinarySHA) {
+		return errors.New("pending verification manifest does not follow retry manifest")
+	}
 	source, _, err := sustainedJournalReader(file)
 	if err != nil {
 		return err
@@ -88,7 +96,7 @@ func readSustainedJournal(path string, f Fixture, o SustainedVerifyOptions, stat
 	line, endCount := 0, 0
 	lastKind := ""
 	var header *sustainedHeader
-	migrated := false
+	migrated, pendingMigrated := false, false
 	for {
 		data, readErr := readSustainedLine(reader)
 		if len(data) == 0 && readErr == io.EOF {
@@ -170,6 +178,22 @@ func readSustainedJournal(path string, f Fixture, o SustainedVerifyOptions, stat
 					}
 				}
 			}
+		case "pending_migration":
+			m := r.PendingMigration
+			if pendingMigrated || !migrated || previousKind != "end" || endCount != 3 || state.rate != 0 || state.activeSince != 0 ||
+				m == nil || pendingAuthorized == nil || *m != *pendingAuthorized || state.created != m.Produced ||
+				state.confirmed != m.Confirmed || state.created-state.confirmed != m.Pending {
+				e = errors.New("invalid pending migration boundary")
+			} else if e = m.validate(file); e == nil {
+				for _, a := range state.actors {
+					if a.inFlight {
+						e = errors.New("pending migration with in-flight attempts")
+					}
+				}
+				if e == nil {
+					pendingMigrated = true
+				}
+			}
 		default:
 			e = errors.New("unexpected journal record")
 		}
@@ -179,6 +203,9 @@ func readSustainedJournal(path string, f Fixture, o SustainedVerifyOptions, stat
 	}
 	if authorized != nil && !migrated {
 		return errors.New("authorized retry migration record missing from journal")
+	}
+	if pendingAuthorized != nil && !pendingMigrated {
+		return errors.New("authorized pending migration record missing from journal")
 	}
 	if line == 0 || lastKind != "end" || state.rate != 0 || state.activeSince != 0 {
 		return errors.New("journal not cleanly closed")

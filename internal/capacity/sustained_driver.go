@@ -44,6 +44,7 @@ type SustainedOptions struct {
 	MaxActive                     time.Duration
 	Resume                        bool
 	RetryMigrationPath            string // explicit reviewed C54 manifest; never implicit
+	PendingMigrationPath          string // explicit reviewed C54 pending-limit decrease
 }
 
 // SustainedSample is cumulative, including work retained across pauses and
@@ -93,31 +94,32 @@ type sustainedHeader struct {
 }
 
 type sustainedRecord struct {
-	Kind           string                   `json:"kind"`
-	TimeUnixNS     int64                    `json:"time_unix_ns"`
-	Header         *sustainedHeader         `json:"header,omitempty"`
-	RetryMigration *sustainedRetryMigration `json:"retry_migration,omitempty"`
-	Command        *SustainedCommand        `json:"command,omitempty"`
-	Task           *SustainedTask           `json:"task,omitempty"`
-	Source         string                   `json:"source,omitempty"`
-	PlannedUnixNS  int64                    `json:"planned_unix_ns,omitempty"`
-	ArrivalState   uint64                   `json:"arrival_state,omitempty"`
-	Sequence       int64                    `json:"sequence,omitempty"`
-	Client         int                      `json:"client,omitempty"`
-	Action         string                   `json:"action,omitempty"`
-	Attempt        int                      `json:"attempt,omitempty"`
-	Status         int                      `json:"status,omitempty"`
-	Confirmed      bool                     `json:"confirmed,omitempty"`
-	ServerClientID int64                    `json:"server_client_id,omitempty"`
-	AckRevision    string                   `json:"ack_revision,omitempty"`
-	Error          string                   `json:"error,omitempty"`
-	ErrorCode      string                   `json:"error_code,omitempty"`
-	RetryAfterNS   int64                    `json:"retry_after_ns,omitempty"`
-	RetryAtUnixNS  int64                    `json:"retry_at_unix_ns,omitempty"`
-	GotConnUnixNS  int64                    `json:"got_conn_unix_ns,omitempty"`
-	WroteUnixNS    int64                    `json:"wrote_unix_ns,omitempty"`
-	Sample         *SustainedSample         `json:"sample,omitempty"`
-	Reason         string                   `json:"reason,omitempty"`
+	Kind             string                     `json:"kind"`
+	TimeUnixNS       int64                      `json:"time_unix_ns"`
+	Header           *sustainedHeader           `json:"header,omitempty"`
+	RetryMigration   *sustainedRetryMigration   `json:"retry_migration,omitempty"`
+	PendingMigration *sustainedPendingMigration `json:"pending_migration,omitempty"`
+	Command          *SustainedCommand          `json:"command,omitempty"`
+	Task             *SustainedTask             `json:"task,omitempty"`
+	Source           string                     `json:"source,omitempty"`
+	PlannedUnixNS    int64                      `json:"planned_unix_ns,omitempty"`
+	ArrivalState     uint64                     `json:"arrival_state,omitempty"`
+	Sequence         int64                      `json:"sequence,omitempty"`
+	Client           int                        `json:"client,omitempty"`
+	Action           string                     `json:"action,omitempty"`
+	Attempt          int                        `json:"attempt,omitempty"`
+	Status           int                        `json:"status,omitempty"`
+	Confirmed        bool                       `json:"confirmed,omitempty"`
+	ServerClientID   int64                      `json:"server_client_id,omitempty"`
+	AckRevision      string                     `json:"ack_revision,omitempty"`
+	Error            string                     `json:"error,omitempty"`
+	ErrorCode        string                     `json:"error_code,omitempty"`
+	RetryAfterNS     int64                      `json:"retry_after_ns,omitempty"`
+	RetryAtUnixNS    int64                      `json:"retry_at_unix_ns,omitempty"`
+	GotConnUnixNS    int64                      `json:"got_conn_unix_ns,omitempty"`
+	WroteUnixNS      int64                      `json:"wrote_unix_ns,omitempty"`
+	Sample           *SustainedSample           `json:"sample,omitempty"`
+	Reason           string                     `json:"reason,omitempty"`
 }
 
 // gzip journals are concatenated members, one per clean driver invocation.
@@ -403,7 +405,7 @@ func validateSustainedOptions(f Fixture, o SustainedOptions) error {
 // snapshot before reconstructing outstanding work. A trailing partial record is
 // an error, never silently truncated. Starts without finishes remain ambiguous
 // and are retried with the same task after resume.
-func restoreSustained(file *os.File, header sustainedHeader, state *sustainedState, compressed bool, migration *sustainedRetryMigration, needsMigration *bool) error {
+func restoreSustained(file *os.File, header sustainedHeader, state *sustainedState, compressed bool, migration *sustainedRetryMigration, pendingMigration *sustainedPendingMigration, needsMigration, needsPendingMigration *bool) error {
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
 		return err
 	}
@@ -419,7 +421,7 @@ func restoreSustained(file *os.File, header sustainedHeader, state *sustainedSta
 	lineNo, endCount, attemptLimit := 0, 0, 0
 	var activeSince int64
 	lastKind := ""
-	migrated := false
+	migrated, pendingMigrated := false, false
 	closeActive := func(at int64) error {
 		if activeSince != 0 {
 			if at < activeSince {
@@ -448,10 +450,20 @@ func restoreSustained(file *os.File, header sustainedHeader, state *sustainedSta
 		if lineNo == 1 {
 			expected := header
 			if migration != nil {
-				if header.MaxAttempts != migration.NextAttempts || header.MaxPending != migration.NextPending {
-					return errors.New("retry migration target differs from runtime configuration")
+				targetPending := migration.NextPending
+				if pendingMigration != nil {
+					if pendingMigration.PreviousPending != targetPending || pendingMigration.MaxAttempts != migration.NextAttempts ||
+						pendingMigration.PreviousConfigHash != migration.NextConfigHash || pendingMigration.PreviousBinarySHA != migration.NextBinarySHA {
+						return errors.New("pending migration does not follow retry migration")
+					}
+					targetPending = pendingMigration.NextPending
+				}
+				if header.MaxAttempts != migration.NextAttempts || header.MaxPending != targetPending {
+					return errors.New("migration target differs from runtime configuration")
 				}
 				expected.MaxAttempts, expected.MaxPending = migration.PreviousAttempts, migration.PreviousPending
+			} else if pendingMigration != nil {
+				return errors.New("pending migration requires the approved retry migration")
 			}
 			if r.Kind != "header" || r.Header == nil || !reflect.DeepEqual(*r.Header, expected) {
 				return errors.New("journal configuration mismatch")
@@ -564,6 +576,24 @@ func restoreSustained(file *os.File, header sustainedHeader, state *sustainedSta
 				return err
 			}
 			migrated, attemptLimit = true, migration.NextAttempts
+		case "pending_migration":
+			if pendingMigration == nil || pendingMigrated || !migrated || previousKind != "end" || endCount != 3 ||
+				state.rate != 0 || activeSince != 0 || r.PendingMigration == nil || *r.PendingMigration != *pendingMigration {
+				return fmt.Errorf("unapproved pending migration at line %d", lineNo)
+			}
+			if err := pendingMigration.validate(file); err != nil {
+				return err
+			}
+			if state.produced != pendingMigration.Produced || state.confirmed != pendingMigration.Confirmed ||
+				state.produced-state.confirmed != pendingMigration.Pending {
+				return errors.New("pending migration totals differ")
+			}
+			for _, a := range state.actors {
+				if a.inFlight {
+					return errors.New("pending migration with in-flight attempts")
+				}
+			}
+			pendingMigrated = true
 		case "sample":
 		default:
 			return fmt.Errorf("unknown journal kind at line %d", lineNo)
@@ -589,6 +619,20 @@ func restoreSustained(file *os.File, header sustainedHeader, state *sustainedSta
 			return err
 		}
 		*needsMigration = true
+	}
+	if pendingMigration != nil && !pendingMigrated {
+		info, err := file.Stat()
+		if err != nil || info.Size() != pendingMigration.PreviousBytes || endCount != 3 || !migrated || state.rate != 0 ||
+			state.produced != pendingMigration.Produced || state.confirmed != pendingMigration.Confirmed ||
+			state.produced-state.confirmed != pendingMigration.Pending {
+			return errors.New("pending migration is not at the verified closed boundary")
+		}
+		for _, a := range state.actors {
+			if a.inFlight {
+				return errors.New("pending migration has in-flight attempts")
+			}
+		}
+		*needsPendingMigration = true
 	}
 	for _, a := range state.actors {
 		if len(a.queue) > 0 && !a.retryAt.IsZero() {

@@ -194,9 +194,9 @@ func TestReviewedRetryMigrationRealCLI(t *testing.T) {
 	c54RetryPrefixSHA = digest
 	defer func() { c54RetryPrefixSHA = previousPin }()
 	m := sustainedRetryMigration{Approval: c54RetryApproval, PreviousJournalSHA: digest, PreviousBytes: int64(len(old)),
-		PreviousBudgetSHA: c54RetryBudgetSHA, PreviousConfigHash: c54RetryOldConfigHash, NextConfigHash: strings.Repeat("a", 64),
-		PreviousBinarySHA: c54RetryOldBinarySHA, NextBinarySHA: strings.Repeat("b", 64), PreviousAttempts: 30, NextAttempts: 512,
-		PreviousPending: 125000, NextPending: 100000, TaskSequence: retained.Sequence, TaskClient: retained.Client,
+		PreviousBudgetSHA: c54RetryBudgetSHA, PreviousConfigHash: c54RetryOldConfigHash, NextConfigHash: c54PendingOldConfigHash,
+		PreviousBinarySHA: c54RetryOldBinarySHA, NextBinarySHA: c54PendingOldBinarySHA, PreviousAttempts: 30, NextAttempts: 512,
+		PreviousPending: 125000, NextPending: 125000, TaskSequence: retained.Sequence, TaskClient: retained.Client,
 		TaskRevision: retained.Revision, TaskDay: retained.Day, TaskBodySHA: retained.BodyHash, TaskAttempts: 30, NextTaskAttempt: 31,
 		TaskFinishNS: lastFinishNS, TaskRetryAfterNS: int64(20 * time.Second), TaskNotBeforeNS: lastFinishNS + int64(20*time.Second)}
 	manifest := filepath.Join(dir, "manifest.json")
@@ -224,12 +224,12 @@ func TestReviewedRetryMigrationRealCLI(t *testing.T) {
 	if err = os.WriteFile(truncated, old[:len(old)-1], 0600); err != nil {
 		t.Fatal(err)
 	}
-	bad = exec.Command(binary, args(truncated, "100000", "512", "--reviewed-retry-migration", manifest)...)
+	bad = exec.Command(binary, args(truncated, "125000", "512", "--reviewed-retry-migration", manifest)...)
 	bad.Stdin = strings.NewReader("")
 	if out, e := bad.CombinedOutput(); e == nil || !bytes.Contains(out, []byte("prefix")) {
 		t.Fatalf("truncated prefix accepted: %v %s", e, out)
 	}
-	bad = exec.Command(binary, args(journal, "100000", "512", "--reviewed-retry-migration", manifest, "--max-in-flight", "5")...)
+	bad = exec.Command(binary, args(journal, "125000", "512", "--reviewed-retry-migration", manifest, "--max-in-flight", "5")...)
 	bad.Stdin = strings.NewReader("")
 	if out, e := bad.CombinedOutput(); e == nil || !bytes.Contains(out, []byte("configuration mismatch")) {
 		t.Fatalf("unapproved non-retry config change accepted: %v %s", e, out)
@@ -262,7 +262,7 @@ func TestReviewedRetryMigrationRealCLI(t *testing.T) {
 	}
 	// The approved path restores the same task and makes exactly attempt 31.
 	samples := filepath.Join(dir, "samples.jsonl")
-	cmd := exec.Command(binary, args(journal, "100000", "512", "--reviewed-retry-migration", manifest, "--samples", samples)...)
+	cmd := exec.Command(binary, args(journal, "125000", "512", "--reviewed-retry-migration", manifest, "--samples", samples)...)
 	stdin, e := cmd.StdinPipe()
 	if e != nil {
 		t.Fatal(e)
@@ -408,6 +408,109 @@ func TestReviewedRetryMigrationRealCLI(t *testing.T) {
 		if e = readSustainedJournal(path, fixture, SustainedVerifyOptions{Models: names, ModelSeed: seed, RetryMigrationPath: manifest}, v); e == nil {
 			t.Fatalf("verification accepted %s", tc.name)
 		}
+	}
+
+	// The second, separate change keeps the 512 retry count and every task,
+	// while reducing only the pending ceiling at the third clean end.
+	prefix, err := os.ReadFile(journal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ph := sha256.Sum256(prefix)
+	prefixDigest := hex.EncodeToString(ph[:])
+	previousPendingPin := c54PendingPrefixSHA
+	c54PendingPrefixSHA = prefixDigest
+	defer func() { c54PendingPrefixSHA = previousPendingPin }()
+	pm := sustainedPendingMigration{Approval: c54PendingApproval, PreviousJournalSHA: prefixDigest, PreviousBytes: int64(len(prefix)),
+		PreviousBudgetSHA: c54PendingBudgetSHA, ReservedBudgetSHA: c54PendingReservedSHA,
+		PreviousConfigHash: c54PendingOldConfigHash, NextConfigHash: strings.Repeat("c", 64),
+		PreviousBinarySHA: c54PendingOldBinarySHA, NextBinarySHA: strings.Repeat("d", 64),
+		PreviousPending: 125000, NextPending: 100000, MaxAttempts: 512, Produced: 3, Confirmed: 3, Pending: 0}
+	pendingManifest := filepath.Join(dir, "pending-manifest.json")
+	data, _ = json.Marshal(pm)
+	if err = os.WriteFile(pendingManifest, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	ldflags := "-X cpa-usage-ranking/internal/capacity.c54RetryPrefixSHA=" + digest + " -X cpa-usage-ranking/internal/capacity.c54PendingPrefixSHA=" + prefixDigest
+	build = exec.Command("go", "build", "-ldflags", ldflags, "-o", binary, "../../cmd/ranking-capacity")
+	if output, e := build.CombinedOutput(); e != nil {
+		t.Fatalf("build pending CLI: %v %s", e, output)
+	}
+	pendingArgs := args(journal, "100000", "512", "--reviewed-retry-migration", manifest, "--reviewed-pending-migration", pendingManifest)
+	bad = exec.Command(binary, args(journal, "100000", "512", "--reviewed-retry-migration", manifest)...)
+	bad.Stdin = strings.NewReader("")
+	if out, e := bad.CombinedOutput(); e == nil {
+		t.Fatalf("unapproved pending decrease accepted: %s", out)
+	}
+	bad = exec.Command(binary, append(append([]string{}, pendingArgs...), "--max-in-flight", "5")...)
+	bad.Stdin = strings.NewReader("")
+	if out, e := bad.CombinedOutput(); e == nil || !bytes.Contains(out, []byte("configuration mismatch")) {
+		t.Fatalf("unapproved pending-era header change accepted: %v %s", e, out)
+	}
+	badManifest := filepath.Join(dir, "bad-pending.json")
+	forgedManifest := pm
+	forgedManifest.PreviousBudgetSHA = strings.Repeat("e", 64)
+	data, _ = json.Marshal(forgedManifest)
+	if err = os.WriteFile(badManifest, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	bad = exec.Command(binary, args(journal, "100000", "512", "--reviewed-retry-migration", manifest, "--reviewed-pending-migration", badManifest)...)
+	bad.Stdin = strings.NewReader("")
+	if out, e := bad.CombinedOutput(); e == nil {
+		t.Fatalf("unapproved budget accepted: %s", out)
+	}
+	paused := exec.Command(binary, pendingArgs...)
+	paused.Stdin = strings.NewReader("")
+	if out, e := paused.CombinedOutput(); e != nil {
+		t.Fatalf("pending paused replay: %v %s", e, out)
+	}
+	if _, e := SummarizeSustained(journal, names, 100000, manifest); e == nil {
+		t.Fatal("summary accepted unapproved pending marker")
+	}
+	stats, err = SummarizeSustained(journal, names, 100000, manifest, pendingManifest)
+	if err != nil || stats.Produced != 3 || stats.Confirmed != 3 || stats.Pending != 0 {
+		t.Fatalf("pending summary: %+v %v", stats, err)
+	}
+	v, err := newVerificationState(context.Background(), fixture, seedConn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = readSustainedJournal(journal, fixture, SustainedVerifyOptions{Models: names, ModelSeed: seed, RetryMigrationPath: manifest, PendingMigrationPath: pendingManifest}, v); err != nil || v.confirmed != 3 {
+		t.Fatalf("pending verification: %v", err)
+	}
+	forgedPath := filepath.Join(dir, "forged-pending.jsonl.gz")
+	f, err = os.Create(forgedPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = f.Write(prefix); err != nil {
+		t.Fatal(err)
+	}
+	z = gzip.NewWriter(f)
+	enc = json.NewEncoder(z)
+	forged := pm
+	forged.NextPending = 99999
+	if err = enc.Encode(sustainedRecord{Kind: "pending_migration", PendingMigration: &forged}); err != nil {
+		t.Fatal(err)
+	}
+	if err = enc.Encode(sustainedRecord{Kind: "end"}); err != nil {
+		t.Fatal(err)
+	}
+	if err = z.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err = f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = SummarizeSustained(forgedPath, names, 100000, manifest, pendingManifest); err == nil {
+		t.Fatal("summary accepted forged pending marker")
+	}
+	v, err = newVerificationState(context.Background(), fixture, seedConn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = readSustainedJournal(forgedPath, fixture, SustainedVerifyOptions{Models: names, ModelSeed: seed, RetryMigrationPath: manifest, PendingMigrationPath: pendingManifest}, v); err == nil {
+		t.Fatal("verification accepted forged pending marker")
 	}
 }
 
