@@ -190,7 +190,12 @@ reserved twice. File-backed RSS and unrelated processes receive no credit; the
 records both the full estimate and the additional memory required. If only a
 future search stage's resource forecast fails, a previously demonstrated
 candidate may still enter the sole confirmation when its own forecast passes;
-the failed forecast is never treated as a server upper bound.
+the failed forecast is never treated as a server upper bound. A specific clean,
+verified C54 transition that stopped before confirmation solely due to a local
+memory forecast can be reviewed without resetting its budget or journal; no
+other failed state is accepted. Before starting confirmation, transient local
+memory forecast misses are rechecked for a bounded time while the driver remains
+paused; a real protection, different forecast failure, or timeout still stops.
 
 For each search or confirmation observation, marked `5 * rate` arrivals are
 kept separate from ordinary input. Post-marker contiguous one-minute windows

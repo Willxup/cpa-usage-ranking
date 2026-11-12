@@ -22,6 +22,10 @@ OLD_JOURNAL_SHA = '6e98dbcd8c0498e0dabd410d949a0f6e4438b3ca2e2b328d94003f5c1f7ba
 OLD_SNAPSHOT_SHA = '40f16735373af7180522a4a8a8238e77e0de8a536f08d0b4d89738433e883258'
 OLD_BINARY_SHA = '404ba7bb01728bf37b0c768e200e42505379f2f3942921f13792fa47901365b8'
 OLD_USED_NS = 612018194623
+CONFIRM_BUDGET_SHA = 'aef1d32c67ba9ee27c6a024a0c62ccdfa1d6d358f1b95e4e878911fa206d9abd'
+CONFIRM_JOURNAL_SHA = '190c540a1b691be86e8d3f4183ceaf362c22cdd42fe8fe6ab5586d48ed6018f1'
+CONFIRM_SNAPSHOT_SHA = '7d594c6162e37d7a314b6a9431ef5fe8b31dc26315e9c3c5f0cbb5898f7db5f2'
+CONFIRM_CONFIG_HASH = 'ef9b5227da220e555079b1dd2d09bacd11b2af3e80ffafa75da796ea8e72cd5b'
 
 
 def file_sha(path):
@@ -42,7 +46,7 @@ def canonical_config(config):
 class ReviewedCheckpoint:
     """Migrate only the specific parent-audited failed/active checkpoint."""
     def __init__(self, config, archive_dir, adapter, kind='original'):
-        if kind not in ('original', 'retry'):
+        if kind not in ('original', 'retry', 'confirmation'):
             raise BudgetError('unknown reviewed checkpoint kind')
         self.config = dict(config)
         self.archive_dir = Path(archive_dir)
@@ -54,7 +58,8 @@ class ReviewedCheckpoint:
         # controller or task tunnel may be alive during the migration.
         for pid in (3184171, 3184172, 3184214, 3184226, 3184364, 3184406, 3184407, 3184415,
                     3236214, 3236217, 3236271, 3236283, 3236348, 3236349, 3236365,
-                    3244196, 3244210, 3246156):
+                    3244196, 3244210, 3246156, 3285924, 3285927, 3285966, 3285978,
+                    3286037, 3286038, 3286079, 3299724):
             if (Path('/proc')/str(pid)).exists():
                 raise BudgetError('prior task PID exists; ownership cannot be assumed: '+str(pid))
         for proc in Path('/proc').iterdir():
@@ -75,6 +80,8 @@ class ReviewedCheckpoint:
     def migrate(self, state, raw, new_config_hash, clock, boot):
         if self.kind == 'retry':
             return self._migrate_retry(state, raw, new_config_hash, clock, boot)
+        if self.kind == 'confirmation':
+            return self._migrate_confirmation(state, raw, new_config_hash, clock, boot)
         if hashlib.sha256(raw).hexdigest() != OLD_BUDGET_SHA:
             raise BudgetError('reviewed original budget hash does not match')
         if (self.config.get('task_id') != '721cb71e50f60575' or Path(self.config.get('local_task_dir', '')) != TASK or
@@ -326,4 +333,113 @@ class ReviewedCheckpoint:
                                'old_max_attempts': 30, 'new_max_attempts': 512,
                                'old_max_pending': 125000, 'new_max_pending': self.config['max_pending'],
                                'resume_rate': 500, 'upper': 600, 'stage_index': 6})
+        return new
+
+    def _migrate_confirmation(self, state, raw, new_config_hash, clock, boot):
+        # Only this clean, verified planned transition failed before the one
+        # confirmation was begun, solely because a local forecast was low.
+        # It is not permission to recover any active/unknown/confirmed failure.
+        if hashlib.sha256(raw).hexdigest() != CONFIRM_BUDGET_SHA:
+            raise BudgetError('confirmation transition budget hash differs')
+        if (self.config.get('task_id') != '721cb71e50f60575' or Path(self.config.get('local_task_dir', '')) != TASK or
+                self.archive_dir.is_symlink() or not self.archive_dir.is_dir() or
+                not self.archive_dir.resolve().is_relative_to(TASK.resolve()) or
+                self.archive_dir.stat().st_uid != os.getuid() or self.archive_dir.stat().st_mode & 0o077):
+            raise BudgetError('confirmation transition archive or task differs')
+        adapter_dir = TASK/'adapter-8qvek47s'
+        checks = {
+            self.archive_dir/'confirmation-transition-budget.json': CONFIRM_BUDGET_SHA,
+            self.archive_dir/'confirmation-transition-journal.jsonl.gz': CONFIRM_JOURNAL_SHA,
+            TASK/'sustained.jsonl.gz': CONFIRM_JOURNAL_SHA,
+            adapter_dir/'transition-snapshot.sqlite': CONFIRM_SNAPSHOT_SHA,
+            adapter_dir/'abort-snapshot.sqlite': CONFIRM_SNAPSHOT_SHA,
+            adapter_dir/'controller-events.jsonl': '198f1aba47c7d23fa54b7bfebbaa78ca5b1675341f1b2bf899886c09cebfc617',
+            adapter_dir/'commands.jsonl': 'e20cb879da49a318d6f4973adf68fcc7863f6e32b28ccb2c127925f7aaec0bd1',
+            adapter_dir/'driver-01-search/process-events.jsonl': 'bdaff50e04de031a8a515c1fa797cbcb40b73df542a2aa76075bed45d0963f91',
+            adapter_dir/'driver-01-search/deadline.jsonl': '9f6531decf984c32ab6dd24da90599bc5bb4f20f9622b03d0dcd327d3faecaa4',
+            adapter_dir/'driver-01-search/deadline-1.jsonl': 'db9d91f0364069a55a3cfb35a5d4a332217a685f50baa0a9eb004629f369c735',
+            adapter_dir/'verify-transition-3.stdout': '40007481fd6eac9d9d5fc329a719ca5791ceb6bda6d26c5c83e6de0a26061e91',
+            adapter_dir/'summary-transition-4.stdout': 'a1121b543a48a636e0b3f37ab4bfb27cda2d65be6a06b084d8f69bb71ee4c113',
+            TASK/'session-xb45svmp/session-events.jsonl': 'defebcbaab266ce416a5c1971af0d8e0bc0b9ed3309e9a995b7ffb1dd7059f41',
+            self.archive_dir/'retry-controller.rc': '4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865',
+            self.archive_dir/'retry-controller.stderr': '1f1bfc9e12f04991ac17fd263de1334a2720d8b91546c3b6212eb2d27b5643db',
+            self.archive_dir/'config-retry.json': '4a601676bb22bb93768c34459bf3d34a7f4d6ab454f40d8e71d371f48746b6c0',
+            self.archive_dir/'retry-migration.json': 'c8b7f6e39305ff8ad49baa8449c85cfcc58a2d930be7de44e0bad183c233b295',
+            TASK/'seed.sqlite': '70f4535010e15ebeaa9763ce4b2d9cb0d65a8cb9f81bd9b06e7f99c32d64ff61',
+            TASK/'fixture.json': '33084756ddd509800083285fd70d196ff7be525e79048e1829cf541a8f3589c4',
+        }
+        for path, expected in checks.items():
+            if file_sha(path) != expected:
+                raise BudgetError('confirmation transition evidence hash mismatch: '+str(path))
+        if (canonical_config(self.config) != CONFIRM_CONFIG_HASH or new_config_hash != CONFIRM_CONFIG_HASH or
+                json.loads((self.archive_dir/'config-retry.json').read_text()) != self.config or
+                file_sha(Path(self.config['capacity_binary'])) != self.config['capacity_sha256'] or
+                self.config.get('capacity_sha256') != 'a56cfa16fba285e31e4d364138d6569838ecea682e8096e0964a5291302b3f1b' or
+                self.config.get('max_attempts') != 512 or self.config.get('max_pending') != 125000):
+            raise BudgetError('confirmation configuration or binary changed')
+        expected_plan = {'current': 550, 'done': True, 'lower': 500, 'upper': 600,
+                         'reason': 'next search resource forecast insufficient', 'uncertain_repeats': 0}
+        if (state.get('version') != 1 or state.get('status') != 'failed' or state.get('active') is not None or
+                state.get('config_hash') != CONFIRM_CONFIG_HASH or state.get('search_ns') != 1095787699798 or
+                state.get('confirm_ns') != 0 or state.get('confirm_started') is not False or
+                state.get('host_protections') != 0 or state.get('plan') != expected_plan or
+                state.get('stage_index') != 7 or state.get('confirm_rate') != 500 or
+                not str(state.get('error', '')).startswith('ResourceForecastLimit(') or
+                "'issues': ['local_memory_insufficient']" not in state.get('error', '')):
+            raise BudgetError('confirmation failure was not the specified inactive forecast failure')
+        evidence = state.get('transition_evidence', {})
+        verification = evidence.get('verification', {})
+        if (evidence.get('verified') is not True or evidence.get('journal_sha256') != CONFIRM_JOURNAL_SHA or
+                evidence.get('snapshot_sha256') != CONFIRM_SNAPSHOT_SHA or
+                evidence.get('snapshot_path') != str(adapter_dir/'transition-snapshot.sqlite') or
+                evidence.get('pending_at_transition') != 16330 or evidence.get('source_state', {}).get('open_handles') != [] or
+                (verification.get('produced'), verification.get('confirmed'), verification.get('pending'),
+                 verification.get('unconfirmed_commits'), verification.get('ambiguous_registrations')) != (456569, 440239, 16330, 16, 0)):
+            raise BudgetError('clean transition proof or debt does not match')
+        history = state.get('history', [])
+        if (len(history) < 2 or history[-2].get('event') != 'end' or history[-2].get('phase') != 'search' or
+                history[-2].get('search_ns') != 1095787699798 or history[-1].get('event') != 'failure'):
+            raise BudgetError('confirmation transition budget history incomplete')
+        if time.strftime('%Y-%m-%d', time.gmtime()) != state.get('preflight', {}).get('utc_day'):
+            raise BudgetError('UTC day changed; original fixture cannot be fabricated')
+        events = [json.loads(line) for line in (adapter_dir/'controller-events.jsonl').read_text().splitlines()]
+        assessments = [x for x in events if x.get('event') == 'assessment' and x.get('phase') == 'search']
+        transitions = [x for x in events if x.get('event') == 'planned_transition']
+        if (len(assessments) != 1 or assessments[0].get('result', {}).get('stage', {}).get('verdict') != 'candidate' or
+                assessments[0]['result']['stage'].get('target_rate') != 500 or
+                len(transitions) != 1 or transitions[0].get('evidence') != evidence):
+            raise BudgetError('500 candidate or clean transition evidence missing')
+        process = [json.loads(line) for line in (adapter_dir/'driver-01-search/process-events.jsonl').read_text().splitlines()]
+        if (len([e for e in process if e.get('event') == 'driver_exit' and e.get('returncode') == 0]) != 1 or
+                len([e for e in process if e.get('event') == 'deadline_exit' and e.get('returncode') == 0]) != 2):
+            raise BudgetError('driver or independent deadlines did not exit cleanly')
+        self._check_prior_processes()
+        listener = state['preflight']['remote']['listener']
+        if listener != {'comm': 'sshd', 'pid': 881, 'start_ticks': 686, 'nofile': [1024, 524288]}:
+            raise BudgetError('original SSH listener baseline differs')
+        new = copy.deepcopy(state)
+        checkpoint = new['reviewed_checkpoint']
+        checkpoint['previous_confirmation_forecast_budget_sha256'] = CONFIRM_BUDGET_SHA
+        checkpoint['previous_confirmation_runtime_hashes'] = state['preflight']['runtime_hashes']
+        new['status'] = 'transition_ready'
+        new['preflight'] = None
+        new['previous_confirmation_forecast_error'] = new.pop('error')
+        preflight = self.adapter.preflight(new)
+        if not isinstance(preflight, dict) or preflight.get('verified') is not True:
+            raise BudgetError('confirmation remote preflight was not proven')
+        if preflight.get('remote', {}).get('listener') != listener or self.adapter._snapshot_state() != evidence['source_state']:
+            raise BudgetError('confirmation stopped database or listener changed')
+        remote_hash = self.adapter.commands.ssh(['/usr/bin/sha256sum', '--', self.adapter.spec.db], timeout=120).stdout.split()
+        if not remote_hash or remote_hash[0] != CONFIRM_SNAPSHOT_SHA:
+            raise BudgetError('confirmation remote DB content changed')
+        forecast = self.adapter.preflight_stage(500, 'confirmation', new)
+        if not forecast.get('ok'):
+            raise BudgetError('confirmation resource forecast insufficient: '+repr(forecast))
+        checkpoint['confirmation_runtime_hashes'] = preflight['runtime_hashes']
+        checkpoint['confirmation_forecast'] = forecast
+        new['preflight'] = preflight
+        new['history'].append({'event': 'reviewed_clean_confirmation_transition', 'at_ns': clock(),
+                               'previous_budget_sha256': CONFIRM_BUDGET_SHA, 'journal_sha256': CONFIRM_JOURNAL_SHA,
+                               'snapshot_sha256': CONFIRM_SNAPSHOT_SHA, 'search_ns': 1095787699798,
+                               'confirm_ns': 0, 'confirm_rate': 500, 'previous_forecast': 'local_memory_insufficient'})
         return new

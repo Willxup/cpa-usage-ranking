@@ -127,6 +127,24 @@ class Controller:
         if not isinstance(result, dict) or result.get('ok') is not True:
             raise ResourceForecastLimit(result)
 
+    def wait_confirmation_resources(self, rate, timeout=180):
+        # A transient local forecast miss before load is not a host-protection
+        # event and must not consume the one confirmation. Recheck without
+        # weakening the forecast or starting arrivals; other failures stop.
+        end = time.monotonic()+timeout
+        while True:
+            try:
+                self.check_resources(rate, 'confirmation')
+                return
+            except ResourceForecastLimit as exc:
+                issues = set(exc.result.get('issues', [])) if isinstance(exc.result, dict) else set()
+                if issues != {'local_memory_insufficient'} or time.monotonic() >= end:
+                    raise
+                self.emit('confirmation_memory_wait', issues=sorted(issues))
+                if getattr(self.adapter, 'session', None) is not None:
+                    self.guard(False)
+                time.sleep(min(5, max(0, end-time.monotonic())))
+
     def await_paused_driver(self):
         # Large clean journals may take longer than one sample interval to
         # replay. This is preparation, not active load. The bootstrap pidfd
@@ -143,8 +161,9 @@ class Controller:
             return sample
         raise ControllerError('paused journal replay exceeded preparation timeout')
 
-    def stage(self, name, rate, seconds, confirmation=False):
-        self.check_resources(rate, 'confirmation' if confirmation else 'search')
+    def stage(self, name, rate, seconds, confirmation=False, prechecked=False):
+        if not prechecked:
+            self.check_resources(rate, 'confirmation' if confirmation else 'search')
         self.guard(False)
         self.driver.send({'operation': 'stage', 'stage': name, 'rate': rate})
         before = None
@@ -298,15 +317,19 @@ class Controller:
             if self.budget.state['status'] != 'transition_ready':
                 raise ControllerError('no clean transition to confirmation')
             rate = self.budget.state['confirm_rate']
-            self.check_resources(rate, 'confirmation')
+            self.wait_confirmation_resources(rate)
             self.adapter.prepare_phase('confirmation')
             self.budget.mark_loading('confirmation')
             self.driver = self.adapter.start_driver('confirmation', self.budget.clock()+7200*NS, resume=True)
-            self.await_paused_driver()  # restore before spending continuous budget
+            paused = self.await_paused_driver()  # restore before spending continuous budget
+            verification = self.budget.state.get('transition_evidence', {}).get('verification')
+            if verification and any(paused.get(k) != verification.get(k) for k in ('produced', 'confirmed', 'pending')):
+                raise ControllerError('confirmation replay did not preserve verified transition debt')
+            self.wait_confirmation_resources(rate)  # last forecast while still paused
             deadline = self.budget.begin('confirmation')
             self.driver.arm(deadline)  # independent deadline before activation
             self.cache = []
-            result = self.stage('confirmation', rate, 1200, confirmation=True)
+            result = self.stage('confirmation', rate, 1200, confirmation=True, prechecked=True)
             final_result = result['confirmation']
             stopped = self.driver.stop()
             self.driver.close()
@@ -426,6 +449,7 @@ def main(argv=None):
     checkpoints = parser.add_mutually_exclusive_group()
     checkpoints.add_argument('--reviewed-checkpoint', help='first explicitly audited C54 checkpoint archive directory')
     checkpoints.add_argument('--reviewed-retry-checkpoint', help='second explicitly audited C54 retry checkpoint archive directory')
+    checkpoints.add_argument('--reviewed-confirmation-checkpoint', help='specific clean C54 confirmation transition after a resource forecast miss')
     args = parser.parse_args(argv)
     config = json.loads(Path(args.config).read_text())
     spec = validate_config(config)
@@ -452,12 +476,12 @@ def main(argv=None):
     anchor = Path('/root/.cache/agent-cache/cpa-usage-ranking/stage-i-c54/sustained-20261113-r1/formal-budget-state.json')
     adapter = None
     try:
-        if args.reviewed_checkpoint or args.reviewed_retry_checkpoint:
+        if args.reviewed_checkpoint or args.reviewed_retry_checkpoint or args.reviewed_confirmation_checkpoint:
             from sustained_reviewed_checkpoint import ReviewedCheckpoint
             adapter = RemoteAdapter(config)
-            retry = bool(args.reviewed_retry_checkpoint)
-            reviewed = ReviewedCheckpoint(config, args.reviewed_retry_checkpoint or args.reviewed_checkpoint, adapter,
-                                          kind='retry' if retry else 'original')
+            kind = 'confirmation' if args.reviewed_confirmation_checkpoint else ('retry' if args.reviewed_retry_checkpoint else 'original')
+            archive = args.reviewed_confirmation_checkpoint or args.reviewed_retry_checkpoint or args.reviewed_checkpoint
+            reviewed = ReviewedCheckpoint(config, archive, adapter, kind=kind)
             budget = Budget(anchor, config_hash, reviewed=reviewed)
         else:
             budget = Budget(anchor, config_hash)

@@ -4,6 +4,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from sustained_controller import Controller, ControllerError, GoAssessment
 from sustained_state import Budget, NS
@@ -227,6 +228,23 @@ class ControllerTest(unittest.TestCase):
         self.assertEqual(result['verdict'], 'confirmed')
         self.assertGreater(self.budget.state['search_ns'], 914302803460)
         self.assertEqual(sum(c['stage'] == 'confirmation' for c in adapter.commands), 1)
+
+    def test_confirmation_waits_for_transient_memory_before_spending_budget(self):
+        adapter = FakeAdapter(self.clock)
+        adapter.preflight_stage = mock.Mock(side_effect=[{'ok': False, 'issues': ['local_memory_insufficient']},
+                                                        {'ok': True}])
+        controller = Controller(self.budget, adapter, self.assess, self.path/'events.jsonl')
+        with mock.patch('sustained_controller.time.sleep'):
+            controller.wait_confirmation_resources(500)
+        self.assertFalse(self.budget.state['confirm_started'])
+        self.assertIsNone(self.budget.state['active'])
+        self.assertEqual(adapter.preflight_stage.call_count, 2)
+        self.assertIn('confirmation_memory_wait', (self.path/'events.jsonl').read_text())
+        adapter.preflight_stage = mock.Mock(return_value={'ok': False, 'issues': ['remote_disk_insufficient']})
+        with mock.patch('sustained_controller.time.sleep') as sleep:
+            with self.assertRaises(ControllerError):
+                controller.wait_confirmation_resources(500)
+            sleep.assert_not_called()
 
     def test_retry_reviewed_search_does_not_probe_below_500(self):
         adapter = FakeAdapter(self.clock, mode=lambda stage, rate: 'failed' if stage != 'confirmation' and rate >= 500 else 'candidate')
