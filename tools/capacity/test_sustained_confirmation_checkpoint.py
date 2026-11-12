@@ -135,8 +135,20 @@ class ConfirmationCheckpointTest(unittest.TestCase):
         self.assertEqual(self.anchor.read_bytes(), self.raw)
         self.hashes[self.task/'sustained.jsonl.gz'] = cp.CONFIRM_JOURNAL_SHA
         self.adapter.preflight_stage.return_value = {'ok': False, 'issues': ['local_memory_insufficient']}
-        with self.assertRaises(BudgetError): self.open()
+        with mock.patch.object(cp, 'CONFIRM_PREFLIGHT_WAIT', 0):
+            with self.assertRaises(BudgetError): self.open()
         self.assertEqual(self.anchor.read_bytes(), self.raw)
+
+    def test_transient_memory_forecast_waits_and_rechecks_remote_before_save(self):
+        self.adapter.preflight_stage.side_effect = [{'ok': False, 'issues': ['local_memory_insufficient']},
+                                                    {'ok': True}, {'ok': True}]
+        with mock.patch.object(cp.time, 'sleep'):
+            b = self.open()
+        self.assertEqual(b.state['status'], 'transition_ready')
+        self.assertFalse(b.state['confirm_started'])
+        self.assertEqual(self.adapter.preflight.call_count, 2)
+        self.assertEqual(self.adapter._snapshot_state.call_count, 2)
+        self.assertEqual(self.adapter.preflight_stage.call_count, 3)
 
 
 if __name__ == '__main__':

@@ -193,9 +193,12 @@ candidate may still enter the sole confirmation when its own forecast passes;
 the failed forecast is never treated as a server upper bound. A specific clean,
 verified C54 transition that stopped before confirmation solely due to a local
 memory forecast can be reviewed without resetting its budget or journal; no
-other failed state is accepted. Before starting confirmation, transient local
-memory forecast misses are rechecked for a bounded time while the driver remains
-paused; a real protection, different forecast failure, or timeout still stops.
+other failed state is accepted. While the task is stopped, the reviewed recovery
+may wait a bounded time for a transient memory forecast miss and must recheck
+the remote identity and stopped snapshot afterward. Before starting confirmation,
+transient local memory forecast misses are also rechecked for a bounded time
+while the driver remains paused; a real protection, different forecast failure,
+or timeout still stops.
 
 For each search or confirmation observation, marked `5 * rate` arrivals are
 kept separate from ordinary input. Post-marker contiguous one-minute windows

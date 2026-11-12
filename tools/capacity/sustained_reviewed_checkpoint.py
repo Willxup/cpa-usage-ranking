@@ -26,6 +26,7 @@ CONFIRM_BUDGET_SHA = 'aef1d32c67ba9ee27c6a024a0c62ccdfa1d6d358f1b95e4e878911fa20
 CONFIRM_JOURNAL_SHA = '190c540a1b691be86e8d3f4183ceaf362c22cdd42fe8fe6ab5586d48ed6018f1'
 CONFIRM_SNAPSHOT_SHA = '7d594c6162e37d7a314b6a9431ef5fe8b31dc26315e9c3c5f0cbb5898f7db5f2'
 CONFIRM_CONFIG_HASH = 'ef9b5227da220e555079b1dd2d09bacd11b2af3e80ffafa75da796ea8e72cd5b'
+CONFIRM_PREFLIGHT_WAIT = 180  # idle-only; no formal arrivals or budget reset
 
 
 def file_sha(path):
@@ -59,7 +60,7 @@ class ReviewedCheckpoint:
         for pid in (3184171, 3184172, 3184214, 3184226, 3184364, 3184406, 3184407, 3184415,
                     3236214, 3236217, 3236271, 3236283, 3236348, 3236349, 3236365,
                     3244196, 3244210, 3246156, 3285924, 3285927, 3285966, 3285978,
-                    3286037, 3286038, 3286079, 3299724):
+                    3286037, 3286038, 3286079, 3299724, 3339803):
             if (Path('/proc')/str(pid)).exists():
                 raise BudgetError('prior task PID exists; ownership cannot be assumed: '+str(pid))
         for proc in Path('/proc').iterdir():
@@ -432,9 +433,32 @@ class ReviewedCheckpoint:
         remote_hash = self.adapter.commands.ssh(['/usr/bin/sha256sum', '--', self.adapter.spec.db], timeout=120).stdout.split()
         if not remote_hash or remote_hash[0] != CONFIRM_SNAPSHOT_SHA:
             raise BudgetError('confirmation remote DB content changed')
-        forecast = self.adapter.preflight_stage(500, 'confirmation', new)
-        if not forecast.get('ok'):
-            raise BudgetError('confirmation resource forecast insufficient: '+repr(forecast))
+        # The task is stopped with no active load. A momentary local memory
+        # forecast miss may clear without changing any limit; wait only a
+        # bounded interval, then rerun the remote identity/snapshot checks.
+        end = time.monotonic()+CONFIRM_PREFLIGHT_WAIT
+        waited = False
+        while True:
+            forecast = self.adapter.preflight_stage(500, 'confirmation', new)
+            if forecast.get('ok'):
+                if waited:
+                    preflight = self.adapter.preflight(new)
+                    if (not preflight.get('verified') or preflight.get('remote', {}).get('listener') != listener or
+                            self.adapter._snapshot_state() != evidence['source_state']):
+                        raise BudgetError('confirmation remote preflight changed while waiting')
+                    remote_hash = self.adapter.commands.ssh(['/usr/bin/sha256sum', '--', self.adapter.spec.db], timeout=120).stdout.split()
+                    if not remote_hash or remote_hash[0] != CONFIRM_SNAPSHOT_SHA:
+                        raise BudgetError('confirmation DB changed while waiting')
+                    forecast = self.adapter.preflight_stage(500, 'confirmation', new)
+                    if forecast.get('ok'):
+                        break
+                else:
+                    break
+            issues = set(forecast.get('issues', [])) if isinstance(forecast, dict) else set()
+            if issues != {'local_memory_insufficient'} or time.monotonic() >= end:
+                raise BudgetError('confirmation resource forecast insufficient: '+repr(forecast))
+            waited = True
+            time.sleep(min(5, max(0, end-time.monotonic())))
         checkpoint['confirmation_runtime_hashes'] = preflight['runtime_hashes']
         checkpoint['confirmation_forecast'] = forecast
         new['preflight'] = preflight
