@@ -1,7 +1,7 @@
 services:
   ranking:
-    # Build locally; no registry publication is required.
-    image: cpa-usage-ranking:local
+    # The default is a local build; set RANKING_IMAGE to use a published image.
+    image: ${RANKING_IMAGE:-cpa-usage-ranking:local}
     build:
       context: .
     ports:

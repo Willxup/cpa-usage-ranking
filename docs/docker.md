@@ -34,6 +34,58 @@ architecture still requires a suitable emulator or native host. The build
 fetches base images and build dependencies. A Buildx builder that can load a
 single-platform image into the local engine is required for `--load`.
 
+## GHCR images and publication
+
+When an image has actually been published to GHCR, set `RANKING_IMAGE` to its
+fully qualified reference. Replace the example owner, repository and version
+with the real values. The repository path is lowercase. Private packages require
+appropriate GHCR access; public availability is a package setting.
+
+```sh
+export RANKING_IMAGE=ghcr.io/owner/repository:v1.2.3
+docker compose -p cpa-ranking pull ranking
+docker compose -p cpa-ranking up -d --no-build
+```
+
+The default, without `RANKING_IMAGE`, remains a local build. Use `--no-build`
+with a registry image so Compose does not replace it with a local build. Image
+tags can be moved or republished; for reproducible deployment use a verified
+manifest digest, for example `ghcr.io/owner/repository@sha256:<digest>`, and
+protect Git release tags. Publishing workflows do not create a GitHub Release
+or distribute standalone binaries.
+
+The configured GHCR workflow has the following policy:
+
+- A pushed stable Git tag must be exactly `vMAJOR.MINOR.PATCH`, with no leading
+  zeroes except `0`, and its commit must be reachable from the repository's
+  default branch. Annotated and lightweight tags are supported. Prereleases and
+  tags on an unmerged branch are rejected. It publishes `vMAJOR.MINOR.PATCH` and
+  `sha-<full-commit-sha>`.
+- A manually dispatched publication must select a non-default branch. It
+  publishes `dev-sha-<full-commit-sha>` and, if an optional development name
+  is provided, `dev-<name>`. Names must be lowercase Docker-tag characters,
+  start with a letter or digit, and be at most 124 characters; reserved names,
+  version-like names and `sha-` names are rejected. Empty means SHA tag only.
+- No `latest`, numeric version, major or minor aliases are published. This
+  deliberately prevents an older version from rolling back a shared stable
+  channel; consumers choose an exact version or digest. Development names cannot
+  enter the stable namespace. Development name tags can move on subsequent runs.
+- Each publication requires policy validation and the entire reusable CI to
+  succeed; failed, cancelled or skipped required checks block it. CI runs Go,
+  frontend and policy tests and builds/runs both image architectures. ARM64 is
+  QEMU-emulated on a GitHub-hosted AMD64 runner, not native hardware. Browser
+  tests are not part of this workflow. The final multi-platform publish is a
+  separate rebuild, so its resulting digest is not the tested local image digest.
+- Only the publishing job has `packages: write`; it uses `GITHUB_TOKEN` and
+  derives the image name from the repository. PR and ordinary CI do not log in
+  or push to GHCR. Buildx caches are stored in the GitHub Actions cache, not
+  GHCR. Publications are serialized; GitHub may replace an already-pending run,
+  so check the run status and rerun an omitted publication if needed.
+
+The workflow is a publication configuration, not a claim that any image or
+package is currently available. Branch and tag protection, package visibility
+and repository Actions permissions remain administrator responsibilities.
+
 **Do not expose this HTTP service directly to the public internet.** Registration
 and reports carry Bearer credentials. Use an HTTPS-terminating reverse proxy,
 restrict direct container and loopback access, and keep Authorization and bodies
@@ -70,6 +122,10 @@ a clean shutdown. `docker compose down -v` deletes the data volume: avoid it
 unless that deletion is intentional.
 
 ## Configuration and health
+
+Pass service settings through Compose `environment` or `docker run -e`;
+exporting them in the host shell does not automatically pass them to a container.
+`RANKING_IMAGE` is a Compose image-selection variable, not a service setting.
 
 These **image** defaults differ from the source-run defaults in the README:
 
@@ -111,7 +167,7 @@ mkdir -p "$BACKUP_DIR" && chmod 700 "$BACKUP_DIR"
 BACKUP_FILE="$BACKUP_DIR/ranking-data-$(date -u +%Y%m%dT%H%M%SZ).tar"
 docker run --rm --network none \
   --mount type=volume,src=cpa-ranking_ranking-data,dst=/data,readonly \
-  --entrypoint /bin/busybox cpa-usage-ranking:local \
+  --entrypoint /bin/busybox "${RANKING_IMAGE:-cpa-usage-ranking:local}" \
   tar -C /data -cf - . > "$BACKUP_FILE"
 # Resume the existing service when appropriate:
 docker compose -p cpa-ranking start ranking
@@ -128,7 +184,7 @@ docker volume inspect cpa-ranking-restored >/dev/null 2>&1 && { echo 'volume alr
 docker volume create cpa-ranking-restored
 docker run --rm -i --network none --user 0:0 \
   --mount type=volume,src=cpa-ranking-restored,dst=/data \
-  --entrypoint /bin/busybox cpa-usage-ranking:local \
+  --entrypoint /bin/busybox "${RANKING_IMAGE:-cpa-usage-ranking:local}" \
   sh -c 'tar -C /data -xf - && chown -R 10001:10001 /data && chmod 700 /data' \
   < "$BACKUP_FILE"
 ```
@@ -148,8 +204,8 @@ docker compose -p cpa-ranking -f compose.yaml -f compose.restore.yaml up -d --no
 
 Check readiness and expected data. The old volume and backup remain available;
 restoring loses changes made after the backup. To upgrade, retain a verified
-backup and the old image, build the new image, recreate the container with the
-same volume, and check readiness/data. Startup applies forward migrations;
+backup and the old image, build or pull the new image, recreate the container
+with the same volume, and check readiness/data. Startup applies forward migrations;
 there is no automatic database downgrade. If rolling back an incompatible image,
 restore a verified pre-upgrade backup to a separate volume rather than assuming
 the migrated database is compatible.

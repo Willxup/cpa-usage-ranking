@@ -23,6 +23,28 @@ docker buildx build --platform linux/amd64 --load -t cpa-usage-ranking:local .
 
 构建阶段运行在构建机架构上，必要时使用目标 C 交叉编译器；最终镜像阶段不运行目标架构命令。运行异构镜像仍需要合适的模拟器或原生主机。构建需要下载基础镜像和构建依赖；`--load` 需要支持将单平台镜像导入本机引擎的 Buildx 构建器。
 
+## GHCR 镜像与发布
+
+GHCR 实际发布镜像后，可将 `RANKING_IMAGE` 设置为完整镜像引用；以下账户、仓库和版本仅为示例，请替换为真实值，仓库路径使用小写。私有包需要相应 GHCR 访问权限；是否公开取决于包设置。
+
+```sh
+export RANKING_IMAGE=ghcr.io/owner/repository:v1.2.3
+docker compose -p cpa-ranking pull ranking
+docker compose -p cpa-ranking up -d --no-build
+```
+
+不设置 `RANKING_IMAGE` 时仍默认本地构建。使用仓库镜像时加 `--no-build`，避免 Compose 用本地构建替代。镜像标签可能被移动或重新发布；可复现部署应使用已验证的 manifest digest，例如 `ghcr.io/owner/repository@sha256:<digest>`，并保护 Git 发布标签。发布工作流不会创建 GitHub Release 或发行独立二进制。
+
+配置的 GHCR 工作流采用以下策略：
+
+- 推送的稳定 Git 标签须严格为 `vMAJOR.MINOR.PATCH`，数字除 `0` 外不能带前导零，且对应提交必须可从仓库默认分支到达。支持附注标签和轻量标签；拒绝预发布版本和未合并分支的标签。发布 `vMAJOR.MINOR.PATCH` 与 `sha-<完整提交SHA>`。
+- 手动发布必须选择非默认分支，发布 `dev-sha-<完整提交SHA>`；若提供可选开发名称，还发布 `dev-<名称>`。名称须使用小写 Docker 标签字符、以字母或数字开头，最多 124 个字符；保留名称、版本式名称和 `sha-` 开头的名称会被拒绝。留空时仅发布 SHA 标签。
+- 不发布 `latest`、数字版本、主版本或次版本别名，从而避免旧版本回退共享稳定通道；使用方选择完整版本或 digest。开发名称不能进入稳定命名空间；后续运行可以移动开发名称标签。
+- 发布必须先通过策略校验和完整复用 CI；任何必要检查失败、取消或跳过都阻止发布。CI 执行 Go、前端、策略测试以及两种架构的镜像构建和运行检查。ARM64 在 GitHub 托管的 AMD64 runner 上通过 QEMU 模拟，不是原生硬件；该工作流不运行浏览器测试。最终多架构发布会重新构建，因此最终 digest 并非本地测试镜像的 digest。
+- 只有发布任务获得 `packages: write`，使用 `GITHUB_TOKEN` 并从仓库上下文派生镜像名。PR 和普通 CI 不登录或推送 GHCR。Buildx 缓存保存在 GitHub Actions 缓存而非 GHCR。发布串行执行；GitHub 可能替换已有的等待中运行，须检查状态并按需重跑遗漏的发布。
+
+工作流只是发布配置，不代表当前已有可用镜像或包。分支和标签保护、包可见性及仓库 Actions 权限仍须由管理员配置。
+
 **不要将此 HTTP 服务直接暴露到公网。** 注册和上报携带 Bearer 凭据，应通过 HTTPS 反向代理终止 TLS，限制对容器和本机监听端口的直接访问，并确保代理日志不记录 Authorization 或请求体。镜像在容器内监听所有接口，即使宿主端口只绑定回环，可访问容器网络的其他容器仍可能直连。默认不信任转发来源 IP；确需代理时只信任真实代理的 IP/CIDR，见[注册来源说明](registration-sources.md)。
 
 Compose 示例未设置 CPU 或内存上限。请按主机预算配置 `cpus`、`mem_limit` 和 `memswap_limit`；资源配额不是吞吐保证。冒烟检查使用 2 CPU 配额、1 GiB 内存上限且不额外使用交换空间，这不表示生产最低配置要求。
@@ -34,6 +56,8 @@ Compose 示例未设置 CPU 或内存上限。请按主机预算配置 `cpus`、
 只运行一个实例，使用本地持久文件系统，不使用 NFS/网络共享或多个副本共用数据库。SQLite 使用 WAL：运行中保留 `-wal` 和 `-shm` 文件，不要删除它们或只复制打开中的数据库文件。停止容器会向服务发送 SIGTERM。Compose 默认留 30 秒，`RANKING_SHUTDOWN_TIMEOUT` 默认对各适用排空阶段分别为 10 秒；增大后也应相应增加 Docker 停止宽限并留余量。强杀或超时不属于正常关停。`docker compose down -v` 会删除数据卷，除非确实要删除数据，否则不要使用。
 
 ## 配置和健康检查
+
+服务配置通过 Compose 的 `environment` 或 `docker run -e` 传入；仅在宿主 shell 中 export 不会自动传入容器。`RANKING_IMAGE` 只用于 Compose 选择镜像，不是服务配置。
 
 下列**镜像**默认值不同于 README 中源码运行的默认值：
 
@@ -62,7 +86,7 @@ mkdir -p "$BACKUP_DIR" && chmod 700 "$BACKUP_DIR"
 BACKUP_FILE="$BACKUP_DIR/ranking-data-$(date -u +%Y%m%dT%H%M%SZ).tar"
 docker run --rm --network none \
   --mount type=volume,src=cpa-ranking_ranking-data,dst=/data,readonly \
-  --entrypoint /bin/busybox cpa-usage-ranking:local \
+  --entrypoint /bin/busybox "${RANKING_IMAGE:-cpa-usage-ranking:local}" \
   tar -C /data -cf - . > "$BACKUP_FILE"
 # 适当时恢复原服务：
 docker compose -p cpa-ranking start ranking
@@ -78,7 +102,7 @@ docker volume inspect cpa-ranking-restored >/dev/null 2>&1 && { echo 'volume alr
 docker volume create cpa-ranking-restored
 docker run --rm -i --network none --user 0:0 \
   --mount type=volume,src=cpa-ranking-restored,dst=/data \
-  --entrypoint /bin/busybox cpa-usage-ranking:local \
+  --entrypoint /bin/busybox "${RANKING_IMAGE:-cpa-usage-ranking:local}" \
   sh -c 'tar -C /data -xf - && chown -R 10001:10001 /data && chmod 700 /data' \
   < "$BACKUP_FILE"
 ```
@@ -96,7 +120,7 @@ volumes:
 docker compose -p cpa-ranking -f compose.yaml -f compose.restore.yaml up -d --no-build
 ```
 
-检查就绪状态和预期数据。原卷和备份仍会保留；恢复会丢失备份之后的变更。升级时保留已验证备份和旧镜像，构建新镜像，用原卷重建容器，再检查就绪和数据。启动时只向前执行数据库迁移，不自动降级；回退到不兼容的旧镜像时应恢复升级前已验证的备份到独立卷，不要假定迁移后的数据库可向后兼容。
+检查就绪状态和预期数据。原卷和备份仍会保留；恢复会丢失备份之后的变更。升级时保留已验证备份和旧镜像，构建或拉取新镜像，用原卷重建容器，再检查就绪和数据。启动时只向前执行数据库迁移，不自动降级；回退到不兼容的旧镜像时应恢复升级前已验证的备份到独立卷，不要假定迁移后的数据库可向后兼容。
 
 ## 可重复的镜像检查
 
