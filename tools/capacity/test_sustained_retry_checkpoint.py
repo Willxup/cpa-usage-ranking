@@ -48,7 +48,9 @@ class RetryCheckpointTest(unittest.TestCase):
                          'previous_max_pending': 125000, 'next_max_pending': 100000,
                          'task_sequence': 130422, 'task_client': 9034, 'task_revision': 54,
                          'task_day': '2026-11-13', 'task_body_sha256': 'ad6e280211e23aa21566bdad0074a0045452d71dbb1ced4d748aea1b21448a1a',
-                         'task_attempts': 30, 'next_task_attempt': 31}
+                         'task_attempts': 30, 'next_task_attempt': 31,
+                         'task_finish_unix_ns': 1794560887575625142, 'task_retry_after_ns': 1000000000,
+                         'task_not_before_unix_ns': 1794560902575625142}
         self.manifest_path.write_text(json.dumps(self.manifest))
         listener = {'comm': 'sshd', 'pid': 881, 'start_ticks': 686, 'nofile': [1024, 524288]}
         first, second = 100, 1_000_000_000_000

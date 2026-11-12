@@ -481,8 +481,9 @@ func restoreSustained(file *os.File, header sustainedHeader, state *sustainedSta
 				return fmt.Errorf("attempt limit exceeded at line %d", lineNo)
 			}
 			a := state.actors[r.Client]
-			if a == nil || len(a.queue) == 0 || a.queue[0].task.Sequence != r.Sequence || a.inFlight {
-				return fmt.Errorf("bad start at line %d", lineNo)
+			if a == nil || len(a.queue) == 0 || a.queue[0].task.Sequence != r.Sequence || a.inFlight ||
+				(!a.retryAt.IsZero() && r.TimeUnixNS < a.retryAt.UnixNano()) {
+				return fmt.Errorf("bad or premature start at line %d", lineNo)
 			}
 			if r.Action == "register" && !a.registered && r.Attempt == a.registrationAttempts+1 {
 				a.registrationAttempts++

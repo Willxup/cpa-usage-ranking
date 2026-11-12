@@ -251,7 +251,9 @@ class ReviewedCheckpoint:
                              'next_max_pending': self.config['max_pending'], 'task_sequence': 130422,
                              'task_client': 9034, 'task_revision': 54, 'task_day': '2026-11-13',
                              'task_body_sha256': 'ad6e280211e23aa21566bdad0074a0045452d71dbb1ced4d748aea1b21448a1a',
-                             'task_attempts': 30, 'next_task_attempt': 31}
+                             'task_attempts': 30, 'next_task_attempt': 31,
+                             'task_finish_unix_ns': 1794560887575625142, 'task_retry_after_ns': 1000000000,
+                             'task_not_before_unix_ns': 1794560902575625142}
         if manifest != expected_manifest:
             raise BudgetError('reviewed retry manifest does not match exact migration')
         oracle = json.loads(oracle_path.read_text())

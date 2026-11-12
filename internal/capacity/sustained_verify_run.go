@@ -163,6 +163,9 @@ func readSustainedJournal(path string, f Fixture, o SustainedVerifyOptions, stat
 						a.queue[0].task.Day != m.TaskDay || a.queue[0].task.BodyHash != m.TaskBodySHA || a.queue[0].attempts != m.TaskAttempts {
 						e = errors.New("reviewed retry task identity or cumulative attempts changed")
 					} else {
+						if a.notBefore < m.TaskNotBeforeNS {
+							a.notBefore = m.TaskNotBeforeNS
+						}
 						state.maxAttempts, migrated = m.NextAttempts, true
 					}
 				}

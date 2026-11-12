@@ -160,7 +160,9 @@ and the approved transition before another attempt. Replay, summary and
 verification of the migrated journal require the same explicit
 `--reviewed-retry-migration` manifest and reject a changed prefix, mismatched
 manifest or unapproved migration; other journal options remain fixed. Attempts and frozen identities/bodies are never reset.
-This is not permission to resume arbitrary failed runs or to change production
+For the exhausted head, the migration restores the original capped backoff and
+Retry-After from the terminal finish before attempt 31 can start; offline elapsed
+time does not consume the active-load budget. This is not permission to resume arbitrary failed runs or to change production
 retry policy. Each controller invocation stores its snapshots and
 reconstruction databases in its own private adapter directory; previous
 snapshots are neither overwritten nor treated as the current stopped database.

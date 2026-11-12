@@ -9,7 +9,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
+	"time"
 )
 
 const c54RetryApproval = "c54-721cb71e50f60575-retry-30-to-512"
@@ -43,6 +45,9 @@ type sustainedRetryMigration struct {
 	TaskBodySHA        string `json:"task_body_sha256"`
 	TaskAttempts       int    `json:"task_attempts"`
 	NextTaskAttempt    int    `json:"next_task_attempt"`
+	TaskFinishNS       int64  `json:"task_finish_unix_ns"`
+	TaskRetryAfterNS   int64  `json:"task_retry_after_ns"`
+	TaskNotBeforeNS    int64  `json:"task_not_before_unix_ns"`
 }
 
 func validSHA(s string) bool {
@@ -57,12 +62,17 @@ func (m *sustainedRetryMigration) validate(file *os.File) error {
 		m.PreviousAttempts != 30 || m.NextAttempts != 512 || m.PreviousPending != 125000 ||
 		(m.NextPending != 125000 && m.NextPending != 100000) || m.PreviousBytes <= 0 ||
 		m.TaskSequence <= 0 || m.TaskClient <= 0 || m.TaskRevision <= 0 || m.TaskDay == "" || !validSHA(m.TaskBodySHA) ||
-		m.TaskAttempts != 30 || m.NextTaskAttempt != 31 {
+		m.TaskAttempts != 30 || m.NextTaskAttempt != 31 || m.TaskFinishNS <= 0 || m.TaskRetryAfterNS < 0 {
 		return errors.New("unapproved C54 retry migration")
+	}
+	delay := sustainedBackoff(0, m.TaskClient, m.TaskAttempts, time.Duration(m.TaskRetryAfterNS))
+	if int64(delay) < 0 || m.TaskFinishNS > math.MaxInt64-int64(delay) || m.TaskNotBeforeNS != m.TaskFinishNS+int64(delay) {
+		return errors.New("reviewed retry backoff or Retry-After was changed")
 	}
 	if c54RetryPrefixSHA == c54RealRetryPrefixSHA &&
 		(m.TaskSequence != 130422 || m.TaskClient != 9034 || m.TaskRevision != 54 || m.TaskDay != "2026-11-13" ||
-			m.TaskBodySHA != "ad6e280211e23aa21566bdad0074a0045452d71dbb1ced4d748aea1b21448a1a") {
+			m.TaskBodySHA != "ad6e280211e23aa21566bdad0074a0045452d71dbb1ced4d748aea1b21448a1a" ||
+			m.TaskFinishNS != 1794560887575625142 || m.TaskRetryAfterNS != 1000000000) {
 		return errors.New("reviewed retry task identity differs from audited task")
 	}
 	h := sha256.New()
@@ -82,6 +92,9 @@ func verifyReviewedRetryTask(m *sustainedRetryMigration, state *sustainedState) 
 	if job.task.Sequence != m.TaskSequence || job.task.Revision != m.TaskRevision || job.task.Day != m.TaskDay ||
 		job.task.BodyHash != m.TaskBodySHA || job.attempts != m.TaskAttempts {
 		return errors.New("reviewed retry task identity, body or cumulative attempts changed")
+	}
+	if a.retryAt.IsZero() || a.retryAt.UnixNano() < m.TaskNotBeforeNS {
+		a.retryAt = time.Unix(0, m.TaskNotBeforeNS)
 	}
 	return nil
 }

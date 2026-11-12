@@ -156,11 +156,14 @@ func TestReviewedRetryMigrationRealCLI(t *testing.T) {
 	write(sustainedRecord{Kind: "finish", TimeUnixNS: now, Sequence: newClient.Sequence, Client: newClient.Client, Action: "register", Attempt: 1, Error: "canceled"})
 	write(sustainedRecord{Kind: "start", TimeUnixNS: now, Sequence: first.Sequence, Client: first.Client, Action: "report", Attempt: 1})
 	write(sustainedRecord{Kind: "finish", TimeUnixNS: now, Sequence: first.Sequence, Client: first.Client, Action: "report", Attempt: 1, Status: 200, Confirmed: true, AckRevision: fmt.Sprint(first.Revision)})
+	var lastFinishNS int64
 	attempt := func(i int) {
 		write(sustainedRecord{Kind: "start", TimeUnixNS: now, Sequence: retained.Sequence, Client: retained.Client, Action: "report", Attempt: i})
 		r := sustainedRecord{Kind: "finish", TimeUnixNS: now, Sequence: retained.Sequence, Client: retained.Client, Action: "report", Attempt: i, Status: 503, ErrorCode: "report_overloaded"}
 		if i == 30 {
 			r.Error = "retry_attempt_limit"
+			r.RetryAfterNS = int64(20 * time.Second)
+			lastFinishNS = r.TimeUnixNS
 		}
 		write(r)
 	}
@@ -194,7 +197,8 @@ func TestReviewedRetryMigrationRealCLI(t *testing.T) {
 		PreviousBudgetSHA: c54RetryBudgetSHA, PreviousConfigHash: c54RetryOldConfigHash, NextConfigHash: strings.Repeat("a", 64),
 		PreviousBinarySHA: c54RetryOldBinarySHA, NextBinarySHA: strings.Repeat("b", 64), PreviousAttempts: 30, NextAttempts: 512,
 		PreviousPending: 125000, NextPending: 100000, TaskSequence: retained.Sequence, TaskClient: retained.Client,
-		TaskRevision: retained.Revision, TaskDay: retained.Day, TaskBodySHA: retained.BodyHash, TaskAttempts: 30, NextTaskAttempt: 31}
+		TaskRevision: retained.Revision, TaskDay: retained.Day, TaskBodySHA: retained.BodyHash, TaskAttempts: 30, NextTaskAttempt: 31,
+		TaskFinishNS: lastFinishNS, TaskRetryAfterNS: int64(20 * time.Second), TaskNotBeforeNS: lastFinishNS + int64(20*time.Second)}
 	manifest := filepath.Join(dir, "manifest.json")
 	data, _ = json.Marshal(m)
 	if err = os.WriteFile(manifest, data, 0600); err != nil {
@@ -369,6 +373,7 @@ func TestReviewedRetryMigrationRealCLI(t *testing.T) {
 	}{
 		{name: "forged", record: sustainedRecord{Kind: "retry_migration", RetryMigration: func() *sustainedRetryMigration { x := m; x.NextAttempts = 513; return &x }()}},
 		{name: "different-config-hash", record: sustainedRecord{Kind: "retry_migration", RetryMigration: func() *sustainedRetryMigration { x := m; x.NextConfigHash = strings.Repeat("c", 64); return &x }()}},
+		{name: "shortened-retry-after", record: sustainedRecord{Kind: "retry_migration", RetryMigration: func() *sustainedRetryMigration { x := m; x.TaskNotBeforeNS--; return &x }()}},
 		{name: "no-marker", record: sustainedRecord{Kind: "start", Sequence: retained.Sequence, Client: retained.Client, Action: "report", Attempt: 31}},
 	} {
 		path := filepath.Join(dir, tc.name+".jsonl.gz")
