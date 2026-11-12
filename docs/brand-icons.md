@@ -14,13 +14,16 @@ Sources and exports:
 - `web/public/assets/brand/favicon-{16,32,48}.png`: small raster variants.
 - `web/public/assets/brand/favicon.ico`: combined 16/32/48px fallback.
 
-The SVG masters are editable. Regenerate raster exports with the existing
-Playwright Chromium installation (no additional runtime dependency):
+The SVG masters are editable. With Chromium available to Playwright, regenerate
+raster exports using:
 
 ```sh
-npm --prefix web run browser:install
 npm --prefix web run icons:generate
 ```
+
+The generator uses Playwright's default Chromium lookup. If the required browser
+is unavailable, `npm --prefix web run browser:install` installs it and may download
+browser files; it is not required when a compatible installation is already available.
 
 Exports are kept alongside the source; normal application builds do not need
 to launch a browser. Vite copies the assets unchanged, and Go serves them under

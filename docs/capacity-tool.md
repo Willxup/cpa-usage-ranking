@@ -75,8 +75,8 @@ An independent clock continues to create one today update per identity per
 cycle, plus one yesterday update per cycle for every tenth identity. Thus the
 planned background rate is approximately `1.1 * clients / cycle_seconds`;
 slow responses do not pause that clock. Initial yesterday tasks are counted as
-pending even while waiting for today's confirmation. K remains eight full
-models; the normal `--changed 2` changes two model rows.
+pending even while waiting for today's confirmation. Each snapshot contains
+all eight fixture models; the normal `--changed 2` changes two model rows.
 
 Each retry retains its logical task, revision and body. Transport errors,
 408, 429 and 5xx can be retried; retry delay observes `Retry-After` and adds
@@ -91,8 +91,10 @@ new, and partial files can remain after an error.
 
 The attempt ledger records task ID, attempt number, status, Retry-After,
 planned/start/connection acquisition/local request-write/completion timestamps
-and confirmation; it never records bearer secrets or bodies. The task event
-file records each created task even if it is never sent. The `release` event
+and confirmation. It does not directly log request Authorization headers or
+bodies, but includes the server's raw `Retry-After` header, truncated to 128 bytes;
+protect the ledger as a private file. The task event file records each created
+task even if it is never sent. The `release` event
 supplies the initial tasks' common planned time (their created events use
 zero); only a valid matching revision is confirmed. One-second samples include
 produced, confirmed, pending, retries, statuses, connection waiting and the
@@ -149,7 +151,8 @@ an assurance that unbounded growth in database size remains sustainable.
 
 For a new private local test directory and isolated test service, use
 `seed-sustained` with the same fixture flags as `seed`, plus a fixed
-`--model-seed`. It seeds variable-size today/yesterday snapshots and the same
+`--model-seed`. The `--models` catalog must contain at least 48 distinct canonical
+model names. It seeds variable-size today/yesterday snapshots and the same
 synthetic historical shape/closed-day backlog. Save the stopped seed database
 unchanged for later reconstruction; use a separate copy for the test service.
 The manifest is private and contains the seed of the synthetic bearer secrets.
@@ -206,8 +209,9 @@ Each task is a frozen full snapshot and independently reconstructible per-row
 delta. Approximately 1% of tasks introduce a new identity through real
 registration; that task is counted as pending while registration is outstanding.
 About 10% of identities are hot and receive half of existing-identity selections.
-Client classes are 60/30/10 percent light/medium/heavy, with 1–4/5–16/17–48
-model-tier pairs respectively. Task days are approximately 90/10 today/yesterday;
+Client classes are 60/30/10 percent light/medium/heavy. Their per-client model-tier
+row limits are drawn from 1–4/5–16/17–48 respectively; actual daily snapshots
+can contain fewer rows and grow with updates. Task days are approximately 90/10 today/yesterday;
 calls per update are 80% 1–3, 18% 4–20 and 2% 21–100. Model selection and
 service tiers are skewed toward hot models and default tier respectively; see
 `internal/capacity/sustained_model.go` for the fixed, versioned draw sequence.

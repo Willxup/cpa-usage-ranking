@@ -64,6 +64,12 @@ images/
   Loading checks filesystem metadata, not image content or licensing. Broken
   or missing resources are errors; they are never silently dropped.
 
+For compatibility with the web UI, IDs must also be JavaScript-safe integers
+(at most `9007199254740991`), and paths must match `^images/[a-zA-Z0-9_./-]+$`
+without empty, `.` or `..` components. The UI ignores incompatible entries and
+uses the catalog default for missing IDs. If the default entry is incompatible,
+the UI falls back to a neutral avatar instead of using the catalog.
+
 Extend the catalog by adding files and entries. Published IDs must keep their
 meaning: do not renumber entries, reuse an ID for another image or remove
 resources still referenced by stored clients. This is a catalog-maintenance

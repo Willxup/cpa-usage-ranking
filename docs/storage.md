@@ -55,9 +55,11 @@ RANKING_SQLITE_PATH=/srv/cpa-ranking/data/ranking.db go run ./cmd/ranking
 Connection-local settings are supplied in the driver DSN, so new connections
 and reconnects receive the same settings. Readers use independent snapshots;
 a read transaction does not prevent a writer from committing in WAL mode.
-Keep future read transactions short so they do not hold back checkpoints.
-SQLite's automatic checkpoint behavior is unchanged; there is no custom
-checkpoint worker, application retry loop or transaction abstraction layer.
+Keep read transactions short so they do not hold back checkpoints. SQLite uses
+automatic checkpoints; there is no custom checkpoint worker. The storage
+connection layer has no general-purpose retry loop. Report and maintenance
+writers implement bounded, cancellable SQLite lock retries; see
+[daily report snapshots](report-snapshots.md).
 
 The SQL connection bound is not a write-admission queue or a throughput promise.
 Storage is closed after HTTP shutdown; both pools are closed even if one close

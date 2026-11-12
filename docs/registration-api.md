@@ -74,8 +74,10 @@ using a new secret. Registration never edits an existing profile.
 
 ## Admission and shutdown of new creation
 
-Every POST reaches the source/global request gate **before** credential and body
-validation, including malformed inputs and idempotent retries. Sources default
+After successful source resolution, every registration POST passes the
+source/global request gate **before** credential and body validation, including
+malformed inputs and idempotent retries. Source resolution failure returns
+400 `invalid_source` without consuming request quota. Sources default
 to canonical RemoteAddr IPs, with IPv4-mapped IPv6 unmapped and native IPv6 /64
 grouping enabled. Forwarded headers are ignored unless the peer is explicitly
 trusted; see [proxy deployment](registration-sources.md).
