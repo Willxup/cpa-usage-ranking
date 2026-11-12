@@ -17,7 +17,8 @@ export async function fetchLeaderboard(board: Board, period: Period, signal: Abo
     const response = await fetch(`/v1/leaderboards/${board}/${period}`, { signal: controller.signal, cache: 'no-store', credentials: 'omit', headers: { Accept: 'application/json' } })
     if (!response.ok) throw new Error(response.status === 503 ? '榜单缓存尚未就绪，请稍后重试。' : `榜单加载失败（${response.status}），请重试。`)
     if (response.headers.get('content-type')?.split(';')[0].trim() !== 'application/json') throw new Error('榜单响应无效，请稍后重试。')
-    const data: unknown = await response.json()
+    let data: unknown
+    try { data = await response.json() } catch { throw new Error('榜单响应无效，请稍后重试。') }
     if (!object(data) || data.board !== board || data.period !== period || typeof data.start !== 'string' || typeof data.end !== 'string' || typeof data.generated_at !== 'string' || !Array.isArray(data.entries) || data.entries.length > 100) throw new Error('榜单响应无效，请稍后重试。')
     const entries: Entry[] = data.entries.map((entry: unknown) => {
       if (!object(entry) || !Number.isInteger(entry.rank) || (entry.rank as number) < 1 || typeof entry.client_id !== 'string' || !digits.test(entry.client_id) || typeof entry.avatar_id !== 'string' || !digits.test(entry.avatar_id) || typeof entry.display_name !== 'string' || typeof entry.metric !== 'string' || !(board === 'usage' ? /^\d+$/ : /^\d+\.\d{2}$/).test(entry.metric)) throw new Error('榜单响应无效，请稍后重试。')
@@ -27,6 +28,7 @@ export async function fetchLeaderboard(board: Board, period: Period, signal: Abo
   } catch (error) {
     if (signal.aborted) throw signal.reason
     if (controller.signal.aborted) throw new Error('榜单加载超时，请重试。')
+    if (error instanceof TypeError) throw new Error('无法加载榜单，请检查连接后重试。')
     if (error instanceof Error) throw error
     throw new Error('无法加载榜单，请重试。')
   } finally {
