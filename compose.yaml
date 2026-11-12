@@ -1,0 +1,15 @@
+services:
+  ranking:
+    # Build locally; no registry publication is required.
+    image: cpa-usage-ranking:local
+    build:
+      context: .
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ranking-data:/data
+    stop_grace_period: 30s
+    restart: unless-stopped
+
+volumes:
+  ranking-data:

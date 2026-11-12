@@ -2,7 +2,17 @@
 
 [English](README.md)
 
-独立的通用用量排名服务。目前已具备受保护注册、日累计快照上报、后台日结、静态头像及 SQLite 存储。启动时校验[模型目录](docs/model-catalog.md)，将精确名称及别名映射至稳定 ID；本次交付未重新核实参考价格。统一缓存针对六个固定 UTC 周期构建五个真实榜单，详见[榜单计算说明](docs/leaderboards.md)；没有网站账号 UI。
+独立的通用用量排名服务。目前已具备受保护注册、日累计快照上报、后台日结、静态头像及 SQLite 存储。启动时校验[模型目录](docs/model-catalog.md)，将精确名称及别名映射至稳定 ID；参考价格并非独立核实的实时报价，可能过时。统一缓存针对六个固定 UTC 周期构建五个真实榜单，详见[榜单计算说明](docs/leaderboards.md)；没有网站账号 UI。
+
+## Docker 部署
+
+使用 Docker Compose 构建并运行镜像；示例仅向宿主回环地址发布 HTTP，SQLite 使用持久数据卷：
+
+```sh
+docker compose -p cpa-ranking up -d --build
+```
+
+接收远程凭据前必须通过可信反向代理提供 HTTPS。[Docker 部署说明](docs/docker.zh.md)涵盖双架构、权限、健康检查、备份恢复及升级。本项目不提供独立二进制发行包。
 
 ## 开发
 
@@ -81,7 +91,7 @@ PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium make test-browser
 
 也可以设置 `PLAYWRIGHT_CHROMIUM_CHANNEL=chrome` 复用已安装的 Chrome 通道，两项只选一项。不设置时沿用 Playwright 默认查找方式（包括 `PLAYWRIGHT_BROWSERS_PATH`）；仅改变缓存目录并不能发现不同 revision 的浏览器，跨 revision 复用应指定可执行文件。只有确实没有可用浏览器时才运行 `make browser-install`，兼容性以实际运行的工具和浏览器验证结果为准。
 
-## 正式前端托管
+## 源码本地前端托管
 
 ```sh
 npm --prefix web ci
@@ -90,7 +100,7 @@ go build -o bin/ranking ./cmd/ranking
 RANKING_WEB_DIR=web/dist ./bin/ranking
 ```
 
-Go 同域提供构建后的页面和 API。部署二进制、`config/models.json`、`web/dist/` 及第三方声明/许可文件，线上不需要 Node 服务。`RANKING_WEB_DIR` 的相对路径以进程工作目录为基准；未设置时仅启用后端路由，设置后若缺少完整入口文件则启动失败。
+Go 同域提供构建后的页面和 API。以上为源码开发示例；部署请使用包含模型目录、前端及第三方声明/许可的 Docker 镜像。`RANKING_WEB_DIR` 的相对路径以进程工作目录为基准；未设置时仅启用后端路由，设置后若缺少完整入口文件则启动失败。
 
 仅提供 `/`、`/index.html`、`/favicon.svg` 和 `/assets/` 下实际存在的文件，不做任意 SPA 页面回退或目录列表。缺失资源、未知 API 和未知页面保持 404；拒绝目录穿越及越界软链接。HTML、非指纹文件及公共资源子目录中的稳定文件名需要重新验证，顶层带构建指纹的资源可缓存一年。运行期间不要原地修改资源，应停止进程、更换构建后重启。
 
@@ -107,6 +117,8 @@ Go 同域提供构建后的页面和 API。部署二进制、`config/models.json
 - 默认不信任客户端提供的转发 IP 头；显式代理配置见[注册来源说明](docs/registration-sources.md)。
 
 ## 配置
+
+下列默认值适用于源码运行；[Docker 镜像](docs/docker.zh.md#配置和健康检查)覆盖其中四项路径或监听设置。
 
 | 环境变量 | 默认值 | 含义 |
 | --- | --- | --- |

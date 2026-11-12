@@ -7,7 +7,21 @@ registration, daily snapshot ingestion, background settlement and SQLite persist
 are available. Five real leaderboards are built in a unified cache for six fixed UTC periods; see [leaderboard calculations](docs/leaderboards.md). No website account UI is provided. The
 [model catalog](docs/model-catalog.md) is validated at startup and maps exact
 names and aliases to stable IDs; there is no model management API. Reference
-prices were not independently reverified for this delivery.
+prices are not independently verified live quotes and may be outdated.
+
+## Docker deployment
+
+Build and run the image with Docker Compose; the example publishes HTTP to
+loopback only and uses a persistent SQLite volume:
+
+```sh
+docker compose -p cpa-ranking up -d --build
+```
+
+Use HTTPS through a trusted reverse proxy before accepting remote credentials.
+See [Docker deployment](docs/docker.md) for both supported architectures,
+permissions, health checks, backup, restore and upgrades. The project does not
+provide standalone binary releases.
 
 ## Development
 
@@ -170,7 +184,7 @@ setting alone does not make a different browser revision discoverable: use the
 executable-path option for that. Run `make browser-install` only when needed;
 compatibility must be verified with the actual installed runner and browser.
 
-## Production frontend serving
+## Local frontend serving from source
 
 ```sh
 npm --prefix web ci
@@ -179,11 +193,12 @@ go build -o bin/ranking ./cmd/ranking
 RANKING_WEB_DIR=web/dist ./bin/ranking
 ```
 
-Go serves the built application and API on the same origin. Deploy the binary,
-`config/models.json`, `web/dist/` and the third-party notices/licenses together;
-Node is needed only for building. `RANKING_WEB_DIR` is relative to the process working directory
-unless absolute. If unset, only backend routes are enabled. If set to an
-incomplete build, startup fails instead of silently serving a broken site.
+Go serves the built application and API on the same origin. This is a source
+development example; for deployment use the Docker image, which includes the
+model catalog, frontend and third-party notices/licenses. `RANKING_WEB_DIR` is
+relative to the process working directory unless absolute. If unset, only
+backend routes are enabled. If set to an incomplete build, startup fails instead
+of silently serving a broken site.
 
 Only `/`, `/index.html`, `/favicon.svg` and actual files below `/assets/` are
 served. There is no arbitrary SPA fallback or directory listing. Missing files,
@@ -211,6 +226,8 @@ stop the process, replace the build, then restart.
   [registration sources](docs/registration-sources.md) for explicit proxy trust.
 
 ## Configuration
+
+The defaults below apply when running from source; the [Docker image](docs/docker.md#configuration-and-health) overrides four paths/listener settings.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
