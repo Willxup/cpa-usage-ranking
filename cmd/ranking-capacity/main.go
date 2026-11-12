@@ -35,6 +35,7 @@ func run(ctx context.Context, args []string) error {
 	seedDB := flags.String("seed-db", "", "original stopped sustained seed SQLite database")
 	expectedDB := flags.String("expected-db", "", "NEW local reconstruction database for sustained verification")
 	resume := flags.Bool("resume", false, "resume a cleanly closed sustained journal, initially paused")
+	retryMigration := flags.String("reviewed-retry-migration", "", "explicit reviewed C54 retry migration manifest")
 	maxInFlight := flags.Int("max-in-flight", 4096, "local sustained simultaneous HTTP-attempt safety bound")
 	maxJournal := flags.Int64("max-journal-bytes", 4<<30, "local sustained journal safety bound")
 	maxArrivalLag := flags.Duration("max-arrival-lag", 5*time.Second, "stop if sustained input generation lags this far")
@@ -142,7 +143,7 @@ func run(ctx context.Context, args []string) error {
 				}
 			}
 		}()
-		value, err = runSustainedSamples(ctx, f, capacity.SustainedOptions{URL: *base, Journal: *journal, Models: names, ModelSeed: *modelSeed, ArrivalSeed: *arrivalSeed, MaxPending: *maxPending, MaxInFlight: *maxInFlight, MaxAttempts: *maxAttempts, MaxJournalBytes: *maxJournal, RequestTimeout: *requestTimeout, MaxArrivalLag: *maxArrivalLag, MaxActive: *activeBudget, Resume: *resume}, commands, *samples)
+		value, err = runSustainedSamples(ctx, f, capacity.SustainedOptions{URL: *base, Journal: *journal, Models: names, ModelSeed: *modelSeed, ArrivalSeed: *arrivalSeed, MaxPending: *maxPending, MaxInFlight: *maxInFlight, MaxAttempts: *maxAttempts, MaxJournalBytes: *maxJournal, RequestTimeout: *requestTimeout, MaxArrivalLag: *maxArrivalLag, MaxActive: *activeBudget, Resume: *resume, RetryMigrationPath: *retryMigration}, commands, *samples)
 	case "assess-sustained":
 		value, err = assessSustainedInput(os.Stdin)
 	case "summarize-sustained":
@@ -157,7 +158,7 @@ func run(ctx context.Context, args []string) error {
 		if *maxPending == 0 {
 			*maxPending = 200000
 		}
-		value, err = capacity.SummarizeSustained(*journal, names, *maxPending)
+		value, err = capacity.SummarizeSustained(*journal, names, *maxPending, *retryMigration)
 	case "inspect":
 		value, err = capacity.Inspect(ctx, *db)
 	case "verify":
@@ -182,7 +183,7 @@ func run(ctx context.Context, args []string) error {
 		for _, m := range c.List() {
 			names = append(names, m.Name)
 		}
-		value, err = capacity.VerifySustained(ctx, f, capacity.SustainedVerifyOptions{SeedDB: *seedDB, FinalDB: *db, Journal: *journal, ExpectedDB: *expectedDB, Models: names, ModelSeed: *modelSeed})
+		value, err = capacity.VerifySustained(ctx, f, capacity.SustainedVerifyOptions{SeedDB: *seedDB, FinalDB: *db, Journal: *journal, ExpectedDB: *expectedDB, RetryMigrationPath: *retryMigration, Models: names, ModelSeed: *modelSeed})
 	case "probe":
 		value, err = capacity.Probe(ctx, *db, *day)
 	default:

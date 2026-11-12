@@ -21,10 +21,10 @@ func TestSustainedSummaryDelayOverHourIsExplicit(t *testing.T) {
 	}
 	enc := json.NewEncoder(file)
 	for _, record := range []sustainedRecord{
-		{Kind: "header", Header: &sustainedHeader{Version: SustainedModelVersion, Day: "2026-11-13", CatalogHash: hex.EncodeToString(hash[:])}},
+		{Kind: "header", Header: &sustainedHeader{Version: SustainedModelVersion, Day: "2026-11-13", CatalogHash: hex.EncodeToString(hash[:]), MaxAttempts: 30}},
 		{Kind: "stage", Command: &SustainedCommand{Operation: "stage", Stage: "s", Rate: 100}},
 		{Kind: "created", Source: "arrival", PlannedUnixNS: 1, Task: &SustainedTask{Sequence: 1, Client: 1, Day: "2026-11-13", Body: json.RawMessage(`{"items":[{}]}`), Deltas: []SustainedDelta{{Model: "model", Tier: "default", RequestCount: 1}}}},
-		{Kind: "start", Sequence: 1, Action: "report"},
+		{Kind: "start", Sequence: 1, Action: "report", Attempt: 1},
 		{Kind: "finish", Sequence: 1, Action: "report", Confirmed: true, TimeUnixNS: 3700000000001},
 		{Kind: "end"},
 	} {
@@ -45,7 +45,7 @@ func TestSustainedSummaryAttributesLateConfirmationsAndBounds(t *testing.T) {
 	models := []string{"model-a", "model-b"}
 	catalog, _ := json.Marshal(models)
 	hash := sha256.Sum256(catalog)
-	header := &sustainedHeader{Version: SustainedModelVersion, Day: "2026-11-13", CatalogHash: hex.EncodeToString(hash[:])}
+	header := &sustainedHeader{Version: SustainedModelVersion, Day: "2026-11-13", CatalogHash: hex.EncodeToString(hash[:]), MaxAttempts: 30}
 	task := func(seq int64, model, tier string) *SustainedTask {
 		return &SustainedTask{Sequence: seq, Client: int(seq), Day: "2026-11-13", Body: json.RawMessage(`{"items":[{},{}]}`),
 			Deltas: []SustainedDelta{{Model: model, Tier: tier, RequestCount: 3}}}
@@ -54,10 +54,10 @@ func TestSustainedSummaryAttributesLateConfirmationsAndBounds(t *testing.T) {
 		{Kind: "header", Header: header},
 		{Kind: "stage", Command: &SustainedCommand{Operation: "stage", Stage: "a", Rate: 100}},
 		{Kind: "created", Source: "debt", PlannedUnixNS: 1, Task: task(1, "model-a", "default")},
-		{Kind: "start", Sequence: 1, Action: "report"},
+		{Kind: "start", Sequence: 1, Action: "report", Attempt: 1},
 		{Kind: "stage", Command: &SustainedCommand{Operation: "stage", Stage: "b", Rate: 200}},
 		{Kind: "created", Source: "arrival", PlannedUnixNS: 1, Task: task(2, "model-b", "flex")},
-		{Kind: "start", Sequence: 2, Action: "report"},
+		{Kind: "start", Sequence: 2, Action: "report", Attempt: 1},
 		{Kind: "finish", Sequence: 1, Action: "report", Confirmed: true, TimeUnixNS: 101000001},
 		{Kind: "finish", Sequence: 2, Action: "report", Confirmed: true, TimeUnixNS: 120000001},
 		{Kind: "end"},

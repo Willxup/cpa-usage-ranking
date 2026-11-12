@@ -84,6 +84,7 @@ type verificationState struct {
 	activeElapsed                                          time.Duration
 	sequence                                               int64
 	nextClient                                             int
+	maxAttempts                                            int
 	reportAttempts, regAttempts, reportRetries, regRetries int64
 	reportStatus, regStatus, reportCodes, regCodes         map[string]int64
 }
@@ -144,7 +145,7 @@ func snapshotRows(body []byte, ids map[string]int64) (verifySnapshot, map[report
 }
 
 func newVerificationState(ctx context.Context, fixture Fixture, seed *sql.DB) (*verificationState, error) {
-	s := &verificationState{fixture: fixture, modelIDs: map[string]int64{}, days: map[verificationKey]*verificationDay{}, actors: map[int]*verificationActor{}, acks: map[verificationKey]verifySnapshot{}, nextClient: fixture.Clients + 1, reportStatus: map[string]int64{}, regStatus: map[string]int64{}, reportCodes: map[string]int64{}, regCodes: map[string]int64{}}
+	s := &verificationState{fixture: fixture, modelIDs: map[string]int64{}, days: map[verificationKey]*verificationDay{}, actors: map[int]*verificationActor{}, acks: map[verificationKey]verifySnapshot{}, nextClient: fixture.Clients + 1, maxAttempts: 30, reportStatus: map[string]int64{}, regStatus: map[string]int64{}, reportCodes: map[string]int64{}, regCodes: map[string]int64{}}
 	rows, err := seed.QueryContext(ctx, "SELECT id,model_name FROM models")
 	if err != nil {
 		return nil, err
@@ -345,7 +346,7 @@ func (s *verificationState) start(r sustainedRecord) error {
 	} else {
 		return errors.New("attempt action/order mismatch")
 	}
-	if r.Attempt > 30 {
+	if r.Attempt < 1 || r.Attempt > s.maxAttempts {
 		return errors.New("attempt limit exceeded")
 	}
 	a.inFlight = true

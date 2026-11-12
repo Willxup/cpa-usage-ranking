@@ -19,6 +19,7 @@ import (
 
 type SustainedVerifyOptions struct {
 	SeedDB, FinalDB, Journal, ExpectedDB string
+	RetryMigrationPath                   string
 	Models                               []string
 	ModelSeed                            uint64
 }
@@ -74,14 +75,20 @@ func readSustainedJournal(path string, f Fixture, o SustainedVerifyOptions, stat
 		return err
 	}
 	defer file.Close()
+	authorized, err := loadSustainedRetryMigration(o.RetryMigrationPath, file)
+	if err != nil {
+		return err
+	}
 	source, _, err := sustainedJournalReader(file)
 	if err != nil {
 		return err
 	}
 	defer source.Close()
 	reader := bufio.NewReaderSize(source, 256*1024)
-	line := 0
+	line, endCount := 0, 0
 	lastKind := ""
+	var header *sustainedHeader
+	migrated := false
 	for {
 		data, readErr := readSustainedLine(reader)
 		if len(data) == 0 && readErr == io.EOF {
@@ -95,14 +102,17 @@ func readSustainedJournal(path string, f Fixture, o SustainedVerifyOptions, stat
 		if json.Unmarshal(data, &r) != nil {
 			return fmt.Errorf("invalid journal JSON at line %d", line)
 		}
+		previousKind := lastKind
 		lastKind = r.Kind
 		if line == 1 {
 			catalog, _ := json.Marshal(o.Models)
 			catalogHash := sha256.Sum256(catalog)
 			credentialHash := sha256.Sum256([]byte(f.Seed))
-			if r.Kind != "header" || r.Header == nil || r.Header.Version != SustainedModelVersion || r.Header.Day != f.Day || r.Header.Stock != f.Clients || r.Header.ModelSeed != o.ModelSeed || r.Header.CatalogHash != hex.EncodeToString(catalogHash[:]) || r.Header.CredentialSeedHash != hex.EncodeToString(credentialHash[:]) || r.Header.MaxAttempts < 1 || r.Header.MaxAttempts > 30 || r.Header.MaxActiveNS <= 0 || r.Header.MaxActiveNS > int64(time.Hour) {
+			if r.Kind != "header" || r.Header == nil || r.Header.Version != SustainedModelVersion || r.Header.Day != f.Day || r.Header.Stock != f.Clients || r.Header.ModelSeed != o.ModelSeed || r.Header.CatalogHash != hex.EncodeToString(catalogHash[:]) || r.Header.CredentialSeedHash != hex.EncodeToString(credentialHash[:]) || r.Header.MaxAttempts < 1 || r.Header.MaxAttempts > 512 || r.Header.MaxActiveNS <= 0 || r.Header.MaxActiveNS > int64(time.Hour) {
 				return errors.New("journal header does not match seed, model, catalog, or safety limit")
 			}
+			header = r.Header
+			state.maxAttempts = header.MaxAttempts
 			continue
 		}
 		var e error
@@ -131,8 +141,31 @@ func readSustainedJournal(path string, f Fixture, o SustainedVerifyOptions, stat
 				a.notBefore = 0
 			}
 		case "end":
+			endCount++
 			if state.rate != 0 || state.activeSince != 0 {
 				e = errors.New("active input not closed before end")
+			}
+		case "retry_migration":
+			m := r.RetryMigration
+			if migrated || previousKind != "end" || endCount != 2 || state.rate != 0 || state.activeSince != 0 || m == nil ||
+				authorized == nil || *m != *authorized || header.MaxAttempts != m.PreviousAttempts || header.MaxPending != m.PreviousPending {
+				e = errors.New("invalid retry migration boundary")
+			} else if e = m.validate(file); e == nil {
+				for _, a := range state.actors {
+					if a.inFlight {
+						e = errors.New("retry migration with in-flight attempts")
+					}
+				}
+				if e == nil {
+					a := state.actors[m.TaskClient]
+					if a == nil || !a.registered || a.inFlight || len(a.queue) == 0 ||
+						a.queue[0].task.Sequence != m.TaskSequence || a.queue[0].task.Revision != m.TaskRevision ||
+						a.queue[0].task.Day != m.TaskDay || a.queue[0].task.BodyHash != m.TaskBodySHA || a.queue[0].attempts != m.TaskAttempts {
+						e = errors.New("reviewed retry task identity or cumulative attempts changed")
+					} else {
+						state.maxAttempts, migrated = m.NextAttempts, true
+					}
+				}
 			}
 		default:
 			e = errors.New("unexpected journal record")
@@ -140,6 +173,9 @@ func readSustainedJournal(path string, f Fixture, o SustainedVerifyOptions, stat
 		if e != nil {
 			return fmt.Errorf("journal line %d (%s): %w", line, r.Kind, e)
 		}
+	}
+	if authorized != nil && !migrated {
+		return errors.New("authorized retry migration record missing from journal")
 	}
 	if line == 0 || lastKind != "end" || state.rate != 0 || state.activeSince != 0 {
 		return errors.New("journal not cleanly closed")

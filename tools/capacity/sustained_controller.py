@@ -215,7 +215,9 @@ class Controller:
                 self.driver = self.adapter.start_driver('search', self.budget.clock()+7200*NS, resume=reviewed)
                 paused = self.await_paused_driver()
                 if reviewed:
-                    if tuple(paused.get(k) for k in ('produced', 'confirmed', 'pending', 'in_flight')) != (188920, 163994, 24926, 0):
+                    checkpoint = self.budget.state.get('reviewed_checkpoint', {})
+                    expected = checkpoint.get('replay_expected', [188920, 163994, 24926, 0])
+                    if [paused.get(k) for k in ('produced', 'confirmed', 'pending', 'in_flight')] != expected:
                         raise ControllerError('reviewed journal replay did not preserve the audited debt')
                     self.emit('reviewed_replay', sample=paused)
                 deadline = self.budget.begin('search')
@@ -348,7 +350,7 @@ def validate_config(config):
                 'application_remote', 'catalog_remote', 'web_remote', 'capacity_binary',
                 'catalog_local', 'capacity_sha256', 'catalog_sha256', 'application_sha256',
                 'baseline_containers_sha256'}
-    optional = {'max_pending', 'max_in_flight', 'max_journal_bytes'}
+    optional = {'max_pending', 'max_in_flight', 'max_journal_bytes', 'max_attempts', 'retry_migration'}
     if not isinstance(config, dict) or set(config)-required-optional or required-set(config):
         raise ValueError('config contains missing or unknown fields')
     token = config['task_id']
@@ -382,6 +384,15 @@ def validate_config(config):
         minimum = 1 << 20 if key == 'max_journal_bytes' else 1
         if type(value) is not int or not minimum <= value <= maximum:
             raise ValueError('invalid local safety bound: '+key)
+    attempts = config.get('max_attempts', 30)
+    migration = config.get('retry_migration')
+    if migration is None:
+        if attempts != 30:
+            raise ValueError('non-default retry limit requires the reviewed C54 migration')
+    elif (attempts != 512 or token != '721cb71e50f60575' or not isinstance(migration, str) or
+          not Path(migration).is_absolute() or Path(migration).is_symlink() or not Path(migration).is_file() or
+          not Path(migration).resolve().is_relative_to(local.resolve())):
+        raise ValueError('invalid reviewed C54 retry migration')
     return spec
 
 
@@ -400,7 +411,9 @@ def main(argv=None):
     parser.add_argument('--config', required=True, help='private fixed JSON config')
     parser.add_argument('--execute-remote', action='store_true', help='run the authorized remote test')
     parser.add_argument('--handoff-after-transition', action='store_true', help='stop at a clean planned transition')
-    parser.add_argument('--reviewed-checkpoint', help='one explicitly audited C54 checkpoint archive directory')
+    checkpoints = parser.add_mutually_exclusive_group()
+    checkpoints.add_argument('--reviewed-checkpoint', help='first explicitly audited C54 checkpoint archive directory')
+    checkpoints.add_argument('--reviewed-retry-checkpoint', help='second explicitly audited C54 retry checkpoint archive directory')
     args = parser.parse_args(argv)
     config = json.loads(Path(args.config).read_text())
     spec = validate_config(config)
@@ -427,10 +440,12 @@ def main(argv=None):
     anchor = Path('/root/.cache/agent-cache/cpa-usage-ranking/stage-i-c54/sustained-20261113-r1/formal-budget-state.json')
     adapter = None
     try:
-        if args.reviewed_checkpoint:
+        if args.reviewed_checkpoint or args.reviewed_retry_checkpoint:
             from sustained_reviewed_checkpoint import ReviewedCheckpoint
             adapter = RemoteAdapter(config)
-            reviewed = ReviewedCheckpoint(config, args.reviewed_checkpoint, adapter)
+            retry = bool(args.reviewed_retry_checkpoint)
+            reviewed = ReviewedCheckpoint(config, args.reviewed_retry_checkpoint or args.reviewed_checkpoint, adapter,
+                                          kind='retry' if retry else 'original')
             budget = Budget(anchor, config_hash, reviewed=reviewed)
         else:
             budget = Budget(anchor, config_hash)

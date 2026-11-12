@@ -43,6 +43,7 @@ type SustainedOptions struct {
 	RequestTimeout, MaxArrivalLag time.Duration
 	MaxActive                     time.Duration
 	Resume                        bool
+	RetryMigrationPath            string // explicit reviewed C54 manifest; never implicit
 }
 
 // SustainedSample is cumulative, including work retained across pauses and
@@ -92,30 +93,31 @@ type sustainedHeader struct {
 }
 
 type sustainedRecord struct {
-	Kind           string            `json:"kind"`
-	TimeUnixNS     int64             `json:"time_unix_ns"`
-	Header         *sustainedHeader  `json:"header,omitempty"`
-	Command        *SustainedCommand `json:"command,omitempty"`
-	Task           *SustainedTask    `json:"task,omitempty"`
-	Source         string            `json:"source,omitempty"`
-	PlannedUnixNS  int64             `json:"planned_unix_ns,omitempty"`
-	ArrivalState   uint64            `json:"arrival_state,omitempty"`
-	Sequence       int64             `json:"sequence,omitempty"`
-	Client         int               `json:"client,omitempty"`
-	Action         string            `json:"action,omitempty"`
-	Attempt        int               `json:"attempt,omitempty"`
-	Status         int               `json:"status,omitempty"`
-	Confirmed      bool              `json:"confirmed,omitempty"`
-	ServerClientID int64             `json:"server_client_id,omitempty"`
-	AckRevision    string            `json:"ack_revision,omitempty"`
-	Error          string            `json:"error,omitempty"`
-	ErrorCode      string            `json:"error_code,omitempty"`
-	RetryAfterNS   int64             `json:"retry_after_ns,omitempty"`
-	RetryAtUnixNS  int64             `json:"retry_at_unix_ns,omitempty"`
-	GotConnUnixNS  int64             `json:"got_conn_unix_ns,omitempty"`
-	WroteUnixNS    int64             `json:"wrote_unix_ns,omitempty"`
-	Sample         *SustainedSample  `json:"sample,omitempty"`
-	Reason         string            `json:"reason,omitempty"`
+	Kind           string                   `json:"kind"`
+	TimeUnixNS     int64                    `json:"time_unix_ns"`
+	Header         *sustainedHeader         `json:"header,omitempty"`
+	RetryMigration *sustainedRetryMigration `json:"retry_migration,omitempty"`
+	Command        *SustainedCommand        `json:"command,omitempty"`
+	Task           *SustainedTask           `json:"task,omitempty"`
+	Source         string                   `json:"source,omitempty"`
+	PlannedUnixNS  int64                    `json:"planned_unix_ns,omitempty"`
+	ArrivalState   uint64                   `json:"arrival_state,omitempty"`
+	Sequence       int64                    `json:"sequence,omitempty"`
+	Client         int                      `json:"client,omitempty"`
+	Action         string                   `json:"action,omitempty"`
+	Attempt        int                      `json:"attempt,omitempty"`
+	Status         int                      `json:"status,omitempty"`
+	Confirmed      bool                     `json:"confirmed,omitempty"`
+	ServerClientID int64                    `json:"server_client_id,omitempty"`
+	AckRevision    string                   `json:"ack_revision,omitempty"`
+	Error          string                   `json:"error,omitempty"`
+	ErrorCode      string                   `json:"error_code,omitempty"`
+	RetryAfterNS   int64                    `json:"retry_after_ns,omitempty"`
+	RetryAtUnixNS  int64                    `json:"retry_at_unix_ns,omitempty"`
+	GotConnUnixNS  int64                    `json:"got_conn_unix_ns,omitempty"`
+	WroteUnixNS    int64                    `json:"wrote_unix_ns,omitempty"`
+	Sample         *SustainedSample         `json:"sample,omitempty"`
+	Reason         string                   `json:"reason,omitempty"`
 }
 
 // gzip journals are concatenated members, one per clean driver invocation.
@@ -388,7 +390,7 @@ func validateSustainedOptions(f Fixture, o SustainedOptions) error {
 	if ip == nil || !ip.IsLoopback() || u.Port() == "" {
 		return errors.New("sustained URL must use a numeric loopback address and port")
 	}
-	if o.Journal == "" || o.MaxPending < 1 || o.MaxPending > 1000000 || o.MaxInFlight < 1 || o.MaxInFlight > 20000 || o.MaxAttempts < 1 || o.MaxAttempts > 30 || o.MaxJournalBytes < 1<<20 || o.RequestTimeout < 10*time.Millisecond || o.RequestTimeout > 2*time.Minute || o.MaxArrivalLag < 10*time.Millisecond || o.MaxArrivalLag > time.Minute || o.MaxActive <= 0 || o.MaxActive > time.Hour {
+	if o.Journal == "" || o.MaxPending < 1 || o.MaxPending > 1000000 || o.MaxInFlight < 1 || o.MaxInFlight > 20000 || o.MaxAttempts < 1 || o.MaxAttempts > 512 || o.MaxJournalBytes < 1<<20 || o.RequestTimeout < 10*time.Millisecond || o.RequestTimeout > 2*time.Minute || o.MaxArrivalLag < 10*time.Millisecond || o.MaxArrivalLag > time.Minute || o.MaxActive <= 0 || o.MaxActive > time.Hour {
 		return errors.New("invalid sustained local safety bounds")
 	}
 	if time.Now().UTC().Format(time.DateOnly) != f.Day {
@@ -401,7 +403,7 @@ func validateSustainedOptions(f Fixture, o SustainedOptions) error {
 // snapshot before reconstructing outstanding work. A trailing partial record is
 // an error, never silently truncated. Starts without finishes remain ambiguous
 // and are retried with the same task after resume.
-func restoreSustained(file *os.File, header sustainedHeader, state *sustainedState, compressed bool) error {
+func restoreSustained(file *os.File, header sustainedHeader, state *sustainedState, compressed bool, migration *sustainedRetryMigration, needsMigration *bool) error {
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
 		return err
 	}
@@ -414,9 +416,10 @@ func restoreSustained(file *os.File, header sustainedHeader, state *sustainedSta
 		return errors.New("journal format does not match path; refusing to append")
 	}
 	reader := bufio.NewReaderSize(source, 256*1024)
-	lineNo := 0
+	lineNo, endCount, attemptLimit := 0, 0, 0
 	var activeSince int64
 	lastKind := ""
+	migrated := false
 	closeActive := func(at int64) error {
 		if activeSince != 0 {
 			if at < activeSince {
@@ -440,11 +443,20 @@ func restoreSustained(file *os.File, header sustainedHeader, state *sustainedSta
 		if json.Unmarshal(line, &r) != nil {
 			return fmt.Errorf("invalid journal record at line %d", lineNo)
 		}
+		previousKind := lastKind
 		lastKind = r.Kind
 		if lineNo == 1 {
-			if r.Kind != "header" || r.Header == nil || !reflect.DeepEqual(*r.Header, header) {
+			expected := header
+			if migration != nil {
+				if header.MaxAttempts != migration.NextAttempts || header.MaxPending != migration.NextPending {
+					return errors.New("retry migration target differs from runtime configuration")
+				}
+				expected.MaxAttempts, expected.MaxPending = migration.PreviousAttempts, migration.PreviousPending
+			}
+			if r.Kind != "header" || r.Header == nil || !reflect.DeepEqual(*r.Header, expected) {
 				return errors.New("journal configuration mismatch")
 			}
+			attemptLimit = r.Header.MaxAttempts
 			continue
 		}
 		switch r.Kind {
@@ -465,6 +477,9 @@ func restoreSustained(file *os.File, header sustainedHeader, state *sustainedSta
 			}
 			state.arrivalRNG.state = r.ArrivalState
 		case "start":
+			if r.Attempt < 1 || r.Attempt > attemptLimit {
+				return fmt.Errorf("attempt limit exceeded at line %d", lineNo)
+			}
 			a := state.actors[r.Client]
 			if a == nil || len(a.queue) == 0 || a.queue[0].task.Sequence != r.Sequence || a.inFlight {
 				return fmt.Errorf("bad start at line %d", lineNo)
@@ -527,9 +542,27 @@ func restoreSustained(file *os.File, header sustainedHeader, state *sustainedSta
 			}
 			a.inFlight = false
 		case "end":
+			endCount++
 			if err := closeActive(r.TimeUnixNS); err != nil {
 				return err
 			}
+		case "retry_migration":
+			if migration == nil || migrated || previousKind != "end" || endCount != 2 || state.rate != 0 || activeSince != 0 ||
+				r.RetryMigration == nil || *r.RetryMigration != *migration {
+				return fmt.Errorf("unapproved retry migration at line %d", lineNo)
+			}
+			if err := migration.validate(file); err != nil {
+				return err
+			}
+			for _, a := range state.actors {
+				if a.inFlight {
+					return errors.New("retry migration with in-flight attempts")
+				}
+			}
+			if err := verifyReviewedRetryTask(migration, state); err != nil {
+				return err
+			}
+			migrated, attemptLimit = true, migration.NextAttempts
 		case "sample":
 		default:
 			return fmt.Errorf("unknown journal kind at line %d", lineNo)
@@ -540,6 +573,21 @@ func restoreSustained(file *os.File, header sustainedHeader, state *sustainedSta
 	}
 	if lastKind != "end" || activeSince != 0 {
 		return errors.New("journal was not closed cleanly; active-time budget is indeterminate")
+	}
+	if migration != nil && !migrated {
+		info, err := file.Stat()
+		if err != nil || info.Size() != migration.PreviousBytes || endCount != 2 || state.rate != 0 {
+			return errors.New("reviewed retry migration is not at the audited closed boundary")
+		}
+		for _, a := range state.actors {
+			if a.inFlight {
+				return errors.New("reviewed retry migration has in-flight attempts")
+			}
+		}
+		if err := verifyReviewedRetryTask(migration, state); err != nil {
+			return err
+		}
+		*needsMigration = true
 	}
 	for _, a := range state.actors {
 		if len(a.queue) > 0 && !a.retryAt.IsZero() {

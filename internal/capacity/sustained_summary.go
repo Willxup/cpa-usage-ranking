@@ -108,7 +108,7 @@ func latencyBucket(ms int64) int64 {
 // incomplete gzip/JSONL and refuses to exceed the caller's pending, two
 // million identities or 32-stage bounds. Verification of
 // every delta, attempt and final database must still be done separately.
-func SummarizeSustained(path string, models []string, maxPending int) (SustainedStatistics, error) {
+func SummarizeSustained(path string, models []string, maxPending int, migrationPaths ...string) (SustainedStatistics, error) {
 	var out SustainedStatistics
 	if maxPending < 1 || maxPending > 1000000 || len(models) == 0 || len(models) > 10000 {
 		return out, errors.New("invalid sustained summary pending or catalog bound")
@@ -125,6 +125,17 @@ func SummarizeSustained(path string, models []string, maxPending int) (Sustained
 		return out, err
 	}
 	defer file.Close()
+	if len(migrationPaths) > 1 {
+		return out, errors.New("at most one reviewed retry manifest is allowed")
+	}
+	var migrationPath string
+	if len(migrationPaths) == 1 {
+		migrationPath = migrationPaths[0]
+	}
+	authorized, err := loadSustainedRetryMigration(migrationPath, file)
+	if err != nil {
+		return out, err
+	}
 	source, _, err := sustainedJournalReader(file)
 	if err != nil {
 		return out, err
@@ -138,6 +149,9 @@ func SummarizeSustained(path string, models []string, maxPending int) (Sustained
 	// identity instead of retaining every task or completed request body.
 	clients := make(map[int]uint32)
 	current, lineNo, lastKind := -1, 0, ""
+	endCount, attemptLimit := 0, 0
+	var header *sustainedHeader
+	migrated := false
 	var lastSequence int64
 	var today, yesterday string
 	for {
@@ -153,11 +167,12 @@ func SummarizeSustained(path string, models []string, maxPending int) (Sustained
 		if json.Unmarshal(line, &r) != nil {
 			return out, fmt.Errorf("invalid summary journal JSON at line %d", lineNo)
 		}
+		previousKind := lastKind
 		lastKind = r.Kind
 		if lineNo == 1 {
 			catalog, _ := json.Marshal(models)
 			hash := sha256.Sum256(catalog)
-			if r.Kind != "header" || r.Header == nil || r.Header.Version != SustainedModelVersion || r.Header.CatalogHash != hex.EncodeToString(hash[:]) {
+			if r.Kind != "header" || r.Header == nil || r.Header.Version != SustainedModelVersion || r.Header.CatalogHash != hex.EncodeToString(hash[:]) || r.Header.MaxAttempts < 1 || r.Header.MaxAttempts > 512 {
 				return out, errors.New("summary journal header/catalog mismatch")
 			}
 			day, parseErr := time.Parse(time.DateOnly, r.Header.Day)
@@ -165,6 +180,7 @@ func SummarizeSustained(path string, models []string, maxPending int) (Sustained
 				return out, errors.New("invalid summary journal UTC day")
 			}
 			today, yesterday = r.Header.Day, day.AddDate(0, 0, -1).Format(time.DateOnly)
+			header, attemptLimit = r.Header, r.Header.MaxAttempts
 			continue
 		}
 		switch r.Kind {
@@ -238,6 +254,9 @@ func SummarizeSustained(path string, models []string, maxPending int) (Sustained
 				s.result.ModelCalls[delta.Model] += delta.RequestCount
 			}
 		case "start":
+			if r.Attempt < 1 || r.Attempt > attemptLimit {
+				return out, errors.New("summary attempt exceeds declared limit")
+			}
 			job, ok := pending[r.Sequence]
 			if !ok {
 				return out, errors.New("summary attempt has no pending task")
@@ -268,10 +287,25 @@ func SummarizeSustained(path string, models []string, maxPending int) (Sustained
 				stages[job.stage].result.Confirmed++
 				out.Confirmed++
 			}
-		case "sample", "recover", "end":
+		case "end":
+			endCount++
+		case "retry_migration":
+			m := r.RetryMigration
+			if migrated || previousKind != "end" || endCount != 2 || m == nil || authorized == nil || *m != *authorized ||
+				header.MaxAttempts != m.PreviousAttempts || header.MaxPending != m.PreviousPending {
+				return out, errors.New("invalid summary retry migration boundary")
+			}
+			if err := m.validate(file); err != nil {
+				return out, err
+			}
+			attemptLimit, migrated = m.NextAttempts, true
+		case "sample", "recover":
 		default:
 			return out, fmt.Errorf("unsupported summary record %q", r.Kind)
 		}
+	}
+	if authorized != nil && !migrated {
+		return out, errors.New("authorized summary retry migration record missing")
 	}
 	if lineNo == 0 || lastKind != "end" {
 		return out, errors.New("summary journal not cleanly closed")

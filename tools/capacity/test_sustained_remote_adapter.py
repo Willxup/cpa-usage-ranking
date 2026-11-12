@@ -332,6 +332,33 @@ class RemotePreflightTest(unittest.TestCase):
         self.assertEqual(result['pending'], 2)
         self.assertEqual(old.read_bytes(), b'old reconstruction')
 
+    def test_retry_manifest_is_bound_for_driver_and_both_verifiers(self):
+        adapter = RemoteAdapter(self.config, self.fake)
+        manifest = self.root/'retry-manifest.json'
+        payload = {'approval': 'explicit-test'}
+        manifest.write_text(json.dumps(payload))
+        adapter.cfg['retry_migration'] = str(manifest)
+        adapter.state = {'reviewed_checkpoint': {'retry_manifest_sha256': digest(manifest), 'retry_manifest': payload}}
+        responses = iter([{'produced': 12, 'confirmed': 10, 'pending': 2},
+                          {'produced': 12, 'confirmed': 10, 'pending': 2}])
+        commands = []
+        def run(argv, *args, **kwargs):
+            commands.append(argv)
+            out = adapter.run_dir/('mock-'+argv[1]+'.json')
+            out.write_text(json.dumps(next(responses)))
+            return out, adapter.run_dir/'mock-stderr'
+        with mock.patch('sustained_remote_adapter.guarded_command', side_effect=run):
+            result, _ = adapter._verify_snapshot('abort', {'snapshot_path': 'mock-snapshot'})
+        self.assertEqual(result['pending'], 2)
+        self.assertEqual(len(commands), 2)
+        for argv in commands:
+            self.assertEqual(argv[argv.index('--reviewed-retry-migration')+1], str(manifest))
+        manifest.write_text(json.dumps({'approval': 'changed'}))
+        with self.assertRaisesRegex(RemoteError, 'manifest changed'):
+            adapter._verify_snapshot('changed', {'snapshot_path': 'mock'})
+        with self.assertRaisesRegex(RemoteError, 'manifest changed'):
+            adapter.start_driver('search', 1000, True)
+
     def test_transition_preserves_same_database_and_verifies_ledger(self):
         adapter = RemoteAdapter(self.config, self.fake)
         adapter.journal.write_bytes(b'closed mock journal')

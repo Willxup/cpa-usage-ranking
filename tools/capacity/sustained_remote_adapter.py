@@ -193,6 +193,12 @@ class RemoteAdapter:
                     checkpoint.get('original_capacity_sha256') != '404ba7bb01728bf37b0c768e200e42505379f2f3942921f13792fa47901365b8' or
                     checkpoint.get('new_capacity_sha256') != expected_binary):
                 raise RemoteError('invalid reviewed checkpoint binary migration')
+            if checkpoint.get('retry_manifest_sha256'):
+                retry_path = Path(self.cfg.get('retry_migration', ''))
+                if (retry_path.is_symlink() or not retry_path.is_file() or
+                        sha256_file(retry_path) != checkpoint['retry_manifest_sha256'] or
+                        json.loads(retry_path.read_text()) != checkpoint.get('retry_manifest')):
+                    raise RemoteError('reviewed retry migration manifest changed')
             manifest_binary = checkpoint['original_capacity_sha256']
         expected_manifest = {'day': day, 'model_seed': 8675309, 'clients': 10000,
                              'fixture_sha256': sha256_file(self.fixture), 'seed_sha256': sha256_file(self.seed),
@@ -654,7 +660,18 @@ class RemoteAdapter:
             self.unwritten_since = None
         return None
 
+    def _check_retry_manifest(self):
+        if not self.cfg.get('retry_migration'):
+            return
+        checkpoint = (self.state or {}).get('reviewed_checkpoint', {})
+        path = Path(self.cfg['retry_migration'])
+        if (path.is_symlink() or not path.is_file() or not checkpoint.get('retry_manifest_sha256') or
+                sha256_file(path) != checkpoint['retry_manifest_sha256'] or
+                json.loads(path.read_text()) != checkpoint.get('retry_manifest')):
+            raise RemoteError('reviewed retry manifest changed or is not bound to budget')
+
     def start_driver(self, phase, deadline, resume):
+        self._check_retry_manifest()
         self.phase_index += 1
         self.cpu_checks['generator'] = SustainedCPUCheck()
         self.cpu_checks['local_combined'] = SustainedCPUCheck()
@@ -665,6 +682,8 @@ class RemoteAdapter:
                                   max_pending=int(self.cfg.get('max_pending', 200000)),
                                   max_in_flight=int(self.cfg.get('max_in_flight', 4096)),
                                   max_journal_bytes=int(self.cfg.get('max_journal_bytes', 4 << 30)),
+                                  max_attempts=int(self.cfg.get('max_attempts', 30)),
+                                  retry_migration=self.cfg.get('retry_migration'),
                                   external_guard=self._driver_liveness)
         self.driver.start(deadline)
         return self.driver
@@ -733,6 +752,7 @@ class RemoteAdapter:
         return {'source_state': before, 'snapshot_path': str(dest), 'snapshot_sha256': sha256_file(dest)}
 
     def _verify_snapshot(self, label, snapshot):
+        self._check_retry_manifest()
         expected = self.run_dir/(label+'-expected.sqlite')
         if any(Path(str(expected)+suffix).exists() or Path(str(expected)+suffix).is_symlink() for suffix in ('', '-wal', '-shm')):
             raise RemoteError('reconstruction database or sidecar already exists')
@@ -740,6 +760,8 @@ class RemoteAdapter:
         argv = [str(self.binary), 'verify-sustained', '--fixture', str(self.fixture),
                 '--models', str(self.catalog), '--model-seed', '8675309', '--seed-db', str(self.seed),
                 '--db', snapshot['snapshot_path'], '--journal', str(self.journal), '--expected-db', str(expected)]
+        if self.cfg.get('retry_migration'):
+            argv.extend(['--reviewed-retry-migration', self.cfg['retry_migration']])
         out, _ = guarded_command(argv, self.run_dir, 'verify-'+label+'-%d' % self.transfer_index,
                                  self._guard_or_raise, self.commands.record, timeout=1800)
         result = json.loads(out.read_text())
@@ -748,6 +770,8 @@ class RemoteAdapter:
         self.transfer_index += 1
         args = [str(self.binary), 'summarize-sustained', '--journal', str(self.journal),
                 '--models', str(self.catalog), '--max-pending', str(self.cfg.get('max_pending', 200000))]
+        if self.cfg.get('retry_migration'):
+            args.extend(['--reviewed-retry-migration', self.cfg['retry_migration']])
         summary_path, _ = guarded_command(args, self.run_dir, 'summary-'+label+'-%d' % self.transfer_index,
                                           self._guard_or_raise, self.commands.record, timeout=1800)
         summary = json.loads(summary_path.read_text())

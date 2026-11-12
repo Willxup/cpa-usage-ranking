@@ -151,7 +151,17 @@ C54 checkpoint has a task-specific `--reviewed-checkpoint` migration: it
 checks the immutable old budget, journal, fixture, seed, snapshot and remote
 identity, records the tool/config change, and charges the old active interval
 before the original budget can be used again. It is not a generic failed-run
-recovery or a fresh budget. Each controller invocation stores its snapshots and
+recovery or a fresh budget. A second explicitly audited C54 checkpoint permits
+only the recorded 30→512 sustained retry-limit migration, and, if the resource
+forecast requires it, the recorded 125000→100000 local pending safety limit.
+The original gzip prefix and 30-attempt header remain intact; a new journal
+record binds the exact old prefix, old budget/config/binary, new config/binary,
+and the approved transition before another attempt. Replay, summary and
+verification of the migrated journal require the same explicit
+`--reviewed-retry-migration` manifest and reject a changed prefix, mismatched
+manifest or unapproved migration; other journal options remain fixed. Attempts and frozen identities/bodies are never reset.
+This is not permission to resume arbitrary failed runs or to change production
+retry policy. Each controller invocation stores its snapshots and
 reconstruction databases in its own private adapter directory; previous
 snapshots are neither overwritten nor treated as the current stopped database.
 The Linux pidfd deadline and separate watcher are
@@ -266,7 +276,10 @@ in-flight tasks; only a correct matching acknowledgement counts as confirmed.
 Retries preserve identity, day, revision and body and respect `Retry-After`.
 The default local bounds are 200,000 pending tasks, 4,096 in-flight attempts,
 30 attempts per task, a 4 GiB journal and a one-hour cumulative active-time
-ceiling. Bound exhaustion is a tool limitation, not an application ceiling.
+ceiling. The opt-in sustained CLI accepts up to 512 attempts; changing a prior
+journal's limit requires an explicit approved migration, not a new header or
+reset counter. The exponential backoff cap and Retry-After remain unchanged.
+Bound exhaustion is a tool limitation, not an application ceiling.
 The journal is read sequentially with bounded individual records; completed
 snapshots are not accumulated per task. Replay and verification still retain
 active identities, per-day state, outstanding tasks and each identity/day's

@@ -67,8 +67,16 @@ func RunSustained(ctx context.Context, f Fixture, o SustainedOptions, commands <
 	state := newSustainedState(model, o.ArrivalSeed)
 	header := sustainedHeaderFor(f, o)
 	compressed := strings.HasSuffix(o.Journal, ".gz")
+	if o.RetryMigrationPath != "" && !o.Resume {
+		return result, errors.New("reviewed retry migration requires a closed journal resume")
+	}
+	migration, err := loadSustainedRetryMigration(o.RetryMigrationPath, file)
+	if err != nil {
+		return result, err
+	}
+	needsMigration := false
 	if o.Resume {
-		if err = restoreSustained(file, header, state, compressed); err != nil {
+		if err = restoreSustained(file, header, state, compressed, migration, &needsMigration); err != nil {
 			return result, err
 		}
 	}
@@ -97,6 +105,18 @@ func RunSustained(ctx context.Context, f Fixture, o SustainedOptions, commands <
 			return result, err
 		}
 	} else {
+		if needsMigration {
+			if err = journal.write(sustainedRecord{Kind: "retry_migration", TimeUnixNS: time.Now().UnixNano(), RetryMigration: migration}); err != nil {
+				return result, err
+			}
+			// Record the approved boundary before any command can start input.
+			if err = journal.flush(); err != nil {
+				return result, err
+			}
+			if err = file.Sync(); err != nil {
+				return result, err
+			}
+		}
 		// Normally all starts finished at the clean end. Explicitly record any
 		// retained ambiguous starts before another attempt is allowed.
 		ids := make([]int, 0, len(state.actors))
