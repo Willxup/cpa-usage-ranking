@@ -217,7 +217,8 @@ class ControllerTest(unittest.TestCase):
                                'arrival_produced': 350619, 'debt_produced': 13000,
                                'oldest_pending_ms': 1000000, 'active_seconds': 913})
         self.budget.state.update({'status': 'reviewed_search_ready', 'search_ns': 914302803460,
-                                  'reviewed_checkpoint': {'replay_expected': [363619, 334393, 29226, 0]},
+                                  'reviewed_checkpoint': {'replay_expected': [363619, 334393, 29226, 0],
+                                                          'retry_manifest_sha256': 'approved-mock'},
                                   'plan': {'current': 500, 'lower': 400, 'upper': 600,
                                            'uncertain_repeats': 0, 'done': False}, 'stage_index': 6})
         result = self.run_controller(adapter)
@@ -226,6 +227,23 @@ class ControllerTest(unittest.TestCase):
         self.assertEqual(result['verdict'], 'confirmed')
         self.assertGreater(self.budget.state['search_ns'], 914302803460)
         self.assertEqual(sum(c['stage'] == 'confirmation' for c in adapter.commands), 1)
+
+    def test_retry_reviewed_search_does_not_probe_below_500(self):
+        adapter = FakeAdapter(self.clock, mode=lambda stage, rate: 'failed' if stage != 'confirmation' and rate >= 500 else 'candidate')
+        adapter.sample.update({'produced': 363619, 'confirmed': 334393, 'pending': 29226,
+                               'arrival_produced': 350619, 'debt_produced': 13000,
+                               'oldest_pending_ms': 1000000, 'active_seconds': 913})
+        self.budget.state.update({'status': 'reviewed_search_ready', 'search_ns': 914302803460,
+                                  'reviewed_checkpoint': {'replay_expected': [363619, 334393, 29226, 0],
+                                                          'retry_manifest_sha256': 'approved-mock'},
+                                  'plan': {'current': 500, 'lower': 400, 'upper': 600,
+                                           'uncertain_repeats': 0, 'done': False}, 'stage_index': 6})
+        result = self.run_controller(adapter)
+        self.assertEqual([(c['stage'], c['rate']) for c in adapter.commands],
+                         [('search-006', 500), ('confirmation', 400)])
+        self.assertEqual(result['verdict'], 'confirmed')
+        self.assertEqual(self.budget.state['plan']['upper'], 500)
+        self.assertIn('reviewed_range_confirmation', (self.path/'events.jsonl').read_text())
 
     def test_next_stage_forecast_limit_preserves_confirmation_without_upper(self):
         adapter = FakeAdapter(self.clock, mode=lambda stage, rate: 'candidate')

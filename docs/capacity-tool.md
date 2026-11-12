@@ -163,7 +163,10 @@ manifest or unapproved migration; other journal options remain fixed. Attempts a
 For the exhausted head, the migration restores the original capped backoff and
 Retry-After from the terminal finish before attempt 31 can start; offline elapsed
 time does not consume the active-load budget. This is not permission to resume arbitrary failed runs or to change production
-retry policy. Each controller invocation stores its snapshots and
+retry policy. The second reviewed checkpoint restricts newly searched stages
+to 500–600 TPS; if the new 500 stage fails, it may proceed to the sole
+confirmation at the already observed 400 candidate rather than search outside
+that range. Each controller invocation stores its snapshots and
 reconstruction databases in its own private adapter directory; previous
 snapshots are neither overwritten nor treated as the current stopped database.
 The Linux pidfd deadline and separate watcher are

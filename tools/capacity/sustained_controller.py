@@ -251,6 +251,18 @@ class Controller:
                             plan['current'] = 800
                             step = {'action': 'stage', 'rate': 800, 'reason': 'repeat incomplete 800 TPS reference'}
                             self.emit('reviewed_probe', rate=800, old_reference_is_not_upper=True)
+                        # The second reviewed continuation authorizes new
+                        # search stages only in the 500–600 interval. If 500
+                        # fails, retain the earlier 400 candidate for the one
+                        # confirmation instead of silently searching at 450.
+                        checkpoint = self.budget.state.get('reviewed_checkpoint', {})
+                        if (reviewed and checkpoint.get('retry_manifest_sha256') and step.get('action') == 'stage' and
+                                plan.get('current', 0) < 500):
+                            if not plan.get('lower'):
+                                raise ControllerError('reviewed search range has no retained candidate')
+                            plan['done'], plan['reason'] = True, 'authorized retry search range exhausted'
+                            step = {'action': 'transition_to_confirmation', 'rate': plan['lower'], 'reason': plan['reason']}
+                            self.emit('reviewed_range_confirmation', rate=plan['lower'], lower=500, upper=600)
                     self.budget.save()
                     if step['action'] == 'stage':
                         if self.budget.state['active']['deadline_ns'] - self.budget.clock() >= 181*NS:
