@@ -27,6 +27,15 @@ describe('reusable browser configuration', () => {
     expect(use?.launchOptions).toBeUndefined()
   })
 
+  it('supports an isolated built web directory while keeping the existing default', async () => {
+    vi.stubEnv('RANKING_TEST_WEB_DIR', '/isolated/web-dist')
+    const isolated = await config()
+    expect((isolated.webServer as { env: Record<string, string> }).env.RANKING_WEB_DIR).toBe('/isolated/web-dist')
+    vi.unstubAllEnvs()
+    const defaults = await config()
+    expect((defaults.webServer as { env: Record<string, string> }).env.RANKING_WEB_DIR).toMatch(/\/web\/dist$/)
+  })
+
   it('rejects ambiguous path and channel settings', async () => {
     await expect(config('/shared/chromium', 'chrome')).rejects.toThrow('not both')
   })
