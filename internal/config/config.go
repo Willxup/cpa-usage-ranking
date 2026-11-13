@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"cpa-usage-ranking/internal/admin"
 	"cpa-usage-ranking/internal/cache"
 	"cpa-usage-ranking/internal/registration"
 	"cpa-usage-ranking/internal/reports"
@@ -31,6 +32,8 @@ type Config struct {
 	ReportWriter             reports.WriterOptions
 	DailyRetentionDays       int
 	CacheRefreshInterval     time.Duration
+	AdminOwner               *admin.Owner
+	AdminAllowLocalHTTP      bool
 }
 
 // Load reads environment variables. Explicitly empty values are invalid.
@@ -153,6 +156,9 @@ func Load() (Config, error) {
 	}
 	if err := cfg.ReportIngestion.Validate(); err != nil {
 		return Config{}, fmt.Errorf("invalid report limits: %w", err)
+	}
+	if err := loadAdmin(&cfg); err != nil {
+		return Config{}, err
 	}
 	return cfg, nil
 }

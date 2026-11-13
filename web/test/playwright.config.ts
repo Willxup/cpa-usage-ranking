@@ -7,6 +7,8 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('RANKIN
 const baseURL = `http://127.0.0.1:${port}`
 const outputDir = process.env.PLAYWRIGHT_OUTPUT_DIR ?? fileURLToPath(new URL('./results', import.meta.url))
 const binary = resolve(process.env.RANKING_TEST_BINARY ?? fileURLToPath(new URL('../../bin/ranking', import.meta.url)))
+const webDir = resolve(process.env.RANKING_TEST_WEB_DIR ?? fileURLToPath(new URL('../dist', import.meta.url)))
+const adminConfig = process.env.RANKING_TEST_ADMIN_CONFIG
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined
 const channel = process.env.PLAYWRIGHT_CHROMIUM_CHANNEL || undefined
 if (executablePath && channel) throw new Error('Choose PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH or PLAYWRIGHT_CHROMIUM_CHANNEL, not both')
@@ -35,7 +37,8 @@ export default defineConfig({
     cwd: fileURLToPath(new URL('../..', import.meta.url)),
     env: {
       RANKING_HTTP_ADDR: `127.0.0.1:${port}`,
-      RANKING_WEB_DIR: fileURLToPath(new URL('../dist', import.meta.url)),
+      RANKING_WEB_DIR: webDir,
+      ...(adminConfig ? { RANKING_ADMIN_CONFIG_FILE: resolve(adminConfig), RANKING_ADMIN_ALLOW_INSECURE_LOCAL_HTTP: 'true' } : {}),
       RANKING_MODELS_PATH: fileURLToPath(new URL('../../config/models.json', import.meta.url)),
       RANKING_SHUTDOWN_TIMEOUT: '5s',
       RANKING_CACHE_REFRESH_INTERVAL: '200ms',

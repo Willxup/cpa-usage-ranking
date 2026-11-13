@@ -38,8 +38,8 @@ func OpenFrontend(directory string) (*Frontend, error) {
 
 func (f *Frontend) Close() error { return f.root.Close() }
 
-// Mount intentionally has no arbitrary SPA fallback: the current UI uses page anchors.
-// Unknown APIs, resources and browser paths keep their real JSON 404/405 responses.
+// Mount intentionally has no arbitrary SPA fallback. Explicit admin paths are
+// mounted only when configured; unknown resources retain JSON 404/405 responses.
 func (f *Frontend) Mount(router *gin.Engine) {
 	for _, route := range []string{"/", "/index.html", "/favicon.svg", "/assets/*path"} {
 		router.GET(route, f.serve)
@@ -52,6 +52,12 @@ func (f *Frontend) serve(c *gin.Context) {
 	if name == "" {
 		name = "index.html"
 	}
+	f.serveFile(c, name)
+}
+
+func (f *Frontend) serveIndex(c *gin.Context) { f.serveFile(c, "index.html") }
+
+func (f *Frontend) serveFile(c *gin.Context, name string) {
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		writeError(c, http.StatusNotFound, "not_found", "Not found")
 		return

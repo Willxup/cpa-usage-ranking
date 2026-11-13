@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AdminEntry } from './admin/AdminEntry'
 import type { Board, Period } from './api/leaderboards'
 import { boards, periods } from './leaderboardLabels'
 import { LeaderboardPanel } from './components/LeaderboardPanel'
@@ -16,6 +17,7 @@ export default function App() {
         <div className="site-header page-width">
           <a className="brand" href="#overview" aria-label="CPA Usage Ranking 首页"><img className="project-icon" src="/assets/brand/project-icon.svg" width="40" height="40" alt="" /><span>CPA Usage Ranking</span></a>
           <nav aria-label="页面导航"><a className="nav-current" href="#ranking">排行榜</a><a href="#foundation">关于</a></nav>
+          <AdminEntry />
         </div>
       </header>
       <main id="main" className="page-width">

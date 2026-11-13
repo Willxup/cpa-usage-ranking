@@ -51,6 +51,7 @@ describe('application shell', () => {
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
       const url = String(input)
       if (url.includes('avatars')) return Promise.resolve(json(catalog))
+      if (url.includes('/admin/session')) return Promise.resolve(json({ enabled: false, authenticated: false }))
       if (first) { first = false; return Promise.resolve(json(empty)) }
       if (url.includes('/overall/')) return new Promise<Response>((resolve) => { finish = resolve })
       return new Promise<Response>(() => {})

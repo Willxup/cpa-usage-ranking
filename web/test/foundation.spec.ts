@@ -1,5 +1,13 @@
 import { expect, test } from '@playwright/test'
 
+test('hides the login entry and admin pages when not configured', async ({ page, request }) => {
+  test.skip(!!process.env.RANKING_TEST_ADMIN_CONFIG, 'Disabled-console check')
+  expect(await (await request.get('/v1/admin/session')).json()).toEqual({ enabled: false, authenticated: false })
+  await page.goto('/')
+  await expect(page.getByRole('link', { name: /^(登录|控制台)$/ })).toHaveCount(0)
+  expect((await request.get('/admin/login')).status()).toBe(404)
+})
+
 test('loads the real production build and checks the live Go process', async ({ page, baseURL, request }, info) => {
   await expect.poll(async () => (await request.get('/readyz')).status()).toBe(200)
   const errors: string[] = []

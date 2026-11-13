@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"cpa-usage-ranking/internal/admin"
 	"cpa-usage-ranking/internal/auth"
 	"cpa-usage-ranking/internal/avatars"
 	"cpa-usage-ranking/internal/cache"
@@ -138,6 +139,18 @@ func run(logger *slog.Logger) (err error) {
 	}
 	if frontend != nil {
 		frontend.Mount(router)
+	}
+	var adminService *admin.Service
+	if cfg.AdminOwner != nil {
+		adminService, err = admin.New(*cfg.AdminOwner)
+		if err != nil {
+			return err
+		}
+	}
+	if err := httpserver.MountAdmin(router, adminService, frontend, logger, httpserver.AdminHTTPOptions{
+		AllowLocalHTTP: cfg.AdminAllowLocalHTTP, TrustedProxies: cfg.TrustedProxies, GroupIPv6By64: cfg.RegistrationIPv6By64,
+	}); err != nil {
+		return err
 	}
 	if err := httpserver.MountReports(router, auth.NewAuthenticator(repository), reportAdmission, reportWriter, int64(cfg.ReportIngestion.MaxBodyBytes)); err != nil {
 		return err
