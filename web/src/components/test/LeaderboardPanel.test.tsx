@@ -16,6 +16,7 @@ describe('live leaderboard', () => {
     expect(container.querySelector('.metric-number')).toHaveTextContent('9007199.25 B')
     expect(screen.queryByRole('button', { name: /完整数值/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('columnheader', { name: '详情' })).not.toBeInTheDocument()
+    expect(screen.queryByText('K 千 · M 百万 · B 十亿')).not.toBeInTheDocument()
     expect(screen.getByText('<script>alert(1)</script>')).toBeVisible()
     expect(container.querySelector('script')).toBeNull()
     const image = await waitFor(() => {

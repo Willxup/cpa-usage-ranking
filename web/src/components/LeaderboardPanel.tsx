@@ -24,7 +24,7 @@ export function LeaderboardPanel({ board, period, selectionVersion = 0 }: { boar
         <div className="empty-symbol" aria-hidden="true"><BrandMark /><span className="empty-symbol-dot" /></div>
         <span className="empty-label">WAITING FOR DATA</span><h2>等待第一份真实数据</h2><p>该榜单在此周期暂无符合条件的已接纳记录。<br />不使用模拟名次或虚构统计。</p>
       </div> : <LeaderboardTable key={`${data.board}/${data.period}`} data={data} avatars={avatars} />}
-      <div className="ranking-bottom"><span>K 千 · M 百万 · B 十亿</span><span>已显示 {data.entries.length} 位 · 最多 100 位</span></div>
+      <div className="ranking-bottom"><span>已显示 {data.entries.length} 位 · 最多 100 位</span></div>
     </>}
   </div>
 }
