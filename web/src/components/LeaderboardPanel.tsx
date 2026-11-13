@@ -1,24 +1,8 @@
-import { Fragment } from 'react'
 import { BrandMark } from './Brand'
-import { OverallMetrics } from './OverallMetrics'
+import { LeaderboardTable } from './LeaderboardTable'
 import { useLeaderboard } from '../hooks/useLeaderboard'
-import type { AvatarCatalog, Board, Period } from '../api/leaderboards'
+import type { Board, Period } from '../api/leaderboards'
 import { boards, periods } from '../leaderboardLabels'
-
-function Avatar({ id, catalog }: { id: string; catalog: AvatarCatalog | null }) {
-  const src = catalog?.paths.get(id) ?? catalog?.defaultPath
-  return <span className="avatar" aria-hidden="true"><BrandMark />{src && <img key={src} src={src} alt="" width="44" height="44" onError={(event) => {
-    const image = event.currentTarget
-    if (catalog && image.getAttribute('src') !== catalog.defaultPath && !image.dataset.fallback) {
-      image.dataset.fallback = 'true'
-      image.src = catalog.defaultPath
-    } else image.hidden = true
-  }} />}</span>
-}
-
-function metric(value: string, board: Board) {
-  return board === 'usage' ? BigInt(value).toLocaleString('en-US') : value
-}
 
 export function LeaderboardPanel({ board, period, selectionVersion = 0 }: { board: Board; period: Period; selectionVersion?: number }) {
   const { data, loading, error, avatars, retry } = useLeaderboard(board, period, selectionVersion)
@@ -39,14 +23,8 @@ export function LeaderboardPanel({ board, period, selectionVersion = 0 }: { boar
       {data.entries.length === 0 ? <div className="ranking-empty">
         <div className="empty-symbol" aria-hidden="true"><BrandMark /><span className="empty-symbol-dot" /></div>
         <span className="empty-label">WAITING FOR DATA</span><h2>等待第一份真实数据</h2><p>该榜单在此周期暂无符合条件的已接纳记录。<br />不使用模拟名次或虚构统计。</p>
-      </div> : <table className={`leaderboard-table leaderboard-table--${data.board}`} role="table">
-        <thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">排名</th><th scope="col" role="columnheader">参与者</th><th scope="col" role="columnheader">{boards[data.board].metric}</th></tr></thead>
-        <tbody role="rowgroup">{data.entries.map((entry) => <Fragment key={entry.client_id}>
-          <tr role="row"><td role="cell"><span className="rank-number">{entry.rank}</span></td><td role="cell"><div className="participant"><Avatar id={entry.avatar_id} catalog={avatars} /><span id={`participant-${entry.client_id}`}>{entry.display_name}</span></div></td><td className="metric-value" role="cell"><span className="metric-number">{metric(entry.metric, data.board)}</span> <span className="metric-unit">{boards[data.board].unit}</span></td></tr>
-          {data.board === 'overall' && <tr className="overall-details-row" role="row"><td colSpan={3} role="cell"><OverallMetrics entry={entry} /></td></tr>}
-        </Fragment>)}</tbody>
-      </table>}
-      <div className="ranking-bottom"><span><i />显示真实缓存结果</span><span>最多展示 100 条</span></div>
+      </div> : <LeaderboardTable key={`${data.board}/${data.period}`} data={data} avatars={avatars} />}
+      <div className="ranking-bottom"><span>K 千 · M 百万 · B 十亿</span><span>已显示 {data.entries.length} 位 · 最多 100 位</span></div>
     </>}
   </div>
 }

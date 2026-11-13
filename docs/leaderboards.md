@@ -6,7 +6,7 @@
 {"board":"usage","period":"today","start":"2026-12-31","end":"2027-01-01","generated_at":"2026-12-31T12:00:00Z","entries":[{"rank":1,"client_id":"42","display_name":"Example","avatar_id":"1","metric":"9007199254740993"}]}
 ```
 
-`start` is inclusive and `end` exclusive, as UTC dates; `all` uses internal start `0001-01-01` and `end: null`. `generated_at` is the UTC start of the published build round, not a client's last report. For all boards, `client_id`, `avatar_id` and `metric` are decimal strings to preserve precision. The metric is overall points, total tokens, cache reuse percentage, conservative success **score in points**, or mean TTFT milliseconds respectively. Except for integer tokens, metrics have two decimal places. `rank` is a JSON integer. Names are plain text; avatar IDs reference the [avatar catalog](avatar-catalog.md). On narrow screens, usage values occupy a separate line below the participant so the complete int64 number stays readable without rounding or splitting its digits.
+`start` is inclusive and `end` exclusive, as UTC dates; `all` uses internal start `0001-01-01` and `end: null`. `generated_at` is the UTC start of the published build round, not a client's last report. For all boards, `client_id`, `avatar_id` and `metric` are decimal strings to preserve precision. The metric is overall points, total tokens, cache reuse percentage, conservative success **score in points**, or mean TTFT milliseconds respectively. Except for integer tokens, metrics have two decimal places. `rank` is a JSON integer. Names are plain text; avatar IDs reference the [avatar catalog](avatar-catalog.md). The API preserves the complete integer; compact UI units do not alter its value or ranking.
 
 The web page offers all five boards for `today`, `yesterday`, `week` and `month`, defaulting to `overall/today`; it has no year/all, model filter, pagination or personal view. It displays only the public rows and actual UTC period and generation time. Loading, empty and failure states are distinct; retry does not invent data. Malformed JSON and transport failures show generic localized messages rather than raw parser or network diagnostics. When a selection or retry is pending or fails, any retained result keeps its own board/period/time label. Avatar paths come only from the served catalog, with its default and a neutral fallback on image failure.
 
@@ -29,7 +29,15 @@ Only `overall` entries additionally contain a `details` object. These six values
 | `ttft_mean_ms` | TTFT sum / TTFT samples, in milliseconds; `null` without samples. |
 | `latency_mean_ms` | Total latency sum / latency samples, in milliseconds; `null` without samples. |
 
-Percentages and measured means are decimal strings rounded to two places; percentages range from `"0.00"` to `"100.00"`. Means use the combined sums and sample counts, not averages of daily averages. A measured zero remains `"0.00"`; unknown values are explicit JSON `null` and displayed as `—`. The page shows all six values alongside each overall result, adapting their layout to narrower screens while preserving integer precision. Older responses without `details` display unknown values, not fabricated zeroes. Other boards retain their existing entry fields. Scores, ranking rules, client report fields and stored statistics are unchanged; TPM/RPM are not added.
+Percentages and measured means are decimal strings rounded to two places; percentages range from `"0.00"` to `"100.00"`. Means use the combined sums and sample counts, not averages of daily averages. A measured zero remains `"0.00"`; unknown values are explicit JSON `null` and displayed as `—`. The page shows all six values alongside each overall result, using aligned columns on desktop and grouped cards on narrower screens. Older responses without `details` display unknown values, not fabricated zeroes. Other boards retain their existing entry fields. Scores, ranking rules, client report fields and stored statistics are unchanged; TPM/RPM are not added.
+
+## List presentation
+
+User names are visually emphasized, primary scores are distinct from supporting metrics, and numeric columns use aligned tabular figures. The page uses Keeper-style `K` (1,000), `M` (1,000,000) and `B` (1,000,000,000) for token and request counts. Scaling uses exact integer arithmetic before rounding the compact display to two decimals; it does not first convert int64 counters to JavaScript `Number`.
+
+Durations adapt from milliseconds to seconds, minutes, hours and days. Positive sub-millisecond values show `<1 ms`, measured zero shows `0 ms`, and missing values remain `—`. Each row's **原值** control expands the unabridged period statistics, including complete comma-grouped integers and the published milliseconds. It works with keyboard and touch, not only hover. Expanding or collapsing details never issues a separate statistics request. List selections reset expanded rows, and retained results continue to identify their own board and period while loading or on failure.
+
+Formatting is presentation only: the API, score calculation and sorting remain unchanged. Different raw values can share the same compact label; use **原值** to inspect the difference.
 
 ## Calculations
 
@@ -64,8 +72,8 @@ Usage requires positive tokens, cache requires positive input, and TTFT requires
 at least one sample; other eligible clients can still enter the overall and
 success views. Usage is sorted by exact int64 totals. Overall is sorted by its
 integer hundredths of points. The cache percentage, conservative success score
-and TTFT mean are rounded half-up to two decimals before both sorting and
-display; equal displayed values tie. Higher is better except TTFT, where lower
+and TTFT mean are rounded half-up to two decimals before sorting and
+publication; equal published metric values tie. Compact UI labels do not define ties. Higher is better except TTFT, where lower
 is better. Equal values receive competition ranks (1, 1, 3); stable client ID
 orders tied rows without affecting rank. Each view is truncated to 100 only
 after all candidates and references are considered, without expanding ties.

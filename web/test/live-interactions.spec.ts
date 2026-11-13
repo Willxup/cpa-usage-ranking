@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
 let participant = ''
-const usage = '123,456,789'
+const usage = '123.46M'
 
 function deferred<T>() {
   let resolve!: (value: T) => void

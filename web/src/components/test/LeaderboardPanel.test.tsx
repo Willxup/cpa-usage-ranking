@@ -12,7 +12,9 @@ describe('live leaderboard', () => {
   it('renders large integers exactly, text names and catalog avatar fallback', async () => {
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => Promise.resolve(json(String(input).includes('avatars') ? catalog : data))))
     const { container } = render(<LeaderboardPanel board="usage" period="today" />)
-    expect(await screen.findByText('9,007,199,254,740,993')).toBeVisible()
+    expect(await screen.findByText('9007199.25')).toBeVisible()
+    await userEvent.setup().click(screen.getByRole('button', { name: '查看<script>alert(1)</script>完整数值' }))
+    expect(screen.getByText('9,007,199,254,740,993')).toBeVisible()
     expect(screen.getByText('<script>alert(1)</script>')).toBeVisible()
     expect(container.querySelector('script')).toBeNull()
     const image = await waitFor(() => {
@@ -31,7 +33,7 @@ describe('live leaderboard', () => {
     const unknown = { ...data, entries: [{ ...data.entries[0], avatar_id: '3' }] }
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => Promise.resolve(json(String(input).includes('avatars') ? catalog : unknown))))
     const { container } = render(<LeaderboardPanel board="usage" period="today" />)
-    await screen.findByText('9,007,199,254,740,993')
+    await screen.findByText('9007199.25')
     await waitFor(() => expect(container.querySelector('.avatar img')?.getAttribute('src')).toBe('/avatars/images/001.webp'))
   })
 
@@ -73,6 +75,6 @@ describe('live leaderboard', () => {
     expect(await screen.findByText(/榜单缓存尚未就绪/)).toBeVisible()
     expect(screen.queryByText('等待第一份真实数据')).not.toBeInTheDocument()
     await userEvent.setup().click(screen.getByRole('button', { name: '重试榜单' }))
-    expect(await screen.findByText('9,007,199,254,740,993')).toBeVisible()
+    expect(await screen.findByText('9007199.25')).toBeVisible()
   })
 })

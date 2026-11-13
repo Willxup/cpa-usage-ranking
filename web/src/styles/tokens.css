@@ -3,7 +3,8 @@
 :root {
   color-scheme: light;
   font-family: Inter, "Noto Sans CJK SC", "Microsoft YaHei", system-ui, sans-serif;
-  font-synthesis: none;
+  /* Preserve weight hierarchy when a system/CJK fallback has only a regular face. */
+  font-synthesis: weight;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   --surface: #fdfdfe;
