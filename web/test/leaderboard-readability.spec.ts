@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 for (const width of [320, 375, 390, 768, 1200, 1440]) {
-  test(`keeps compact usage and its exact int64 value readable at ${width}px`, async ({ page }) => {
+  test(`keeps compact usage readable without a duplicate value column at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
     await page.route('**/v1/leaderboards/usage/today', (route) => route.fulfill({
       status: 200, contentType: 'application/json', body: JSON.stringify({
@@ -11,28 +11,17 @@ for (const width of [320, 375, 390, 768, 1200, 1440]) {
     }))
     await page.goto('/')
     await page.getByRole('button', { name: '用量榜', exact: true }).click()
-    await expect(page.locator('.metric-value')).toHaveText('9223372036.85B')
+    await expect(page.locator('.metric-value')).toHaveText('9223372036.85 B')
     await expect(page.locator('#participant-1')).toHaveCSS('font-weight', '750')
-    const toggle = page.getByRole('button', { name: '查看ABCDEFGHIJKLMNOPQRSTUVWXYZ012345完整数值' })
-    await toggle.focus()
-    await page.keyboard.press('Enter')
-    await expect(page.locator('.exact-toggle').first()).toHaveAttribute('aria-expanded', 'true')
-    const value = page.locator('.exact-values dd')
-    await expect(value).toHaveText('9,223,372,036,854,775,807')
-    const geometry = await value.evaluate((cell) => {
-      const range = document.createRange()
-      range.selectNodeContents(cell)
-      const lines = [...range.getClientRects()]
-      return { lines: lines.length, right: Math.max(...lines.map((r) => r.right)), left: Math.min(...lines.map((r) => r.left)), viewport: innerWidth, scrollWidth: document.documentElement.scrollWidth }
+    await expect(page.getByRole('columnheader')).toHaveCount(3)
+    await expect(page.getByRole('table').getByRole('button')).toHaveCount(0)
+    await expect(page.locator('.metric-number')).toHaveAttribute('title', '9,223,372,036,854,775,807')
+    const geometry = await page.locator('.metric-number').evaluate((element) => {
+      const rect = element.getBoundingClientRect()
+      return { left: rect.left, right: rect.right, viewport: innerWidth, scrollWidth: document.documentElement.scrollWidth }
     })
-    expect(geometry.lines).toBe(1)
     expect(geometry.left).toBeGreaterThanOrEqual(0)
     expect(geometry.right).toBeLessThanOrEqual(geometry.viewport)
     expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.viewport)
-    await expect(page.getByRole('columnheader', { name: 'Token 用量' })).toHaveCount(1)
-    const close = page.getByRole('button', { name: '收起ABCDEFGHIJKLMNOPQRSTUVWXYZ012345完整数值' })
-    await expect(close).toBeFocused()
-    await page.keyboard.press('Space')
-    await expect(page.locator('.exact-values')).toHaveCount(0)
   })
 }

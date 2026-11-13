@@ -35,9 +35,9 @@ Percentages and measured means are decimal strings rounded to two places; percen
 
 User names are visually emphasized, primary scores are distinct from supporting metrics, and numeric columns use aligned tabular figures. The page uses Keeper-style `K` (1,000), `M` (1,000,000) and `B` (1,000,000,000) for token and request counts. Scaling uses exact integer arithmetic before rounding the compact display to two decimals; it does not first convert int64 counters to JavaScript `Number`.
 
-Durations adapt from milliseconds to seconds, minutes, hours and days. Positive sub-millisecond values show `<1 ms`, measured zero shows `0 ms`, and missing values remain `—`. Each row's **原值** control expands the unabridged period statistics, including complete comma-grouped integers and the published milliseconds. It works with keyboard and touch, not only hover. Expanding or collapsing details never issues a separate statistics request. List selections reset expanded rows, and retained results continue to identify their own board and period while loading or on failure.
+Durations adapt from milliseconds to seconds, minutes, hours and days. Positive sub-millisecond values show `<1 ms`, measured zero shows `0 ms`, and missing values remain `—`. Numbers and units are separated by a space (`1.20 B`, `99.00 %`, `1.75 s`) while retaining their different visual emphasis. Each metric is displayed once: there is no duplicate original-value column or expandable row. Retained results continue to identify their own board and period while loading or on failure.
 
-Formatting is presentation only: the API, score calculation and sorting remain unchanged. Different raw values can share the same compact label; use **原值** to inspect the difference.
+Formatting is presentation only: the API, score calculation and sorting remain unchanged. Different raw values can share the same compact label; the API retains the complete published values.
 
 ## Calculations
 

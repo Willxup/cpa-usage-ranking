@@ -38,15 +38,12 @@
 .leaderboard-table { border-collapse: separate; border-spacing: 0; width: 100%; table-layout: fixed; font-size: 14px; }
 .table-caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .rank-column { width: 52px; }
-.action-column { width: 64px; }
 .primary-column { width: 32%; }
 .leaderboard-table--overall .participant-column { width: 20%; }
 .leaderboard-table--overall .primary-column { width: 96px; }
 .leaderboard-table th, .leaderboard-table td { padding: 14px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
 .leaderboard-table th { position: sticky; top: 0; z-index: 1; background: #faf9fc; color: var(--muted); font-size: 12px; font-weight: 500; }
 .leaderboard-table .numeric-heading, .leaderboard-table .metric-value, .leaderboard-table .detail-cell { text-align: right; }
-.leaderboard-table .action-heading, .leaderboard-table .row-action { text-align: center; }
-.leaderboard-group:focus-within { background: #f7f4fd; }
 @media (hover: hover) { .leaderboard-group:hover { background: #faf8fe; } }
 .rank-number { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
 .rank-leading { color: var(--accent); background: #fff0e9; }
@@ -60,17 +57,6 @@
 .metric-number { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .metric-unit { color: var(--muted); font-size: 12px; font-weight: 400; }
 .metric-missing { color: var(--muted); font-weight: 400; }
-.exact-toggle { min-width: 44px; min-height: 44px; padding: 4px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--muted); font-size: 12px; }
-.exact-toggle:hover, .exact-toggle[aria-expanded="true"] { color: #633da0; background: #f0eaf9; border-color: #ded4ef; }
-.exact-toggle:focus-visible { outline: 2px solid var(--electric); outline-offset: 2px; }
-.leaderboard-group[data-expanded="true"] .leaderboard-row td { border-bottom-color: transparent; }
-.leaderboard-table .exact-values { padding: 16px 20px 20px; background: #f7f5fb; text-align: left; }
-.exact-heading { margin: 0 0 12px; color: var(--muted); font-size: 12px; }
-.overall-details { margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 24px; }
-.overall-detail { min-width: 0; }
-.overall-detail dt { color: var(--muted); font-size: 12px; font-weight: 400; }
-.overall-detail dd { margin: 4px 0 0; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.overall-detail--count dd { white-space: nowrap; overflow-wrap: normal; }
 @media (max-width: 1199px) {
   .leaderboard-table--overall { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
   .leaderboard-table--overall colgroup { display: none; }
@@ -79,15 +65,11 @@
   .leaderboard-table--overall .leaderboard-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; }
   .leaderboard-table--overall .leaderboard-row td { border: 0; padding: 8px 0; min-width: 0; }
   .leaderboard-table--overall .rank-cell { grid-column: 1; grid-row: 1; align-self: start; }
-  .leaderboard-table--overall td.participant-cell { grid-column: 1 / -1; grid-row: 1; min-height: 64px; padding-left: 36px; padding-right: 44px; }
-  .leaderboard-table--overall td.row-action { grid-column: 2; grid-row: 1; justify-self: end; align-self: start; padding: 0; }
+  .leaderboard-table--overall td.participant-cell { grid-column: 1 / -1; grid-row: 1; min-height: 64px; padding-left: 36px; }
   .leaderboard-table--overall td.metric-value { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 4px 0 8px; padding-bottom: 12px; border-bottom: 1px solid var(--line); font-size: 22px; }
   .leaderboard-table--overall .metric-value::before, .leaderboard-table--overall .detail-cell::before { content: attr(data-label); color: var(--muted); font-size: 12px; font-weight: 400; }
   .leaderboard-table--overall .detail-cell { text-align: left; font-size: 14px; }
   .leaderboard-table--overall .detail-cell::before { display: block; margin-bottom: 4px; }
-  .leaderboard-table--overall .exact-values-row, .leaderboard-table--overall .exact-values { display: block; }
-  .leaderboard-table--overall .exact-values { margin-top: 12px; padding: 14px; border: 0; border-radius: 8px; }
-  .leaderboard-table--overall .overall-details { grid-template-columns: 1fr; }
   .leaderboard-table--overall .participant { gap: 8px; }
   .leaderboard-table--overall .avatar { width: 32px; height: 32px; border-radius: 10px; }
 }
@@ -99,15 +81,12 @@
   .leaderboard-table:not(.leaderboard-table--overall) colgroup { display: none; }
   .leaderboard-table:not(.leaderboard-table--overall) thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .leaderboard-table:not(.leaderboard-table--overall) .leaderboard-group { display: block; padding: 12px 0; border-bottom: 1px solid var(--line); }
-  .leaderboard-table:not(.leaderboard-table--overall) .leaderboard-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) 44px; }
+  .leaderboard-table:not(.leaderboard-table--overall) .leaderboard-row { display: grid; grid-template-columns: 36px minmax(0, 1fr); }
   .leaderboard-table:not(.leaderboard-table--overall) .leaderboard-row td { border: 0; padding: 6px 0; }
   .leaderboard-table:not(.leaderboard-table--overall) .rank-cell { grid-column: 1; grid-row: 1; }
   .leaderboard-table:not(.leaderboard-table--overall) .participant-cell { grid-column: 2; grid-row: 1; }
-  .leaderboard-table:not(.leaderboard-table--overall) .row-action { grid-column: 3; grid-row: 1; }
   .leaderboard-table:not(.leaderboard-table--overall) .metric-value { grid-column: 2 / -1; grid-row: 2; text-align: left; font-size: 20px; }
   .leaderboard-table:not(.leaderboard-table--overall) .metric-value::before { content: attr(data-label); display: block; margin-bottom: 2px; color: var(--muted); font-size: 12px; font-weight: 400; }
-  .leaderboard-table:not(.leaderboard-table--overall) .exact-values-row, .leaderboard-table:not(.leaderboard-table--overall) .exact-values { display: block; }
-  .leaderboard-table .overall-details { grid-template-columns: 1fr; }
   .participant { gap: 8px; }
   .avatar { width: 36px; height: 36px; border-radius: 11px; }
 }

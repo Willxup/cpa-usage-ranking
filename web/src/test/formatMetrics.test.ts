@@ -3,9 +3,9 @@ import { exactMetric, formatCount, formatDuration, formatMetric } from '../forma
 
 describe('Keeper-compatible compact counts with exact integer scaling', () => {
   it.each([
-    ['0', '0'], ['999', '999'], ['1000', '1.00K'], ['12345', '12.35K'], ['999994', '999.99K'], ['999995', '1.00M'],
-    ['1000000', '1.00M'], ['999995000', '1.00B'], ['123456789', '123.46M'], ['1000000000', '1.00B'],
-    ['9007199254740993', '9007199.25B'], ['9223372036854775807', '9223372036.85B'],
+    ['0', '0'], ['999', '999'], ['1000', '1.00 K'], ['12345', '12.35 K'], ['999994', '999.99 K'], ['999995', '1.00 M'],
+    ['1000000', '1.00 M'], ['999995000', '1.00 B'], ['123456789', '123.46 M'], ['1000000000', '1.00 B'],
+    ['9007199254740993', '9007199.25 B'], ['9223372036854775807', '9223372036.85 B'],
   ])('%s → %s', (value, expected) => expect(formatCount(value)).toBe(expected))
   it('retains every digit in the expanded original', () => {
     expect(exactMetric('9007199254740993', 'count')).toBe('9,007,199,254,740,993')
@@ -27,7 +27,7 @@ describe('adaptive durations', () => {
   it('never turns missing measurements into zero or success scores into percentages', () => {
     expect(formatMetric(null, 'duration')).toBe('—')
     expect(formatMetric(undefined, 'count')).toBe('—')
-    expect(formatMetric('0.00', 'percent')).toBe('0.00%')
+    expect(formatMetric('0.00', 'percent')).toBe('0.00 %')
     expect(formatMetric('20.65', 'points')).toBe('20.65 分')
   })
 })

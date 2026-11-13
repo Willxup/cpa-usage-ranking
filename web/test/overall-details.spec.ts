@@ -1,8 +1,7 @@
 import { expect, test } from '@playwright/test'
 
-test.use({ hasTouch: true })
 for (const width of [320, 375, 768, 1200, 1280, 1440]) {
-  test(`shows a readable metric hierarchy and accessible originals at ${width}px`, async ({ page }, info) => {
+  test(`shows spaced metric units without duplicate detail rows at ${width}px`, async ({ page }, info) => {
     const errors: string[] = []
     page.on('pageerror', (error) => errors.push(error.message))
     await page.setViewportSize({ width, height: 1100 })
@@ -14,13 +13,14 @@ for (const width of [320, 375, 768, 1200, 1280, 1440]) {
     }) }))
     await page.goto('/')
     const first = page.locator('.leaderboard-group').first()
-    await expect(first.locator('.detail-cell')).toHaveText(['9223372036.85B', '9223372036.85B', '75.00%', '25.13%', '0 ms', '1.35 s'])
+    await expect(first.locator('.detail-cell')).toHaveText(['9223372036.85 B', '9223372036.85 B', '75.00 %', '25.13 %', '0 ms', '1.35 s'])
     await expect(page.locator('#participant-1')).toHaveCSS('font-weight', '750')
-    await expect(page.locator('#participant-1')).toHaveCSS('font-synthesis', 'weight')
-    await expect(first.locator('.metric-value')).toHaveCSS('font-weight', '750')
     await expect(first.locator('.detail-cell').first()).toHaveCSS('font-weight', '500')
     await expect(first.locator('.metric-unit').first()).toHaveCSS('font-weight', '400')
-    await expect(page.locator('.leaderboard-group').nth(1).locator('.detail-cell')).toHaveText(['0', '1', '0.00%', '—', '—', '—'])
+    await expect(page.locator('.leaderboard-group').nth(1).locator('.detail-cell')).toHaveText(['0', '1', '0.00 %', '—', '—', '—'])
+    await expect(page.getByRole('columnheader')).toHaveCount(9)
+    await expect(page.getByRole('table').getByRole('button')).toHaveCount(0)
+    await expect(page.locator('.exact-values-row, .overall-details')).toHaveCount(0)
     for (const amount of await first.locator('.metric-number').all()) {
       expect(await amount.evaluate((element) => {
         const value = element.getBoundingClientRect()
@@ -28,28 +28,19 @@ for (const width of [320, 375, 768, 1200, 1280, 1440]) {
         return value.left >= cell.left && value.right <= cell.right && value.right <= innerWidth
       })).toBe(true)
     }
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-    await page.screenshot({ path: info.outputPath(`overall-${width}.png`) })
-    const toggle = first.locator('.exact-toggle')
-    if (width <= 375) await toggle.tap()
-    else { await toggle.focus(); await page.keyboard.press('Enter') }
-    await expect(toggle).toHaveAttribute('aria-expanded', 'true')
-    const details = first.locator('.overall-details')
-    await expect(details.locator('dt')).toHaveText(['Token', '请求数', '实际成功率', '缓存复用率', '平均首字延迟', '平均总延迟'])
-    await expect(details.locator('dd')).toHaveText(['9,223,372,036,854,775,807', '9,223,372,036,854,775,807', '75.00%', '25.13%', '0.00 ms', '1350.00 ms'])
-    for (const index of [0, 1]) {
-      const geometry = await details.locator('dd').nth(index).evaluate((element) => {
+    for (const unit of await first.locator('.metric-unit').all()) {
+      const gap = await unit.evaluate((element) => {
+        const previous = element.previousElementSibling!
+        const text = previous.firstChild!
         const range = document.createRange()
-        range.selectNodeContents(element)
-        const rects = [...range.getClientRects()]
-        return { lines: rects.length, right: Math.max(...rects.map((r) => r.right)), viewport: innerWidth }
+        range.setStart(text, 0)
+        range.setEnd(text, text.textContent!.trimEnd().length)
+        return element.getBoundingClientRect().left - range.getBoundingClientRect().right
       })
-      expect(geometry.lines).toBe(1)
-      expect(geometry.right).toBeLessThanOrEqual(geometry.viewport)
+      expect(gap).toBeGreaterThan(1)
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-    await toggle.click()
-    await expect(details).toHaveCount(0)
     expect(errors).toEqual([])
+    await page.screenshot({ path: info.outputPath(`overall-${width}.png`) })
   })
 }

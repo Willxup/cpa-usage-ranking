@@ -12,7 +12,7 @@ export function formatCount(value: string): string {
     index++
     scaled = (count * 100n + units[index].base / 2n) / units[index].base
   }
-  return `${scaled / 100n}.${String(scaled % 100n).padStart(2, '0')}${units[index].suffix}`
+  return `${scaled / 100n}.${String(scaled % 100n).padStart(2, '0')} ${units[index].suffix}`
 }
 
 export function formatDuration(value: string): string {
@@ -53,11 +53,11 @@ export function formatMetric(value: string | null | undefined, kind: MetricKind)
   if (value == null) return '—'
   if (kind === 'count') return formatCount(value)
   if (kind === 'duration') return formatDuration(value)
-  return `${value}${kind === 'percent' ? '%' : ' 分'}`
+  return `${value}${kind === 'percent' ? ' %' : ' 分'}`
 }
 
 export function exactMetric(value: string | null | undefined, kind: MetricKind): string {
   if (value == null) return '—'
   if (kind === 'count') return BigInt(value).toLocaleString('en-US')
-  return `${value}${kind === 'duration' ? ' ms' : kind === 'percent' ? '%' : ' 分'}`
+  return `${value}${kind === 'duration' ? ' ms' : kind === 'percent' ? ' %' : ' 分'}`
 }

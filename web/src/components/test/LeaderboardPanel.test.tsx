@@ -9,12 +9,13 @@ const data = { board: 'usage', period: 'today', start: '2026-12-31', end: '2027-
 afterEach(() => vi.unstubAllGlobals())
 
 describe('live leaderboard', () => {
-  it('renders large integers exactly, text names and catalog avatar fallback', async () => {
+  it('renders compact values without duplicate details, text names and avatar fallback', async () => {
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => Promise.resolve(json(String(input).includes('avatars') ? catalog : data))))
     const { container } = render(<LeaderboardPanel board="usage" period="today" />)
     expect(await screen.findByText('9007199.25')).toBeVisible()
-    await userEvent.setup().click(screen.getByRole('button', { name: '查看<script>alert(1)</script>完整数值' }))
-    expect(screen.getByText('9,007,199,254,740,993')).toBeVisible()
+    expect(container.querySelector('.metric-number')).toHaveTextContent('9007199.25 B')
+    expect(screen.queryByRole('button', { name: /完整数值/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: '详情' })).not.toBeInTheDocument()
     expect(screen.getByText('<script>alert(1)</script>')).toBeVisible()
     expect(container.querySelector('script')).toBeNull()
     const image = await waitFor(() => {
