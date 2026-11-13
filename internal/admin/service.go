@@ -2,14 +2,17 @@
 package admin
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/subtle"
+	"database/sql"
 	"encoding/base64"
 	"errors"
 	"regexp"
 	"sync"
 	"time"
 
+	"cpa-usage-ranking/internal/storage"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -21,6 +24,9 @@ var (
 	ErrSession     = errors.New("invalid administrator session")
 	ErrCapacity    = errors.New("administrator session capacity reached")
 	ErrInput       = errors.New("invalid administrator input")
+	ErrForbidden   = errors.New("administrator permission denied")
+	ErrNotFound    = errors.New("administrator target not found")
+	ErrConflict    = errors.New("administrator username unavailable")
 )
 
 var usernamePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{2,63}$`)
@@ -48,6 +54,8 @@ type Session struct {
 }
 
 type Service struct {
+	reader    *sql.DB
+	writer    *sql.DB
 	owner     Identity
 	ownerHash []byte
 	mu        sync.Mutex
@@ -55,7 +63,7 @@ type Service struct {
 	now       func() time.Time
 }
 
-func New(owner Owner) (*Service, error) {
+func New(owner Owner, db *storage.DB) (*Service, error) {
 	if !ValidCredentials(owner.Username, owner.Password) {
 		return nil, ErrInput
 	}
@@ -63,16 +71,43 @@ func New(owner Owner) (*Service, error) {
 	if err != nil {
 		return nil, errors.New("hash administrator password")
 	}
-	return &Service{owner: Identity{ID: "owner", Username: owner.Username, Owner: true}, ownerHash: hash, sessions: make(map[string]Session), now: time.Now}, nil
+	s := &Service{owner: Identity{ID: "owner", Username: owner.Username, Owner: true}, ownerHash: hash, sessions: make(map[string]Session), now: time.Now}
+	if db != nil {
+		s.reader, s.writer = db.Reader, db.Writer
+		var count int
+		if err := s.reader.QueryRow("SELECT count(*) FROM admin_accounts WHERE username = ?", owner.Username).Scan(&count); err != nil {
+			return nil, errors.New("read administrator accounts")
+		}
+		if count != 0 {
+			return nil, errors.New("configured owner username conflicts with an ordinary administrator")
+		}
+	}
+	return s, nil
 }
 
-func (s *Service) Login(username, password string) (string, Session, error) {
+func (s *Service) Login(ctx context.Context, username, password string) (string, Session, error) {
+	identity := s.owner
+	hash := s.ownerHash
+	found := username == s.owner.Username
+	if !found && s.reader != nil {
+		var id int64
+		err := s.reader.QueryRowContext(ctx, "SELECT id, password_hash FROM admin_accounts WHERE username = ?", username).Scan(&id, &hash)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return "", Session{}, errors.New("read administrator account")
+		}
+		found = err == nil
+		if found {
+			identity = Identity{ID: accountID(id), Username: username}
+		} else {
+			hash = s.ownerHash
+		}
+	}
 	// Always pay the password-hash cost, including unknown usernames.
-	valid := bcrypt.CompareHashAndPassword(s.ownerHash, []byte(password)) == nil
-	if !valid || username != s.owner.Username {
+	valid := bcrypt.CompareHashAndPassword(hash, []byte(password)) == nil
+	if !valid || !found {
 		return "", Session{}, ErrCredentials
 	}
-	return s.createSession(s.owner)
+	return s.createSession(identity)
 }
 
 func randomToken() (string, error) {
@@ -108,13 +143,23 @@ func (s *Service) createSession(identity Identity) (string, Session, error) {
 	return token, session, nil
 }
 
-func (s *Service) Lookup(token string) (Session, error) {
+func (s *Service) Lookup(ctx context.Context, token string) (Session, error) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	session, ok := s.sessions[token]
-	if !ok || !s.now().Before(session.ExpiresAt) {
+	valid := ok && s.now().Before(session.ExpiresAt)
+	if !valid {
 		delete(s.sessions, token)
+	}
+	s.mu.Unlock()
+	if !valid {
 		return Session{}, ErrSession
+	}
+	if !session.Identity.Owner {
+		var exists int
+		if s.reader == nil || s.reader.QueryRowContext(ctx, "SELECT 1 FROM admin_accounts WHERE id = ?", session.Identity.ID).Scan(&exists) != nil {
+			s.Logout(token)
+			return Session{}, ErrSession
+		}
 	}
 	return session, nil
 }

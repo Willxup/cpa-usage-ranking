@@ -24,7 +24,7 @@ func adminRouter(t *testing.T, enabled bool, options httpserver.AdminHTTPOptions
 	var service *admin.Service
 	if enabled {
 		var err error
-		service, err = admin.New(admin.Owner{Username: "owner", Password: "isolated-test-password"})
+		service, err = admin.New(admin.Owner{Username: "owner", Password: "isolated-test-password"}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}

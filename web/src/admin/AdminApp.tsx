@@ -4,6 +4,7 @@ import { LeaderboardPanel } from '../components/LeaderboardPanel'
 import { boards, periods } from '../leaderboardLabels'
 import { adminRequest, jsonRequest } from './api'
 import { useSession } from './useSession'
+import { Accounts } from './Accounts'
 import '../styles/app.css'
 import './admin.css'
 
@@ -54,6 +55,7 @@ export default function AdminApp() {
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState('')
   const login = window.location.pathname === '/admin/login'
+  const accounts = window.location.pathname === '/admin/accounts'
   const main = useRef<HTMLElement>(null)
   useEffect(() => { main.current?.focus() }, [])
   useEffect(() => {
@@ -77,9 +79,9 @@ export default function AdminApp() {
       {session && !session.enabled && <section className="admin-card"><h1>管理后台未启用</h1><a className="primary-link" href="/">返回公开榜单</a></section>}
       {session?.enabled && !session.authenticated && login && <Login />}
       {session?.authenticated && !login && <>
-        <div className="admin-nav-wrap"><nav className="admin-nav" aria-label="控制台导航"><a href="/admin/leaderboards" aria-current="page">榜单查看</a></nav><div className="admin-identity"><span>{session.user?.username} · 主管理员</span><button className="admin-button" disabled={busy} onClick={() => void logout()}>{busy ? '正在退出…' : '退出'}</button></div></div>
+        <div className="admin-nav-wrap"><nav className="admin-nav" aria-label="控制台导航"><a href="/admin/leaderboards" aria-current={!accounts ? 'page' : undefined}>榜单查看</a>{session.user?.owner && <a href="/admin/accounts" aria-current={accounts ? 'page' : undefined}>管理员管理</a>}</nav><div className="admin-identity"><span>{session.user?.username} · {session.user?.owner ? '主管理员' : '普通管理员'}</span><button className="admin-button" disabled={busy} onClick={() => void logout()}>{busy ? '正在退出…' : '退出'}</button></div></div>
         {actionError && <p className="admin-error" role="alert">{actionError}</p>}
-        <CurrentLeaderboards />
+        {accounts ? session.user?.owner ? <Accounts session={session} onExpired={refresh} /> : <section className="admin-card"><h1>仅主管理员可管理账号</h1><a className="primary-link" href="/admin/leaderboards">返回榜单</a></section> : <CurrentLeaderboards />}
       </>}
     </main>
     <footer className="site-footer page-width"><span>CPA Usage Ranking · 控制台</span><p>统计周期保持 UTC</p></footer>

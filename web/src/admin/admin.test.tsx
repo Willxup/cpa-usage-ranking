@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
 import { AdminEntry } from './AdminEntry'
 import AdminApp from './AdminApp'
+import { Accounts } from './Accounts'
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 afterEach(() => { vi.unstubAllGlobals(); window.history.replaceState({}, '', '/') })
@@ -19,6 +20,29 @@ it('hides the disabled entry and shows login or console from session state', asy
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({ enabled: true, authenticated: true })))
   render(<AdminEntry />)
   expect(await screen.findByRole('link', { name: '控制台' })).toHaveAttribute('href', '/admin/leaderboards')
+})
+
+it('ordinary administrator cannot render account management or fetch its data', async () => {
+  window.history.replaceState({}, '', '/admin/accounts')
+  const fetcher = vi.fn().mockResolvedValue(json({ enabled: true, authenticated: true, user: { id: '17', username: 'staff', owner: false } }))
+  vi.stubGlobal('fetch', fetcher)
+  render(<AdminApp />)
+  expect(await screen.findByRole('heading', { name: '仅主管理员可管理账号' })).toBeVisible()
+  expect(screen.queryByRole('link', { name: '管理员管理' })).not.toBeInTheDocument()
+  expect(fetcher.mock.calls.every(([path]) => path === '/v1/admin/session')).toBe(true)
+})
+
+it('does not retry a failed account creation automatically', async () => {
+  const fetcher = vi.fn((_path: RequestInfo | URL, init?: RequestInit) => Promise.resolve(init?.method === 'POST' ? json({}, 409) : json({ owner: { username: 'owner' }, accounts: [] })))
+  vi.stubGlobal('fetch', fetcher)
+  const user = userEvent.setup()
+  render(<Accounts session={{ enabled: true, authenticated: true, csrf_token: 'test-csrf' }} onExpired={vi.fn()} />)
+  expect(await screen.findByText('暂无普通管理员。')).toBeVisible()
+  await user.type(screen.getByLabelText('用户名'), 'staff')
+  await user.type(screen.getByLabelText('初始密码'), 'isolated-test-password')
+  await user.click(screen.getByRole('button', { name: '添加管理员' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('用户名已存在')
+  expect(fetcher.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(1)
 })
 
 it('allows password manager input, prevents duplicate login and reports failure', async () => {

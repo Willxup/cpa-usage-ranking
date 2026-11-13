@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
+import { randomBytes } from 'node:crypto'
 
 const config = process.env.RANKING_TEST_ADMIN_CONFIG
 const owner: { username: string; password: string } = config ? JSON.parse(readFileSync(config, 'utf8')) : { username: '', password: '' }
@@ -17,11 +18,11 @@ async function loginSlot() {
   attempts.push(Date.now())
 }
 
-async function login(page: Page) {
+async function login(page: Page, credentials = owner) {
   await loginSlot()
   await page.goto('/admin/login')
-  await page.getByLabel('用户名', { exact: true }).fill(owner.username)
-  await page.getByLabel('密码', { exact: true }).fill(owner.password)
+  await page.getByLabel('用户名', { exact: true }).fill(credentials.username)
+  await page.getByLabel('密码', { exact: true }).fill(credentials.password)
   await page.getByRole('button', { name: '登录', exact: true }).click()
   await expect(page.getByRole('navigation', { name: '控制台导航' })).toBeVisible()
 }
@@ -74,6 +75,35 @@ test('login failure, keyboard submission and session expiry', async ({ page, con
   await expect(page).toHaveURL(/\/admin\/login$/)
   await page.goto('/')
   await expect(page.getByRole('link', { name: '登录', exact: true })).toBeVisible()
+})
+
+test('owner manages ordinary accounts and deletion revokes the live session', async ({ page, browser, baseURL }, info) => {
+  await page.setViewportSize({ width: 375, height: 812 })
+  await login(page)
+  await page.getByRole('link', { name: '管理员管理', exact: true }).click()
+  const credentials = { username: `staff-${Date.now()}`, password: randomBytes(24).toString('base64url') }
+  await page.getByLabel('用户名', { exact: true }).fill(credentials.username)
+  await page.getByLabel('初始密码', { exact: true }).fill(credentials.password)
+  await page.getByRole('button', { name: '添加管理员', exact: true }).click()
+  await expect(page.getByRole('status').filter({ hasText: '管理员已添加' })).toBeVisible()
+  const row = page.getByRole('row').filter({ hasText: credentials.username })
+  await expect(row).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: info.outputPath('accounts-375.png'), fullPage: true })
+  const ordinaryContext = await browser.newContext({ baseURL })
+  try {
+    const ordinary = await ordinaryContext.newPage()
+    await login(ordinary, credentials)
+    await expect(ordinary.getByRole('link', { name: '管理员管理', exact: true })).toHaveCount(0)
+    expect((await ordinaryContext.request.get('/v1/admin/accounts')).status()).toBe(403)
+    await ordinary.goto('/admin/accounts')
+    await expect(ordinary.getByRole('heading', { name: '仅主管理员可管理账号' })).toBeVisible()
+    page.once('dialog', (dialog) => dialog.accept())
+    await row.getByRole('button', { name: '删除', exact: true }).click()
+    await expect(page.getByRole('status').filter({ hasText: '管理员已删除' })).toBeVisible()
+    await ordinary.goto('/admin/leaderboards')
+    await expect(ordinary).toHaveURL(/\/admin\/login$/)
+  } finally { await ordinaryContext.close() }
 })
 
 test('expired public session changes the top right entry without navigation', async ({ page, context }) => {

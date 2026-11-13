@@ -45,8 +45,11 @@ func MountAdmin(router *gin.Engine, service *admin.Service, frontend *Frontend, 
 	}
 	router.POST("/v1/admin/session", h.sameOrigin, h.login)
 	router.DELETE("/v1/admin/session", h.sameOrigin, h.authorize, h.csrf, h.logout)
+	router.GET("/v1/admin/accounts", h.authorize, h.ownerOnly, h.accounts)
+	router.POST("/v1/admin/accounts", h.sameOrigin, h.authorize, h.ownerOnly, h.csrf, h.createAccount)
+	router.DELETE("/v1/admin/accounts/:id", h.sameOrigin, h.authorize, h.ownerOnly, h.csrf, h.deleteAccount)
 	if frontend != nil {
-		for _, path := range []string{"/admin/login", "/admin/leaderboards"} {
+		for _, path := range []string{"/admin/login", "/admin/leaderboards", "/admin/accounts"} {
 			router.GET(path, func(c *gin.Context) { frontend.serveIndex(c) })
 			router.HEAD(path, func(c *gin.Context) { frontend.serveIndex(c) })
 		}
@@ -60,7 +63,7 @@ func (h *adminHTTP) status(c *gin.Context) {
 		return
 	}
 	token, _ := c.Cookie(adminCookie)
-	session, err := h.service.Lookup(token)
+	session, err := h.service.Lookup(c.Request.Context(), token)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"enabled": true, "authenticated": false})
 		return
@@ -89,7 +92,7 @@ func (h *adminHTTP) login(c *gin.Context) {
 	if !decodeAdmin(c, &input) {
 		return
 	}
-	token, session, err := h.service.Login(input.Username, input.Password)
+	token, session, err := h.service.Login(c.Request.Context(), input.Username, input.Password)
 	if err != nil {
 		if errors.Is(err, admin.ErrCredentials) {
 			writeError(c, http.StatusUnauthorized, "invalid_credentials", "Invalid username or password")
@@ -112,7 +115,7 @@ func (h *adminHTTP) cookie(c *gin.Context, token string, maxAge int) {
 
 func (h *adminHTTP) authorize(c *gin.Context) {
 	token, _ := c.Cookie(adminCookie)
-	session, err := h.service.Lookup(token)
+	session, err := h.service.Lookup(c.Request.Context(), token)
 	if err != nil {
 		writeError(c, http.StatusUnauthorized, "session_required", "Administrator login required")
 		return

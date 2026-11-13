@@ -13,7 +13,18 @@ func MigrateSchema(ctx context.Context, writer *sql.DB) error {
 		{Version: 3, Apply: createReportWindowV3},
 		{Version: 4, Apply: createDailySnapshotsV4},
 		{Version: 5, Apply: createPeriodStatsV5},
+		{Version: 6, Apply: createAdminAccountsV6},
 	})
+}
+
+func createAdminAccountsV6(ctx context.Context, tx *sql.Tx) error {
+	_, err := tx.ExecContext(ctx, `CREATE TABLE admin_accounts (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		username TEXT NOT NULL UNIQUE,
+		password_hash BLOB NOT NULL,
+		created_at_ms INTEGER NOT NULL
+	)`)
+	return err
 }
 
 func createClientsV1(ctx context.Context, tx *sql.Tx) error {

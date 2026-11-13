@@ -142,7 +142,7 @@ func run(logger *slog.Logger) (err error) {
 	}
 	var adminService *admin.Service
 	if cfg.AdminOwner != nil {
-		adminService, err = admin.New(*cfg.AdminOwner)
+		adminService, err = admin.New(*cfg.AdminOwner, db)
 		if err != nil {
 			return err
 		}
