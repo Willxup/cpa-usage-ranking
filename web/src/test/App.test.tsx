@@ -16,6 +16,7 @@ describe('application shell', () => {
     render(<App />)
     expect(screen.getByRole('main')).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('AI 用量排行榜')
+    expect(screen.queryByText('每一次调用，都将在这里被看见。')).not.toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: '等待第一份真实数据' })).toBeVisible()
     expect(screen.getByRole('heading', { name: '今日 · 综合总榜' })).toBeVisible()
     expect(fetcher).toHaveBeenCalledWith('/v1/leaderboards/overall/today', expect.anything())
