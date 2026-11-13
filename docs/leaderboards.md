@@ -10,7 +10,26 @@
 
 The web page offers all five boards for `today`, `yesterday`, `week` and `month`, defaulting to `overall/today`; it has no year/all, model filter, pagination or personal view. It displays only the public rows and actual UTC period and generation time. Loading, empty and failure states are distinct; retry does not invent data. Malformed JSON and transport failures show generic localized messages rather than raw parser or network diagnostics. When a selection or retry is pending or fails, any retained result keeps its own board/period/time label. Avatar paths come only from the served catalog, with its default and a neutral fallback on image failure.
 
-A successful empty view returns `200` with `entries: []`. Before the first complete round, the response is `503` with `{"error":{"code":"leaderboard_unavailable","message":"Leaderboard cache is not ready"}}`. Invalid board, period or query parameters return `400` with `invalid_parameter`; unknown paths and methods retain JSON `404`/`405`. Later build failures retain the prior complete result and its original period/time; there is no cache-expiry SLA. No raw counts, score contributions, coverage, credentials, hashes or IP addresses are returned. `/readyz` independently checks database and catalogs as well as cache initialization.
+A successful empty view returns `200` with `entries: []`. Before the first complete round, the response is `503` with `{"error":{"code":"leaderboard_unavailable","message":"Leaderboard cache is not ready"}}`. Invalid board, period or query parameters return `400` with `invalid_parameter`; unknown paths and methods retain JSON `404`/`405`. Later build failures retain the prior complete result and its original period/time; there is no cache-expiry SLA. No success counts, measurement counts, other token breakdowns, score contributions, coverage, credentials, hashes or IP addresses are returned. `/readyz` independently checks database and catalogs as well as cache initialization.
+
+## Overall detail values
+
+Only `overall` entries additionally contain a `details` object. These six values come from the same period totals and cache build as the score, not separate board requests:
+
+```json
+{"total_tokens":"100","request_count":"4","success_rate":"75.00","cache_read_rate":"35.71","ttft_mean_ms":"75.00","latency_mean_ms":null}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `total_tokens` | Exact total tokens, as an int64 decimal string. |
+| `request_count` | Exact accepted execution count, as an int64 decimal string. |
+| `success_rate` | Observed successes / executions × 100; **not** the Wilson success score. |
+| `cache_read_rate` | Cache-read tokens / input tokens × 100; `null` without input tokens. |
+| `ttft_mean_ms` | TTFT sum / TTFT samples, in milliseconds; `null` without samples. |
+| `latency_mean_ms` | Total latency sum / latency samples, in milliseconds; `null` without samples. |
+
+Percentages and measured means are decimal strings rounded to two places; percentages range from `"0.00"` to `"100.00"`. Means use the combined sums and sample counts, not averages of daily averages. A measured zero remains `"0.00"`; unknown values are explicit JSON `null` and displayed as `—`. The page shows all six values alongside each overall result, adapting their layout to narrower screens while preserving integer precision. Older responses without `details` display unknown values, not fabricated zeroes. Other boards retain their existing entry fields. Scores, ranking rules, client report fields and stored statistics are unchanged; TPM/RPM are not added.
 
 ## Calculations
 

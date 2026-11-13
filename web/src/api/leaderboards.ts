@@ -1,11 +1,18 @@
 export type Board = 'overall' | 'usage' | 'cache' | 'success' | 'ttft'
 export type Period = 'today' | 'yesterday' | 'week' | 'month'
-export type Entry = { rank: number; client_id: string; display_name: string; avatar_id: string; metric: string }
+export type OverallDetails = { total_tokens: string; request_count: string; success_rate: string; cache_read_rate: string | null; ttft_mean_ms: string | null; latency_mean_ms: string | null }
+export type Entry = { rank: number; client_id: string; display_name: string; avatar_id: string; metric: string; details?: OverallDetails }
 export type Leaderboard = { board: Board; period: Period; start: string; end: string; generated_at: string; entries: Entry[] }
 export type AvatarCatalog = { defaultPath: string; paths: Map<string, string> }
 
 const digits = /^[1-9]\d*$/
 const object = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
+const count = (value: unknown) => typeof value === 'string' && /^(0|[1-9]\d{0,18})$/.test(value) && BigInt(value) <= 9223372036854775807n
+const percent = (value: unknown) => typeof value === 'string' && /^\d{1,3}\.\d{2}$/.test(value) && Number(value) <= 100
+const mean = (value: unknown) => value === null || (typeof value === 'string' && /^\d+\.\d{2}$/.test(value) && Number.isFinite(Number(value)))
+function validDetails(value: unknown): value is OverallDetails {
+  return object(value) && count(value.total_tokens) && count(value.request_count) && percent(value.success_rate) && (value.cache_read_rate === null || percent(value.cache_read_rate)) && mean(value.ttft_mean_ms) && mean(value.latency_mean_ms)
+}
 
 export async function fetchLeaderboard(board: Board, period: Period, signal: AbortSignal): Promise<Leaderboard> {
   const controller = new AbortController()
@@ -22,6 +29,7 @@ export async function fetchLeaderboard(board: Board, period: Period, signal: Abo
     if (!object(data) || data.board !== board || data.period !== period || typeof data.start !== 'string' || typeof data.end !== 'string' || typeof data.generated_at !== 'string' || !Array.isArray(data.entries) || data.entries.length > 100) throw new Error('榜单响应无效，请稍后重试。')
     const entries: Entry[] = data.entries.map((entry: unknown) => {
       if (!object(entry) || !Number.isInteger(entry.rank) || (entry.rank as number) < 1 || typeof entry.client_id !== 'string' || !digits.test(entry.client_id) || typeof entry.avatar_id !== 'string' || !digits.test(entry.avatar_id) || typeof entry.display_name !== 'string' || typeof entry.metric !== 'string' || !(board === 'usage' ? /^\d+$/ : /^\d+\.\d{2}$/).test(entry.metric)) throw new Error('榜单响应无效，请稍后重试。')
+      if (board === 'overall' && entry.details !== undefined && !validDetails(entry.details)) throw new Error('榜单响应无效，请稍后重试。')
       return entry as Entry
     })
     return { board, period, start: data.start, end: data.end, generated_at: data.generated_at, entries }

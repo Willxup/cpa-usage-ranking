@@ -30,11 +30,12 @@ const (
 
 // Entry 是唯一公开条目白名单。指标和 ID 使用十进制字符串，避免 JavaScript 丢失 int64 精度。
 type Entry struct {
-	Rank        int    `json:"rank"`
-	ClientID    string `json:"client_id"`
-	DisplayName string `json:"display_name"`
-	AvatarID    string `json:"avatar_id"`
-	Metric      string `json:"metric"`
+	Rank        int             `json:"rank"`
+	ClientID    string          `json:"client_id"`
+	DisplayName string          `json:"display_name"`
+	AvatarID    string          `json:"avatar_id"`
+	Metric      string          `json:"metric"`
+	Details     *OverallDetails `json:"details,omitempty"`
 }
 
 type candidate struct {
@@ -193,7 +194,11 @@ func Build(ctx context.Context, s statistics.Snapshot) (map[string][]Entry, erro
 			default:
 				metric = strconv.FormatFloat(c.value, 'f', 2, 64)
 			}
-			entries = append(entries, Entry{Rank: rank, ClientID: strconv.FormatInt(c.id, 10), DisplayName: c.profile.DisplayName, AvatarID: strconv.FormatInt(c.profile.AvatarID, 10), Metric: metric})
+			entry := Entry{Rank: rank, ClientID: strconv.FormatInt(c.id, 10), DisplayName: c.profile.DisplayName, AvatarID: strconv.FormatInt(c.profile.AvatarID, 10), Metric: metric}
+			if kind == Overall {
+				entry.Details = overallDetails(c)
+			}
+			entries = append(entries, entry)
 		}
 		boards[kind] = entries
 		if err := ctx.Err(); err != nil {

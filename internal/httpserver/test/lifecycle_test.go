@@ -303,7 +303,11 @@ func (f *lifecycleRuntime) assertCombined(t *testing.T, when time.Time, alice, b
 	f.assertBoard(t, "cache", "all", "0001-01-01", "", when, []leaderboard.Entry{lifecycleEntry(1, alice, "35.71"), lifecycleEntry(2, bob, "0.00")})
 	f.assertBoard(t, "ttft", "all", "0001-01-01", "", when, []leaderboard.Entry{lifecycleEntry(1, alice, "75.00")})
 	// 中间百分位 30/10 分，Wilson 贡献 9.02/10.27，缓存 7.14/0，TTFT 5/0。
-	f.assertBoard(t, "overall", "all", "0001-01-01", "", when, []leaderboard.Entry{lifecycleEntry(1, alice, "51.16"), lifecycleEntry(2, bob, "20.27")})
+	a, b := lifecycleEntry(1, alice, "51.16"), lifecycleEntry(2, bob, "20.27")
+	cacheAlice, cacheBob, ttftAlice := "35.71", "0.00", "75.00"
+	a.Details = &leaderboard.OverallDetails{TotalTokens: "100", RequestCount: "4", SuccessRate: "75.00", CacheReadRate: &cacheAlice, TTFTMeanMS: &ttftAlice}
+	b.Details = &leaderboard.OverallDetails{TotalTokens: "35", RequestCount: "2", SuccessRate: "100.00", CacheReadRate: &cacheBob}
+	f.assertBoard(t, "overall", "all", "0001-01-01", "", when, []leaderboard.Entry{a, b})
 }
 
 func TestCompleteIngestionLifecycle(t *testing.T) {

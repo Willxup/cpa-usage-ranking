@@ -6,6 +6,7 @@ test('shows real submitted data across approved boards and periods', async ({ pa
   const headers = { Authorization: `Bearer ${secret}` }
   const registration = await request.post('/v1/clients/register', { headers, data: { display_name: '真实测试参与者', avatar_id: 2 } })
   expect(registration.status()).toBe(201)
+  const registered = await registration.json() as { client_id: string }
   const day = new Date().toISOString().slice(0, 10)
   const report = await request.put(`/v1/reports/${day}`, { headers, data: {
     schema_version: 1, revision: '1', items: [{ model: 'claude-fable-5', total_tokens: '9007199254740993', input_tokens: '10', output_tokens: '0', cache_read_tokens: '5', cache_write_tokens: '0', reasoning_tokens: '0', request_count: '2', success_count: '1', ttft_avg_ms: 12, ttft_samples: '1', latency_avg_ms: null, latency_samples: '0' }],
@@ -22,6 +23,9 @@ test('shows real submitted data across approved boards and periods', async ({ pa
   await expect(page.getByRole('heading', { name: '今日 · 综合总榜' })).toBeVisible()
   await expect(page.getByText('真实测试参与者')).toBeVisible()
   await expect(page.getByRole('row', { name: /真实测试参与者/ }).locator('.avatar img')).toHaveAttribute('src', '/avatars/images/001.webp')
+  const details = page.locator(`dl[aria-describedby="participant-${registered.client_id}"]`)
+  await expect(details.locator('dt')).toHaveText(['Token', '请求数', '实际成功率', '缓存复用率', '平均首字延迟', '平均总延迟'])
+  await expect(details.locator('dd')).toHaveText(['9,007,199,254,740,993', '2', '50.00%', '50.00%', '12.00 ms', '—'])
   await expect(page.getByRole('button', { name: '今日' })).toHaveAttribute('aria-pressed', 'true')
   await page.getByRole('button', { name: '用量榜' }).click()
   await expect(page.getByRole('heading', { name: '今日 · 用量榜' })).toBeVisible()
