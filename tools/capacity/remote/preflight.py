@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 """Read-only C54 host preflight; reads metadata, not business DBs or secrets."""
-from datetime import datetime
-from zoneinfo import ZoneInfo
 import hashlib
 import json
 import os
@@ -67,7 +65,7 @@ parent = root_path.parent
 while not parent.exists() and parent != parent.parent:
     parent = parent.parent
 result = {
-    'time': time.time(), 'business_day': datetime.now(ZoneInfo('Asia/Shanghai')).date().isoformat(),
+    'time': time.time(), 'utc_day': time.strftime('%Y-%m-%d', time.gmtime()),
     'utc_time': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
     'containers': containers, 'expected_containers': original, 'actual_containers': actual,
     'containers_match': actual == original, 'units': unit, 'port': port,

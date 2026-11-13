@@ -3,7 +3,6 @@ package test
 import (
 	"bufio"
 	"context"
-	"cpa-usage-ranking/internal/periods"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -25,7 +24,7 @@ import (
 func sustainedFixture(t *testing.T, clients int) (capacity.Fixture, []string) {
 	t.Helper()
 	_, names := sustainedCatalog(t)
-	return capacity.Fixture{Clients: clients, Day: periods.BusinessDay(time.Now()), HistoryDays: 90, Models: names[:8], Seed: strings.Repeat("ab", 32)}, names
+	return capacity.Fixture{Clients: clients, Day: time.Now().UTC().Format(time.DateOnly), HistoryDays: 90, Models: names[:8], Seed: strings.Repeat("ab", 32)}, names
 }
 
 func TestSustainedOpenInputCancelAndResume(t *testing.T) {

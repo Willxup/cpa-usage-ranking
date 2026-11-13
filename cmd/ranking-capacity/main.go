@@ -4,7 +4,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"cpa-usage-ranking/internal/periods"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -29,7 +28,7 @@ func run(ctx context.Context, args []string) error {
 	clients := flags.Int("clients", 10000, "synthetic client count")
 	history := flags.Int("history-days", 90, "synthetic settled history days")
 	backlog := flags.Int("backlog", 0, "clients whose newest historical day remains pending")
-	day := flags.String("day", periods.BusinessDay(time.Now()), "Shanghai business fixture day")
+	day := flags.String("day", time.Now().UTC().Format(time.DateOnly), "UTC fixture day")
 	modelSeed := flags.Uint64("model-seed", 1, "reproducible sustained synthetic content seed (not a credential)")
 	arrivalSeed := flags.Uint64("arrival-seed", 2, "reproducible independent arrival-clock seed")
 	journal := flags.String("journal", "", "private sustained JSONL journal")

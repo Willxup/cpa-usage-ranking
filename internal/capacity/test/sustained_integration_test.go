@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"compress/gzip"
 	"context"
-	"cpa-usage-ranking/internal/periods"
 	"database/sql"
 	"encoding/json"
 	"io"
@@ -50,7 +49,7 @@ func TestSustainedActualHTTPAndSQLiteConservation(t *testing.T) {
 func sustainedActualHTTPAndSQLiteConservation(t *testing.T, suffix string) {
 	ctx := context.Background()
 	catalogPath, names := sustainedCatalog(t)
-	day := periods.BusinessDay(time.Now())
+	day := time.Now().UTC().Format(time.DateOnly)
 	const stock = 20
 	var seed uint64
 	for candidate := uint64(1); candidate < 100; candidate++ {

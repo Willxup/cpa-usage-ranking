@@ -3,7 +3,6 @@ package capacity
 import (
 	"compress/gzip"
 	"context"
-	"cpa-usage-ranking/internal/periods"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -35,7 +34,7 @@ func TestSustainedSizingSample(t *testing.T) {
 	runtime.GC()
 	runtime.ReadMemStats(&m0)
 	began := time.Now()
-	model, err := NewSustainedModel(periods.BusinessDay(time.Now()), names, 10000, 8675309)
+	model, err := NewSustainedModel(time.Now().UTC().Format(time.DateOnly), names, 10000, 8675309)
 	if err != nil {
 		t.Fatal(err)
 	}

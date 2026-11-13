@@ -1,4 +1,3 @@
-import { formatBeijingTime } from '../formatTime'
 import { BrandMark } from './Brand'
 import { LeaderboardTable } from './LeaderboardTable'
 import { useLeaderboard } from '../hooks/useLeaderboard'
@@ -18,8 +17,8 @@ export function LeaderboardPanel({ board, period, selectionVersion = 0 }: { boar
     {!data && error && <div className="ranking-empty"><div className="empty-symbol"><BrandMark /></div><h2>暂时无法加载榜单</h2><p>请检查连接后重试。</p></div>}
     {data && <>
       <div className="board-heading">
-        <div><h2>{periods[data.period]} · {boards[data.board].label}{previous && <span className="previous-label">上次结果</span>}</h2><p>北京时间 {data.start} 至 {data.end}（不含结束日）</p></div>
-        <p>缓存生成于 {formatBeijingTime(data.generated_at)} 北京时间</p>
+        <div><h2>{periods[data.period]} · {boards[data.board].label}{previous && <span className="previous-label">上次结果</span>}</h2><p>UTC {data.start} 至 {data.end}（不含结束日）</p></div>
+        <p>缓存生成于 {data.generated_at.slice(0, 19).replace('T', ' ')} UTC</p>
       </div>
       {data.entries.length === 0 ? <div className="ranking-empty">
         <div className="empty-symbol" aria-hidden="true"><BrandMark /><span className="empty-symbol-dot" /></div>

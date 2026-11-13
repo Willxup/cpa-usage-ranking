@@ -30,7 +30,7 @@ export default function App() {
           <LeaderboardPanel board={board} period={period} selectionVersion={selection.version} />
         </section>
         <section id="foundation" className="foundation" aria-labelledby="foundation-heading">
-          <div className="foundation-copy"><span className="eyebrow">ABOUT THE RANKING</span><h2 id="foundation-heading">真实用量，清晰呈现。</h2><p>榜单来自已接纳的使用记录，按照北京时间周期汇总。<br />排行不代表受控性能认证，也不验证自报数据的真实性。</p></div>
+          <div className="foundation-copy"><span className="eyebrow">ABOUT THE RANKING</span><h2 id="foundation-heading">真实用量，清晰呈现。</h2><p>榜单来自已接纳的使用记录，按照 UTC 周期汇总。<br />排行不代表受控性能认证，也不验证自报数据的真实性。</p></div>
           <StatusPanel state={health.state} message={health.message} onCheck={health.check} />
         </section>
       </main>

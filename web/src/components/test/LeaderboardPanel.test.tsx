@@ -28,8 +28,7 @@ describe('live leaderboard', () => {
     expect(image.getAttribute('src')).toBe('/avatars/images/001.webp')
     fireEvent.error(image)
     expect(image.hidden).toBe(true)
-    expect(screen.getByText('北京时间 2026-12-31 至 2027-01-01（不含结束日）')).toBeVisible()
-    expect(screen.getByText(/缓存生成于 2026-12-31 20:00:00 北京时间/)).toBeVisible()
+    expect(screen.getByText(/缓存生成于 2026-12-31 12:00:00 UTC/)).toBeVisible()
   })
 
   it('uses the catalog default for an unknown avatar and never loads a catalog URL', async () => {

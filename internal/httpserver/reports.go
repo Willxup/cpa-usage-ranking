@@ -19,7 +19,7 @@ func MountReports(router *gin.Engine, authenticator *auth.Authenticator, admissi
 	if authenticator == nil || admission == nil || writer == nil || maxBodyBytes <= 0 {
 		return fmt.Errorf("invalid report HTTP configuration")
 	}
-	router.PUT("/v1/reports/:business_day", ClientAuthentication(authenticator), func(c *gin.Context) {
+	router.PUT("/v1/reports/:utc_day", ClientAuthentication(authenticator), func(c *gin.Context) {
 		client, ok := AuthenticatedClient(c)
 		if !ok {
 			writeError(c, http.StatusInternalServerError, "internal_error", "Internal server error")
@@ -65,7 +65,7 @@ func MountReports(router *gin.Engine, authenticator *auth.Authenticator, admissi
 			writeError(c, http.StatusUnprocessableEntity, "invalid_report", "Invalid report")
 			return
 		}
-		result, err := writer.Enqueue(c.Request.Context(), client.ID, c.Param("business_day"), prepared)
+		result, err := writer.Enqueue(c.Request.Context(), client.ID, c.Param("utc_day"), prepared)
 		if err != nil {
 			if errors.Is(err, reports.ErrQueueFull) || errors.Is(err, reports.ErrWriterClosed) {
 				c.Header("Retry-After", "1")
@@ -96,7 +96,7 @@ func writeReportResult(c *gin.Context, result reports.WriteResult) {
 	case errors.As(result.Err, &conflict):
 		c.AbortWithStatusJSON(http.StatusConflict, gin.H{"error": gin.H{"code": "revision_conflict", "message": "Report revision conflicts with the current snapshot"}, "revision": strconv.FormatInt(conflict.Current, 10)})
 	case errors.Is(result.Err, reports.ErrInvalidDay), errors.Is(result.Err, reports.ErrFutureDay):
-		writeError(c, http.StatusUnprocessableEntity, "invalid_day", "Invalid or future Shanghai business day")
+		writeError(c, http.StatusUnprocessableEntity, "invalid_day", "Invalid or future UTC day")
 	case errors.Is(result.Err, reports.ErrExpiredDay):
 		writeError(c, http.StatusGone, "expired_day", "Report window has closed")
 	case errors.Is(result.Err, reports.ErrInvalid):

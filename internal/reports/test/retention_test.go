@@ -21,7 +21,7 @@ func periodFixture(t *testing.T, db *storage.DB, kind, day string, id, model, ti
 	}
 }
 
-func TestRetentionShanghaiInclusiveBoundariesAndSourceProtection(t *testing.T) {
+func TestRetentionUTCInclusiveBoundariesAndSourceProtection(t *testing.T) {
 	db := reportDB(t)
 	id := seedClosedReports(t, db, 1)[0]
 	ctx := context.Background()
@@ -34,7 +34,7 @@ func TestRetentionShanghaiInclusiveBoundariesAndSourceProtection(t *testing.T) {
 	}
 	periodFixture(t, db, periods.Month, "2026-01-01", id, 0, 0)
 	periodFixture(t, db, periods.All, periods.AllStart, id, 0, 0)
-	now := instant("2026-11-15T15:59:59Z")
+	now := instant("2026-11-15T23:59:59Z")
 	for _, kind := range []string{periods.Day, periods.Week} {
 		n, err := reports.Prune(ctx, db.Writer, now, 31, kind, 1)
 		if err != nil || n != 1 {
@@ -64,8 +64,8 @@ func TestRetentionShanghaiInclusiveBoundariesAndSourceProtection(t *testing.T) {
 	if scalar(t, db.Reader, `SELECT count(*) FROM period_stats WHERE kind IN ('month','all')`) != 2 || scalar(t, db.Reader, `SELECT count(*) FROM daily_reports`) != 1 || scalar(t, db.Reader, `SELECT count(*) FROM daily_stats`) != 2 {
 		t.Fatal("retention deleted long term or unsettled data")
 	}
-	// UTC 仍是周日，但已到上海周一：应保留 11-09 和 11-16 两周。
-	later, err := time.Parse(time.RFC3339, "2026-11-15T16:00:00Z")
+	// 本地仍是周日，但已到 UTC 周一：应保留 11-09 和 11-16 两周。
+	later, err := time.Parse(time.RFC3339, "2026-11-15T16:00:00-08:00")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,13 +73,13 @@ func TestRetentionShanghaiInclusiveBoundariesAndSourceProtection(t *testing.T) {
 		t.Fatal(err)
 	}
 	if scalar(t, db.Reader, `SELECT count(*) FROM period_stats WHERE kind='week' AND start_day='2026-11-02'`) != 0 || scalar(t, db.Reader, `SELECT count(*) FROM period_stats WHERE kind='week' AND start_day='2026-11-09'`) != 2 {
-		t.Fatal("Shanghai monday boundary wrong")
+		t.Fatal("UTC monday boundary wrong")
 	}
 	if _, err := reports.Prune(ctx, db.Writer, later, 31, periods.Day, 20); err != nil {
 		t.Fatal(err)
 	}
 	if scalar(t, db.Reader, `SELECT count(*) FROM period_stats WHERE kind='day' AND start_day='2026-10-16'`) != 0 {
-		t.Fatal("Shanghai daily cutoff wrong")
+		t.Fatal("UTC daily cutoff wrong")
 	}
 	if _, err := reports.Prune(ctx, db.Writer, now, 31, periods.Month, 20); err == nil {
 		t.Fatal("monthly cleanup accepted")
@@ -96,7 +96,7 @@ func TestRetentionYearBoundaryAndConfigurableDays(t *testing.T) {
 		periodFixture(t, db, periods.Week, day, id, 0, 0)
 	}
 	ctx := context.Background()
-	now := instant("2027-01-03T16:00:00Z")
+	now := instant("2027-01-04T00:00:00Z")
 	if _, err := reports.Prune(ctx, db.Writer, now, 5, periods.Day, 20); err != nil {
 		t.Fatal(err)
 	}

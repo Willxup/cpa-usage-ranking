@@ -4,7 +4,7 @@
 
 An independent usage-ranking service under construction. Protected client
 registration, daily snapshot ingestion, background settlement and SQLite persistence
-are available. Five real leaderboards are built in a unified cache for six fixed Asia/Shanghai business periods; see [leaderboard calculations](docs/leaderboards.md). No website account UI is provided. The
+are available. Five real leaderboards are built in a unified cache for six fixed UTC periods; see [leaderboard calculations](docs/leaderboards.md). No website account UI is provided. The
 [model catalog](docs/model-catalog.md) is validated at startup and maps exact
 names and aliases to stable IDs; there is no model management API. Reference
 prices are not independently verified live quotes and may be outdated.
@@ -84,7 +84,7 @@ See the API document for requests, status codes, proxy trust and all deployment
 parameters. Internal [authentication middleware](docs/client-credentials.md#internal-identity-enforcement)
 selects identity only by credential; no demonstration `/me` API is added.
 
-`PUT /v1/reports/{business_day}` accepts an authenticated full snapshot for Asia/Shanghai
+`PUT /v1/reports/{utc_day}` accepts an authenticated full snapshot for UTC
 today or yesterday. Revisions, catalog-independent idempotency, persistent
 window closure, limits and atomic replacement are described in the
 [daily report API](docs/report-snapshots.md). Closed snapshots are finalized in
@@ -216,7 +216,7 @@ stop the process, replace the build, then restart.
   later refreshes retain the last complete snapshot; no expiry SLA is imposed.
 - `POST /v1/clients/register`: protected creation/safe retry; see the
   [registration API](docs/registration-api.md).
-- `PUT /v1/reports/{business_day}`: protected full daily snapshot; see the
+- `PUT /v1/reports/{utc_day}`: protected full daily snapshot; see the
   [daily report API](docs/report-snapshots.md).
 - `GET /v1/leaderboards/{board}/{period}`: fixed public cache views; see the [leaderboard API and scoring](docs/leaderboards.md).
 - `GET`/`HEAD /avatars/catalog.json` and listed `/avatars/images/*` resources.

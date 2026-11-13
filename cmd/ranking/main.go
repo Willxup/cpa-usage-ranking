@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"cpa-usage-ranking/internal/periods"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -166,13 +165,13 @@ func run(logger *slog.Logger) (err error) {
 	return httpserver.Serve(ctx, listener, router, cfg.ShutdownTimeout)
 }
 
-// Observe Shanghai midnight even without incoming reports. A one-minute maximum wait
+// Observe midnight even without incoming reports. A one-minute maximum wait
 // also notices forward clock corrections; every report independently advances
 // and rechecks the durable watermark before it can commit.
 func watchReportWindow(ctx context.Context, writer *sql.DB, logger *slog.Logger) {
 	for {
-		now := time.Now()
-		next := periods.NextMidnight(now)
+		now := time.Now().UTC()
+		next := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, time.UTC)
 		delay := next.Sub(now)
 		if delay > time.Minute {
 			delay = time.Minute

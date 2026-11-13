@@ -35,7 +35,7 @@ export default defineConfig({
     cwd: fileURLToPath(new URL('../..', import.meta.url)),
     env: {
       RANKING_HTTP_ADDR: `127.0.0.1:${port}`,
-      RANKING_WEB_DIR: resolve(process.env.RANKING_TEST_WEB_DIR ?? fileURLToPath(new URL('../dist', import.meta.url))),
+      RANKING_WEB_DIR: fileURLToPath(new URL('../dist', import.meta.url)),
       RANKING_MODELS_PATH: fileURLToPath(new URL('../../config/models.json', import.meta.url)),
       RANKING_SHUTDOWN_TIMEOUT: '5s',
       RANKING_CACHE_REFRESH_INTERVAL: '200ms',

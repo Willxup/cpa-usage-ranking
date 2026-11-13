@@ -6,7 +6,7 @@ import (
 	"cpa-usage-ranking/internal/periods"
 )
 
-func TestCalendarBoundaries(t *testing.T) {
+func TestUTCBoundaries(t *testing.T) {
 	for _, tc := range []struct{ day, ws, we, ms, me string }{
 		{"2026-10-31", "2026-10-26", "2026-11-02", "2026-10-01", "2026-11-01"},
 		{"2026-11-01", "2026-10-26", "2026-11-02", "2026-11-01", "2026-12-01"},

@@ -3,7 +3,6 @@ import json
 import os
 import tempfile
 import time
-from business_day import business_day
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -21,7 +20,7 @@ class FakeCommands:
     def __init__(self, remote):
         self.remote = remote
         self.ssh_base = ['mock-independent-ssh']
-        self.stage_day = business_day()
+        self.stage_day = time.strftime('%Y-%m-%d', time.gmtime())
         self.calls = []
 
     def ssh(self, argv, **kwargs):
@@ -42,18 +41,11 @@ class RemotePreflightTest(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(dir=os.environ['TMPDIR'])
         self.root = Path(self.temp.name)
         self.root.chmod(0o700)
-        # Keep mocked remote tests in the caller's isolated TMPDIR, not the historical task root.
-        original_relative_to = Path.is_relative_to
-        historical_root = Path('/root/.cache/agent-cache/cpa-usage-ranking/stage-i-c54/sustained-20261113-r1')
-        patcher = mock.patch.object(Path, 'is_relative_to', lambda path, other:
-                                    True if path == self.root and other == historical_root else original_relative_to(path, other))
-        patcher.start()
-        self.addCleanup(patcher.stop)
         binary, catalog = self.root/'binary', self.root/'models'
         binary.write_bytes(b'test binary')
         catalog.write_bytes(b'test catalog')
         fixture, seed = self.root/'fixture.json', self.root/'seed.sqlite'
-        self.day = business_day()
+        self.day = time.strftime('%Y-%m-%d', time.gmtime())
         fixture.write_text(json.dumps({'day': self.day, 'clients': 10000, 'history_days': 90,
                                        'backlog': 10000, 'seed': 'private-test-only'}))
         seed.write_bytes(b'seed placeholder')
@@ -75,7 +67,7 @@ class RemotePreflightTest(unittest.TestCase):
         (self.root/'seed-manifest.json').write_text(json.dumps(manifest))
         units = {u: {'stdout': 'inactive\n'} for u in (self.config['service'], self.config['watch'],
                                                        'ranking-c54.service', 'ranking-c54-watch.service')}
-        self.remote = {'business_day': self.day, 'containers_match': True, 'containers': {'returncode': 0},
+        self.remote = {'utc_day': self.day, 'containers_match': True, 'containers': {'returncode': 0},
                        'actual_containers': containers,
                        'expected_containers': containers,
                        'original_marker': False, 'task_marker': False, 'port': {'returncode': 0, 'stdout': ''},
@@ -116,18 +108,13 @@ class RemotePreflightTest(unittest.TestCase):
         with self.assertRaisesRegex(RemoteError, 'journal'):
             RemoteAdapter(self.config, self.fake).preflight({'status': 'transition_ready', 'transition_evidence': {}})
 
-    def test_legacy_utc_state_rejected_before_remote_or_fixture_work(self):
-        with self.assertRaisesRegex(RemoteError, 'legacy UTC-day state'):
-            RemoteAdapter(self.config, self.fake).preflight({'status': 'new', 'preflight': {'utc_day': self.day}})
-        self.assertEqual(self.fake.calls, [])
-
-    def test_business_day_rollover_stops_before_stage(self):
+    def test_utc_rollover_stops_before_stage(self):
         adapter = RemoteAdapter(self.config, self.fake)
         adapter.preflight({'status': 'new'})
         self.fake.stage_day = '1900-01-01'
         result = adapter.preflight_stage(100, 'search', {'status': 'new'})
         self.assertFalse(result['ok'])
-        self.assertIn('business_day_changed', result['issues'])
+        self.assertIn('utc_day_changed', result['issues'])
 
     def test_stage_forecast_credits_only_the_owned_active_driver(self):
         adapter = RemoteAdapter(self.config, self.fake)

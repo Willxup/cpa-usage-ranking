@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"container/heap"
 	"context"
-	"cpa-usage-ranking/internal/periods"
 	"errors"
 	"fmt"
 	"io"
@@ -247,8 +246,8 @@ func RunSustained(ctx context.Context, f Fixture, o SustainedOptions, commands <
 					return errors.New("invalid stage")
 				}
 			}
-			if periods.BusinessDay(time.Now()) != f.Day {
-				return errors.New("Shanghai business day changed; report window must not be fabricated")
+			if time.Now().UTC().Format(time.DateOnly) != f.Day {
+				return errors.New("UTC day changed; report window must not be fabricated")
 			}
 			if state.rate > 0 {
 				if e := arrivalsThrough(now); e != nil {
@@ -294,8 +293,8 @@ func RunSustained(ctx context.Context, f Fixture, o SustainedOptions, commands <
 		if journal.bytes >= o.MaxJournalBytes {
 			return errors.New("generator journal size limit reached")
 		}
-		if periods.BusinessDay(time.Now()) != f.Day {
-			return errors.New("Shanghai business day changed")
+		if time.Now().UTC().Format(time.DateOnly) != f.Day {
+			return errors.New("UTC day changed")
 		}
 		task, e := state.model.Next()
 		if e != nil {

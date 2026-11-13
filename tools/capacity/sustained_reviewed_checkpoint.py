@@ -9,7 +9,6 @@ import hashlib
 import json
 import os
 import time
-from business_day import business_day
 from pathlib import Path
 
 from sustained_state import BudgetError
@@ -82,8 +81,6 @@ class ReviewedCheckpoint:
                 raise BudgetError('another controller, generator, watchdog, session or task tunnel exists: '+proc.name)
 
     def migrate(self, state, raw, new_config_hash, clock, boot):
-        if 'utc_day' in (state.get('preflight') or {}):
-            raise BudgetError('legacy UTC-day state cannot be reused; rebuild Shanghai fixtures')
         if self.kind == 'retry':
             return self._migrate_retry(state, raw, new_config_hash, clock, boot)
         if self.kind in ('confirmation', 'pending'):
@@ -154,8 +151,8 @@ class ReviewedCheckpoint:
                 state.get('plan') != {'current': 800, 'lower': 400, 'upper': 0, 'uncertain_repeats': 0, 'done': False} or
                 state.get('stage_index') != 3):
             raise BudgetError('reviewed active budget or old search plan does not match')
-        if business_day() != state.get('preflight', {}).get('business_day'):
-            raise BudgetError('Shanghai business day changed; original fixture cannot be fabricated')
+        if time.strftime('%Y-%m-%d', time.gmtime()) != state.get('preflight', {}).get('utc_day'):
+            raise BudgetError('UTC day changed; original fixture cannot be fabricated')
         self._check_prior_processes()
         records = [json.loads(line) for line in (TASK/'commands.jsonl').read_text().splitlines()]
         abort = [r for r in records if r.get('event') == 'abort_verification']
@@ -300,8 +297,8 @@ class ReviewedCheckpoint:
                 state.get('plan') != {'current': 500, 'lower': 400, 'upper': 600, 'uncertain_repeats': 0, 'done': False} or
                 state.get('stage_index') != 5):
             raise BudgetError('reviewed retry active budget or plan mismatch')
-        if business_day() != state.get('preflight', {}).get('business_day'):
-            raise BudgetError('Shanghai business day changed; original fixture cannot be fabricated')
+        if time.strftime('%Y-%m-%d', time.gmtime()) != state.get('preflight', {}).get('utc_day'):
+            raise BudgetError('UTC day changed; original fixture cannot be fabricated')
         self._check_prior_processes()
         listener = state['preflight']['remote']['listener']
         if listener != {'comm': 'sshd', 'pid': 881, 'start_ticks': 686, 'nofile': [1024, 524288]}:
@@ -460,8 +457,8 @@ class ReviewedCheckpoint:
         if (len(history) < 2 or history[-2].get('event') != 'end' or history[-2].get('phase') != 'search' or
                 history[-2].get('search_ns') != 1095787699798 or history[-1].get('event') != 'failure'):
             raise BudgetError('confirmation transition budget history incomplete')
-        if business_day() != state.get('preflight', {}).get('business_day'):
-            raise BudgetError('Shanghai business day changed; original fixture cannot be fabricated')
+        if time.strftime('%Y-%m-%d', time.gmtime()) != state.get('preflight', {}).get('utc_day'):
+            raise BudgetError('UTC day changed; original fixture cannot be fabricated')
         events = [json.loads(line) for line in (adapter_dir/'controller-events.jsonl').read_text().splitlines()]
         assessments = [x for x in events if x.get('event') == 'assessment' and x.get('phase') == 'search']
         transitions = [x for x in events if x.get('event') == 'planned_transition']

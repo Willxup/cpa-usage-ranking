@@ -26,20 +26,12 @@ Both output files must not already exist; a failed seed may leave partial files.
 The manifest contains a random seed that derives **synthetic bearer secrets**:
 keep it private, do not log it or commit it, and do not reuse it with real
 identities. Fixture and SQLite files are created mode 0600, subject to umask.
-`--day` defaults to the current Asia/Shanghai business date; a running service accepts only its
+`--day` defaults to the current UTC date; a running service accepts only its
 current reporting window. The fixture prepopulates identities, today/yesterday
 snapshots and synthetic historical period aggregates; historical prefill is
 not evidence of actual settlement. `--backlog` retains the newest closed day
 as pending source data for that many identities so the real service can
 finalize it. Eight catalog models and default tiers are used.
-
-The Python orchestration tools use the same fixed business day and record it
-as `business_day`. Prior experimental states containing `preflight.utc_day`
-are rejected, not converted or resumed. Rebuild synthetic fixtures for the new
-contract; do not relabel old UTC daily totals. Keep `business_day.py` alongside
-the orchestration modules when copying the tools (it is included in runtime
-hash verification). Python date calculation requires IANA `Asia/Shanghai`
-zone data; the Go service embeds its timezone data for minimal images.
 
 Start a separate test service against a **copy** of the closed seed database,
 with its own data directory, origin and resource controls. After readiness and
@@ -245,7 +237,7 @@ snapshots are not accumulated per task. Replay and verification still retain
 active identities, per-day state, outstanding tasks and each identity/day's
 latest confirmed snapshot, so their memory grows with those quantities and is
 not bounded by a constant independent of workload.
-Shanghai midnight rollover stops the driver instead of inventing a reporting window. Resource,
+UTC rollover stops the driver instead of inventing a reporting window. Resource,
 SSH, cache, settlement and host safety observations require separate tooling.
 
 After stopping the isolated service, obtain a consistent final SQLite snapshot

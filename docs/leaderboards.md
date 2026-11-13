@@ -6,9 +6,9 @@
 {"board":"usage","period":"today","start":"2026-12-31","end":"2027-01-01","generated_at":"2026-12-31T12:00:00Z","entries":[{"rank":1,"client_id":"42","display_name":"Example","avatar_id":"1","metric":"9007199254740993"}]}
 ```
 
-`start` is inclusive and `end` exclusive, as Asia/Shanghai business dates; `all` uses internal start `0001-01-01` and `end: null`. `generated_at` is the UTC start of the published build round, not a client's last report. For all boards, `client_id`, `avatar_id` and `metric` are decimal strings to preserve precision. The metric is overall points, total tokens, cache reuse percentage, conservative success **score in points**, or mean TTFT milliseconds respectively. Except for integer tokens, metrics have two decimal places. `rank` is a JSON integer. Names are plain text; avatar IDs reference the [avatar catalog](avatar-catalog.md). The API preserves the complete integer; compact UI units do not alter its value or ranking.
+`start` is inclusive and `end` exclusive, as UTC dates; `all` uses internal start `0001-01-01` and `end: null`. `generated_at` is the UTC start of the published build round, not a client's last report. For all boards, `client_id`, `avatar_id` and `metric` are decimal strings to preserve precision. The metric is overall points, total tokens, cache reuse percentage, conservative success **score in points**, or mean TTFT milliseconds respectively. Except for integer tokens, metrics have two decimal places. `rank` is a JSON integer. Names are plain text; avatar IDs reference the [avatar catalog](avatar-catalog.md). The API preserves the complete integer; compact UI units do not alter its value or ranking.
 
-The web page offers all five boards for `today`, `yesterday`, `week` and `month`, defaulting to `overall/today`; it has no year/all, model filter, pagination or personal view. It displays only the public rows and actual Beijing-time period and generation time (converted explicitly with `Asia/Shanghai`, independent of browser timezone). Loading, empty and failure states are distinct; retry does not invent data. Malformed JSON and transport failures show generic localized messages rather than raw parser or network diagnostics. When a selection or retry is pending or fails, any retained result keeps its own board/period/time label. Avatar paths come only from the served catalog, with its default and a neutral fallback on image failure.
+The web page offers all five boards for `today`, `yesterday`, `week` and `month`, defaulting to `overall/today`; it has no year/all, model filter, pagination or personal view. It displays only the public rows and actual UTC period and generation time. Loading, empty and failure states are distinct; retry does not invent data. Malformed JSON and transport failures show generic localized messages rather than raw parser or network diagnostics. When a selection or retry is pending or fails, any retained result keeps its own board/period/time label. Avatar paths come only from the served catalog, with its default and a neutral fallback on image failure.
 
 A successful empty view returns `200` with `entries: []`. Before the first complete round, the response is `503` with `{"error":{"code":"leaderboard_unavailable","message":"Leaderboard cache is not ready"}}`. Invalid board, period or query parameters return `400` with `invalid_parameter`; unknown paths and methods retain JSON `404`/`405`. Later build failures retain the prior complete result and its original period/time; there is no cache-expiry SLA. No success counts, measurement counts, other token breakdowns, score contributions, coverage, credentials, hashes or IP addresses are returned. `/readyz` independently checks database and catalogs as well as cache initialization.
 
@@ -44,11 +44,11 @@ Formatting is presentation only: the API, score calculation and sorting remain u
 The cache builds five views from all eligible clients: overall, token usage,
 cache reuse, conservative success score, and measured mean time to first token
 (TTFT). Eligibility requires an enabled client and at least one accepted
-execution in the selected Shanghai business period. There is no minimum sample count or success
+execution in the selected UTC period. There is no minimum sample count or success
 rate. Only all-model totals are used; totals and model details are not added.
 
 The six fixed periods are today, yesterday, current Monday-start week, current
-month, current calendar year, and all time, all using `Asia/Shanghai` business dates. Period ends are exclusive. Yearly
+month, current calendar year, and all time. Period ends are exclusive. Yearly
 raw totals combine finalized monthly sums and all unsettled daily sums of that
 calendar year in one SQLite read snapshot; there is no year table. Cumulative
 statistics remain persisted and maintained. Profiles, disabled state and raw
