@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-独立的通用用量排名服务。目前已具备受保护注册、日累计快照上报、后台日结、静态头像及 SQLite 存储。启动时校验[模型目录](docs/model-catalog.md)，将精确名称及别名映射至稳定 ID；参考价格并非独立核实的实时报价，可能过时。统一缓存针对六个固定 UTC 周期构建五个真实榜单，详见[榜单计算说明](docs/leaderboards.md)；没有网站账号 UI。
+独立的通用用量排名服务。目前已具备受保护注册、日累计快照上报、后台日结、静态头像及 SQLite 存储。启动时校验[模型目录](docs/model-catalog.md)，将精确名称及别名映射至稳定 ID；参考价格并非独立核实的实时报价，可能过时。统一缓存针对六个固定 Asia/Shanghai 业务周期构建五个真实榜单，详见[榜单计算说明](docs/leaderboards.md)；没有网站账号 UI。
 
 ## Docker 部署
 
@@ -41,7 +41,7 @@ go test ./internal/httpserver/test -run '^TestCompleteIngestionLifecycle$'
 [凭据解析与摘要](docs/client-credentials.md)接受客户端预先保存的 32 字节 CSPRNG 秘密，使用规范无填充 base64url Bearer 编码；服务端仅存 SHA-256 摘要，不签发秘密。
 `POST /v1/clients/register` 已接通[受保护注册 API](docs/registration-api.md)：新建返回 201，相同秘密重试返回 200 及当前资料、不覆盖。客户端首次尝试前先生成并保存 32 字节 CSPRNG 秘密，通过 HTTPS Bearer 携带。来源/全局请求限流包含失败和重试；成功新建另受滚动配额（默认 3/小时、10/24 小时）保护。有界内存状态仅属于单机进程、重启清零。`RANKING_REGISTRATION_ENABLED=false` 重启后仅关闭新建，保留已有身份重试和鉴权；不是全站停机。请求、响应、状态码、代理信任与全部部署参数见 API 文档。内部[鉴权中间件](docs/client-credentials.md#internal-identity-enforcement)仅凭秘密选择身份，不增加演示 `/me` API。
 
-`PUT /v1/reports/{utc_day}` 接收该凭据所属客户端的 UTC 今天或昨天完整快照。版本、目录无关的幂等重试、持久封窗、限流及原子替换见[日快照上报 API](docs/report-snapshots.md)。后台有界日结，并清理过期日摘要和周统计，不删除未结快照。内部候选读取在同一 SQLite 快照中合并已结和待结用量；日结后不保留逐模型日历史，见[存储说明](docs/storage.md)。
+`PUT /v1/reports/{business_day}` 接收该凭据所属客户端的 北京时间今天或昨天完整快照。版本、目录无关的幂等重试、持久封窗、限流及原子替换见[日快照上报 API](docs/report-snapshots.md)。后台有界日结，并清理过期日摘要和周统计，不删除未结快照。内部候选读取在同一 SQLite 快照中合并已结和待结用量；日结后不保留逐模型日历史，见[存储说明](docs/storage.md)。
 
 ## 前端开发
 
@@ -109,7 +109,7 @@ Go 同域提供构建后的页面和 API。以上为源码开发示例；部署�
 - `GET /healthz`：200 与 `{"status":"ok"}` 仅表示进程存活。
 - `GET /readyz`：仅在数据库和目录已初始化且首轮真实缓存完整成功后返回 200；此前即使 `/healthz` 健康也返回 503。后续刷新失败保留上轮完整缓存，不额外规定缓存过期 SLA。
 - `POST /v1/clients/register`：受保护创建/安全重试，见[注册 API](docs/registration-api.md)。
-- `PUT /v1/reports/{utc_day}`：受保护的完整日快照，见[上报 API](docs/report-snapshots.md)。
+- `PUT /v1/reports/{business_day}`：受保护的完整日快照，见[上报 API](docs/report-snapshots.md)。
 - `GET /v1/leaderboards/{board}/{period}`：固定公开缓存榜单，见[接口与评分说明](docs/leaderboards.md)。
 - `GET`/`HEAD /avatars/catalog.json` 及目录列出的 `/avatars/images/*` 图片。
 - 未知路由和不支持的方法返回 JSON 错误（404/405）。

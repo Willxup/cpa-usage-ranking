@@ -198,3 +198,38 @@ func TestSettlementOverflowPreservesSource(t *testing.T) {
 		})
 	}
 }
+
+func TestShanghaiMidnightClosesSnapshotAfterRevisionAndRetry(t *testing.T) {
+	db := reportDB(t)
+	registry := reportRegistry(t, db, `{"model_name":"alpha","alias":[],"prices":{}}`)
+	client := createReportClient(t, db)
+	ctx := context.Background()
+	now := instant("2026-12-31T15:59:59Z")
+	store := reports.NewStore(db.Writer, registry, func() time.Time { return now })
+	day := "2026-12-30"
+	for _, rev := range []int64{1, 2, 2} {
+		if _, err := store.Apply(ctx, client, day, prepared(t, rev, usage("alpha", 0, rev*10, 1, 1))); err != nil {
+			t.Fatal(err)
+		}
+	}
+	received := scalar(t, db.Reader, `SELECT received_at_ms FROM daily_reports WHERE day=?`, day)
+	if received != now.UnixMilli() {
+		t.Fatal("received_at not the original instant", received)
+	}
+	if ok, err := reports.Finalize(ctx, db.Writer, day, client); err != nil || ok {
+		t.Fatalf("open day finalized: %v %v", ok, err)
+	}
+	now = instant("2026-12-31T16:00:00Z")
+	if _, err := store.Apply(ctx, client, day, prepared(t, 2, usage("alpha", 0, 20, 1, 1))); !errors.Is(err, reports.ErrExpiredDay) {
+		t.Fatalf("closed retry: %v", err)
+	}
+	if ok, err := reports.Finalize(ctx, db.Writer, day, client); err != nil || !ok {
+		t.Fatalf("closed day not finalized: %v %v", ok, err)
+	}
+	if scalar(t, db.Reader, `SELECT total_tokens FROM period_stats WHERE kind='all' AND model_id=0 AND client_id=?`, client) != 20 {
+		t.Fatal("revisions or retry double-counted")
+	}
+	if ok, err := reports.Finalize(ctx, db.Writer, day, client); err != nil || ok {
+		t.Fatalf("settled twice: %v %v", ok, err)
+	}
+}

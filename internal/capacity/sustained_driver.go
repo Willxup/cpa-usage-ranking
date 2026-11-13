@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"compress/gzip"
 	"container/heap"
+	"cpa-usage-ranking/internal/periods"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -395,8 +396,8 @@ func validateSustainedOptions(f Fixture, o SustainedOptions) error {
 	if o.Journal == "" || o.MaxPending < 1 || o.MaxPending > 1000000 || o.MaxInFlight < 1 || o.MaxInFlight > 20000 || o.MaxAttempts < 1 || o.MaxAttempts > 512 || o.MaxJournalBytes < 1<<20 || o.RequestTimeout < 10*time.Millisecond || o.RequestTimeout > 2*time.Minute || o.MaxArrivalLag < 10*time.Millisecond || o.MaxArrivalLag > time.Minute || o.MaxActive <= 0 || o.MaxActive > time.Hour {
 		return errors.New("invalid sustained local safety bounds")
 	}
-	if time.Now().UTC().Format(time.DateOnly) != f.Day {
-		return errors.New("fixture day is not the current UTC day")
+	if periods.BusinessDay(time.Now()) != f.Day {
+		return errors.New("fixture day is not the current Shanghai business day")
 	}
 	return nil
 }

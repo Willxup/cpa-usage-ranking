@@ -156,6 +156,24 @@ func TestReportHTTPIdentityRevisionsWindowsAndRegistrationSwitch(t *testing.T) {
 	}
 }
 
+func TestReportHTTPShanghaiYearBoundary(t *testing.T) {
+	f := reportSetup(t, defaultRegistrationSettings(), generousReportLimits(), nil)
+	secret := testSecret(1)
+	f.seed(t, secret)
+	f.clock.Store(time.Date(2026, 12, 31, 15, 59, 59, 0, time.UTC).UnixNano())
+	expectRevision(t, f.report(t, "2026-12-30", secret, reportJSON, nil), 200, "1")
+	expectRevision(t, f.report(t, "2026-12-31", secret, reportJSON, nil), 200, "1")
+	future := f.report(t, "2027-01-01", secret, reportJSON, nil)
+	requireHTTPError(t, future, 422, "invalid_day")
+	if !strings.Contains(string(future.body), "Shanghai business day") {
+		t.Fatalf("incorrect date contract: %s", future.body)
+	}
+	f.clock.Store(time.Date(2026, 12, 31, 16, 0, 0, 0, time.UTC).UnixNano())
+	requireHTTPError(t, f.report(t, "2026-12-30", secret, reportJSON, nil), 410, "expired_day")
+	expectRevision(t, f.report(t, "2026-12-31", secret, reportJSON, nil), 200, "1")
+	expectRevision(t, f.report(t, "2027-01-01", secret, reportJSON, nil), 200, "1")
+}
+
 func TestReportHTTPBadInputLimitsAndIndependentHealth(t *testing.T) {
 	limits := generousReportLimits()
 	limits.ClientBurst = 20

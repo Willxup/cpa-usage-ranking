@@ -2,15 +2,16 @@ package reports
 
 import (
 	"context"
+	"cpa-usage-ranking/internal/periods"
 	"database/sql"
 	"errors"
 	"time"
 )
 
 var (
-	ErrInvalidDay = errors.New("invalid UTC day")
-	ErrFutureDay  = errors.New("future UTC day")
-	ErrExpiredDay = errors.New("expired UTC day")
+	ErrInvalidDay = errors.New("invalid business day")
+	ErrFutureDay  = errors.New("future business day")
+	ErrExpiredDay = errors.New("expired business day")
 	// ErrWindowAdvance means the caller must roll back, persist the watermark
 	// separately, then recheck in a new transaction.
 	ErrWindowAdvance = errors.New("report window watermark needs advancement")
@@ -26,9 +27,8 @@ func parseDay(day string) (time.Time, error) {
 	return parsed, nil
 }
 
-func utcWindow(now time.Time) (today, yesterday string, err error) {
-	n := now.UTC()
-	start := time.Date(n.Year(), n.Month(), n.Day(), 0, 0, 0, 0, time.UTC)
+func businessWindow(now time.Time) (today, yesterday string, err error) {
+	start := periods.StartOfDay(now)
 	today, yesterday = start.Format(dayLayout), start.AddDate(0, 0, -1).Format(dayLayout)
 	if len(today) != 10 || len(yesterday) != 10 {
 		return "", "", ErrInvalidDay
@@ -36,7 +36,7 @@ func utcWindow(now time.Time) (today, yesterday string, err error) {
 	return today, yesterday, nil
 }
 
-// AdvanceWindow commits the observed UTC boundary independently of a report
+// AdvanceWindow commits the observed Shanghai business-day boundary independently of a report
 // transaction. It must run at startup and before admission to a report write;
 // unsuccessful reports must not roll the boundary back.
 func AdvanceWindow(ctx context.Context, writer *sql.DB, now time.Time) error {
@@ -50,7 +50,7 @@ func AdvanceWindow(ctx context.Context, writer *sql.DB, now time.Time) error {
 }
 
 func advanceWindow(ctx context.Context, now time.Time, exec func(context.Context, string, ...any) (sql.Result, error)) error {
-	_, yesterday, err := utcWindow(now)
+	_, yesterday, err := businessWindow(now)
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func advanceWindow(ctx context.Context, now time.Time, exec func(context.Context
 // CheckWindow uses the write transaction's own connection, and must precede
 // every revision decision. A midnight crossing may require a separate advance.
 func CheckWindow(ctx context.Context, tx *sql.Tx, day string, now time.Time) error {
-	today, yesterday, err := utcWindow(now)
+	today, yesterday, err := businessWindow(now)
 	if err != nil {
 		return err
 	}

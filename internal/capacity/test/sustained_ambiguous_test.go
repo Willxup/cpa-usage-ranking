@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"cpa-usage-ranking/internal/periods"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -19,7 +20,7 @@ import (
 func TestSustainedVerifierRecognizesAmbiguousCommit(t *testing.T) {
 	ctx := context.Background()
 	catalogPath, names := sustainedCatalog(t)
-	day := time.Now().UTC().Format(time.DateOnly)
+	day := periods.BusinessDay(time.Now())
 	var seed uint64
 	for candidate := uint64(1); candidate < 100; candidate++ {
 		m, e := capacity.NewSustainedModel(day, names, 1, candidate)

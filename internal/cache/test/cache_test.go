@@ -292,7 +292,7 @@ func TestRealBoardsPublishFixedPeriodsAcrossMidnight(t *testing.T) {
 	day.Store(1)
 	opts := cache.DefaultOptions()
 	opts.Interval = 40 * time.Millisecond
-	opts.Now = func() time.Time { return time.Date(2027, 1, int(day.Load()), 0, 0, 1, 0, time.UTC) }
+	opts.Now = func() time.Time { return time.Date(2027, 1, int(day.Load())-1, 16, 0, 1, 0, time.UTC) }
 	c, err := cache.New(r, leaderboard.Items(), opts, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err != nil {
 		t.Fatal(err)
@@ -309,7 +309,7 @@ func TestRealBoardsPublishFixedPeriodsAcrossMidnight(t *testing.T) {
 	yesterday, _ := first.Get("yesterday")
 	year, _ := first.Get("year")
 	all, _ := first.Get("all")
-	if yesterday.Start != "2026-12-31" || yesterday.End != "2027-01-01" || yesterday.GeneratedAt != "2027-01-01T00:00:01Z" || year.Start != "2027-01-01" {
+	if yesterday.Start != "2026-12-31" || yesterday.End != "2027-01-01" || yesterday.GeneratedAt != "2026-12-31T16:00:01Z" || year.Start != "2027-01-01" {
 		t.Fatal(yesterday, year)
 	}
 	var y, a map[string][]leaderboard.Entry
@@ -339,7 +339,7 @@ func TestRealBoardsPublishFixedPeriodsAcrossMidnight(t *testing.T) {
 	if err := json.Unmarshal([]byte(freshAll.Content), &a); err != nil {
 		t.Fatal(err)
 	}
-	if len(a[leaderboard.Overall]) != 0 || freshAll.GeneratedAt != "2027-01-02T00:00:01Z" {
+	if len(a[leaderboard.Overall]) != 0 || freshAll.GeneratedAt != "2027-01-01T16:00:01Z" {
 		t.Fatal(a, freshAll)
 	}
 	old, _ := first.Get("yesterday")
@@ -451,5 +451,53 @@ func TestTimerSkipsOverlapAndOldTicksAndStops(t *testing.T) {
 	cancel()
 	if err := <-done; !errors.Is(err, context.Canceled) {
 		t.Fatal(err)
+	}
+}
+
+func TestShanghaiYearRolloverAllBoardsUseSameBusinessPeriodAndUTCInstant(t *testing.T) {
+	_, reader := cacheFixture(t)
+	for _, tc := range []struct {
+		at, today, yesterday, month, year string
+		todayRows                         int
+	}{
+		{"2026-12-31T15:59:59Z", "2026-12-31", "2026-12-30", "2026-12-01", "2026-01-01", 1},
+		{"2026-12-31T16:00:00Z", "2027-01-01", "2026-12-31", "2027-01-01", "2027-01-01", 0},
+	} {
+		t.Run(tc.at, func(t *testing.T) {
+			now, err := time.Parse(time.RFC3339, tc.at)
+			if err != nil {
+				t.Fatal(err)
+			}
+			opts := cache.DefaultOptions()
+			opts.Interval = time.Hour
+			opts.Now = func() time.Time { return now.In(time.FixedZone("input", -5*3600)) }
+			c, err := cache.New(reader, leaderboard.Items(), opts, slog.New(slog.NewTextHandler(io.Discard, nil)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			run(t, c)
+			waitFor(t, func() bool { _, err := c.Current(); return err == nil })
+			snapshot, _ := c.Current()
+			for id, start := range map[string]string{"today": tc.today, "yesterday": tc.yesterday, "week": "2026-12-28", "month": tc.month, "year": tc.year, "all": periods.AllStart} {
+				entry, ok := snapshot.Get(id)
+				if !ok || entry.Start != start || entry.GeneratedAt != tc.at {
+					t.Fatalf("%s: %+v", id, entry)
+				}
+				var boards map[string][]leaderboard.Entry
+				if err := json.Unmarshal([]byte(entry.Content), &boards); err != nil {
+					t.Fatal(err)
+				}
+				if len(boards) != 5 {
+					t.Fatal("missing boards", boards)
+				}
+				if id == "today" {
+					for _, board := range []string{leaderboard.Overall, leaderboard.Usage, leaderboard.Success} {
+						if len(boards[board]) != tc.todayRows {
+							t.Fatalf("%s selected wrong day: %+v", board, boards[board])
+						}
+					}
+				}
+			}
+		})
 	}
 }

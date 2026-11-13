@@ -4,6 +4,7 @@ import json
 import os
 import tempfile
 import time
+from business_day import business_day
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -13,6 +14,11 @@ from sustained_state import Budget, BudgetError, CONFIRM_RESERVE, NS, SEARCH_LIM
 
 
 class ReviewedCheckpointTest(unittest.TestCase):
+    def test_legacy_utc_checkpoint_rejected_at_entry(self):
+        policy = checkpoint.ReviewedCheckpoint({}, self.archive, None)
+        with self.assertRaisesRegex(BudgetError, 'legacy UTC-day state'):
+            policy.migrate({'preflight': {'utc_day': '2026-11-13'}}, b'', '', None, None)
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(dir=os.environ['TMPDIR'])
         self.root = Path(self.tmp.name)
@@ -41,7 +47,7 @@ class ReviewedCheckpointTest(unittest.TestCase):
                                  'boot_id': 'test-boot'},
                       'error': "ToolLimit('generator/transport path invalid: remote SSH worker sustained near one CPU')",
                       'plan': {'current': 800, 'lower': 400, 'upper': 0, 'uncertain_repeats': 0, 'done': False},
-                      'stage_index': 3, 'preflight': {'utc_day': time.strftime('%Y-%m-%d', time.gmtime()),
+                      'stage_index': 3, 'preflight': {'business_day': business_day(),
                                                      'remote': {'listener': listener}, 'runtime_hashes': {'old': 'hash'}},
                       'history': [{'event': 'begin', 'phase': 'search', 'start_ns': begin},
                                   {'event': 'failure', 'at_ns': begin+checkpoint.OLD_USED_NS}]}

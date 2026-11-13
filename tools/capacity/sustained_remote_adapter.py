@@ -16,6 +16,7 @@ import sys
 import tempfile
 import threading
 import time
+from business_day import business_day
 import urllib.request
 from pathlib import Path, PurePosixPath
 
@@ -46,7 +47,7 @@ def runtime_hashes():
     root = Path(__file__).resolve().parent
     names = ('sustained_controller.py', 'sustained_state.py', 'sustained_deadline.py',
              'sustained_process.py', 'sustained_transfer.py', 'sustained_remote_spec.py',
-             'sustained_remote_adapter.py', 'sustained_resource.py', 'sustained_session.py',
+             'sustained_remote_adapter.py', 'business_day.py', 'sustained_resource.py', 'sustained_session.py',
              'sustained_reviewed_checkpoint.py')
     paths = [root/name for name in names] + sorted((root/'remote').glob('*.py'))
     return {str(path.relative_to(root)): sha256_file(path) for path in paths}
@@ -144,6 +145,8 @@ class RemoteAdapter:
         self.cleanup_log_error = None
 
     def preflight(self, state):
+        if 'utc_day' in (state.get('preflight') or {}):
+            raise RemoteError('legacy UTC-day state cannot be reused; rebuild Shanghai fixtures')
         for path in (self.binary, self.catalog):
             if not path.is_absolute() or not path.is_file():
                 raise RemoteError('missing absolute local executable/catalog: '+str(path))
@@ -162,7 +165,7 @@ class RemoteAdapter:
                 raise RemoteError('planned transition journal is missing or changed')
         if len({self.fixture.exists(), self.seed.exists(), self.seed_manifest.exists()}) != 1:
             raise RemoteError('incomplete fixture/seed/manifest; never fabricate a replacement')
-        day = time.strftime('%Y-%m-%d', time.gmtime())
+        day = business_day()
         if not self.seed.exists():
             if state['status'] != 'new':
                 raise RemoteError('planned transition lost the original seed')
@@ -210,7 +213,7 @@ class RemoteAdapter:
                              'fixture_sha256': sha256_file(self.fixture), 'seed_sha256': sha256_file(self.seed),
                              'capacity_sha256': manifest_binary, 'catalog_sha256': expected_catalog}
         if manifest != expected_manifest or (fixture.get('day'), fixture.get('clients'), fixture.get('history_days'), fixture.get('backlog')) != (day, 10000, 90, 10000):
-            raise RemoteError('fixture, UTC day, seed or immutable manifest mismatch')
+            raise RemoteError('fixture, Shanghai business day, seed or immutable manifest mismatch')
         previous = state.get('preflight')
         tools = runtime_hashes()
         if previous and (any(previous.get(key) != expected_manifest[key] for key in
@@ -226,9 +229,9 @@ class RemoteAdapter:
                 self.spec.app, self.spec.catalog, self.spec.web, self.spec.service, self.spec.watcher]
         result = self.commands.ssh(argv, timeout=35)
         remote = json.loads(result.stdout)
-        expected_day = time.strftime('%Y-%m-%d', time.gmtime())
-        if day != expected_day or remote.get('utc_day') != expected_day:
-            raise RemoteError('local/remote UTC day mismatch')
+        expected_day = business_day()
+        if day != expected_day or remote.get('business_day') != expected_day:
+            raise RemoteError('local/remote Shanghai business day mismatch')
         expected_containers = remote.get('expected_containers', {})
         baseline_hash = hashlib.sha256(json.dumps(expected_containers, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
         if (remote.get('containers', {}).get('returncode') != 0 or not remote.get('containers_match') or
@@ -274,7 +277,7 @@ class RemoteAdapter:
             listener.close()
         self.last_remote = remote
         self.state = state
-        return {'verified': True, 'remote': remote, 'utc_day': expected_day,
+        return {'verified': True, 'remote': remote, 'business_day': expected_day,
                 'local_utc_time': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
                 'capacity_sha256': expected_binary, 'catalog_sha256': expected_catalog,
                 'fixture_sha256': manifest['fixture_sha256'], 'seed_sha256': manifest['seed_sha256'],
@@ -287,12 +290,12 @@ class RemoteAdapter:
         mem = next(int(line.split()[1])*1024 for line in Path('/proc/meminfo').read_text().splitlines()
                    if line.startswith('MemAvailable:'))
         remote_data = self.commands.ssh(['/usr/bin/python3', '-c',
-                                         'import json,shutil,sys,time;print(json.dumps({"free":shutil.disk_usage(sys.argv[1]).free,"day":time.strftime("%Y-%m-%d",time.gmtime())}))',
+                                         'import json,shutil,sys,time;from datetime import datetime;from zoneinfo import ZoneInfo;print(json.dumps({"free":shutil.disk_usage(sys.argv[1]).free,"day":datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()}))',
                                          self.spec.root], timeout=8)
         data = json.loads(remote_data.stdout)
         day = json.loads(self.seed_manifest.read_text())['day']
-        if day != time.strftime('%Y-%m-%d', time.gmtime()) or data.get('day') != day:
-            return {'ok': False, 'issues': ['utc_day_changed']}
+        if day != business_day() or data.get('day') != day:
+            return {'ok': False, 'issues': ['business_day_changed']}
         db_bytes = 0
         if self.session is not None:
             row = self._last_remote_sample()

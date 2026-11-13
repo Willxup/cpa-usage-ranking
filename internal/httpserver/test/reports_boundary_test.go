@@ -19,7 +19,7 @@ func TestReportHTTPRechecksDeadlineAndDisableAfterAuthentication(t *testing.T) {
 		})
 	})
 	client := f.seed(t, testSecret(1))
-	f.clock.Store(time.Date(2026, 10, 31, 23, 59, 59, 0, time.UTC).UnixNano())
+	f.clock.Store(time.Date(2026, 10, 31, 15, 59, 59, 0, time.UTC).UnixNano())
 	tx, err := f.db.Writer.BeginTx(context.Background(), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -27,7 +27,7 @@ func TestReportHTTPRechecksDeadlineAndDisableAfterAuthentication(t *testing.T) {
 	result := make(chan registrationResponse, 1)
 	go func() { result <- f.report(t, "2026-10-30", testSecret(1), reportJSON, nil) }()
 	<-started
-	f.clock.Store(time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC).UnixNano())
+	f.clock.Store(time.Date(2026, 10, 31, 16, 0, 0, 0, time.UTC).UnixNano())
 	if err := tx.Commit(); err != nil {
 		t.Fatal(err)
 	}

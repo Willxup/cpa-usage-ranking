@@ -24,7 +24,7 @@ var (
 	ErrOverflow         = errors.New("statistics metrics overflow")
 )
 
-// Selection 指定一种视角；日期仅用于选择包含它的 UTC 周期。
+// Selection 指定一种视角；日期仅用于选择包含它的 业务日历周期。
 // 全模型合计是 ModelID=0、Tier=0 的独立视角，不能与明细相加。
 type Selection struct {
 	Kind    string

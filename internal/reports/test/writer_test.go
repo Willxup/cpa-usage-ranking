@@ -132,7 +132,7 @@ func TestQueuedRealSQLiteRechecksWindowAndDisabledClient(t *testing.T) {
 	registry := reportRegistry(t, db, `{"model_name":"alpha","alias":[],"prices":{}}`)
 	firstID, disabledID := createReportClient(t, db), createReportClient(t, db)
 	var clock atomic.Int64
-	clock.Store(instant("2026-10-31T23:59:59Z").UnixNano())
+	clock.Store(instant("2026-10-31T15:59:59Z").UnixNano())
 	store := reports.NewStore(db.Writer, registry, func() time.Time { return time.Unix(0, clock.Load()).UTC() })
 	started := make(chan struct{})
 	var once sync.Once
@@ -167,7 +167,7 @@ func TestQueuedRealSQLiteRechecksWindowAndDisabledClient(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	clock.Store(instant("2026-11-01T00:00:00Z").UnixNano())
+	clock.Store(instant("2026-10-31T16:00:00Z").UnixNano())
 	if err := tx.Commit(); err != nil {
 		t.Fatal(err)
 	}

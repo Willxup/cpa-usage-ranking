@@ -5,6 +5,7 @@ import json
 import os
 import tempfile
 import time
+from business_day import business_day
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -44,7 +45,7 @@ class ConfirmationCheckpointTest(unittest.TestCase):
                       'stage_index': 7, 'confirm_rate': 500, 'transition_evidence': self.evidence,
                       'error': 'ResourceForecastLimit("test {\'issues\': [\'local_memory_insufficient\']}")',
                       'reviewed_checkpoint': {'retry_manifest_sha256': 'old'},
-                      'preflight': {'utc_day': time.strftime('%Y-%m-%d', time.gmtime()),
+                      'preflight': {'business_day': business_day(),
                                     'remote': {'listener': listener}, 'runtime_hashes': {'old': 'hash'}},
                       'history': [{'event': 'end', 'phase': 'search', 'search_ns': 1095787699798},
                                   {'event': 'failure'}]}

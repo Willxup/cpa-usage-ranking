@@ -29,7 +29,7 @@ func windowCheck(t *testing.T, db *storage.DB, day string, now time.Time) error 
 	return reports.CheckWindow(context.Background(), tx, day, now)
 }
 
-func TestUTCWindowAdvancesIndependentlyAndSurvivesRollbackRestart(t *testing.T) {
+func TestShanghaiWindowAdvancesIndependentlyAndSurvivesRollbackRestart(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "window.db")
 	db, err := storage.Open(ctx, path)
@@ -40,8 +40,8 @@ func TestUTCWindowAdvancesIndependentlyAndSurvivesRollbackRestart(t *testing.T) 
 	if err := storage.MigrateSchema(ctx, db.Writer); err != nil {
 		t.Fatal(err)
 	}
-	before := instant("2026-11-01T07:59:59+08:00")
-	midnight := instant("2026-11-01T08:00:00+08:00")
+	before := instant("2026-10-31T15:59:59Z")
+	midnight := instant("2026-10-31T16:00:00Z")
 	if err := reports.AdvanceWindow(ctx, db.Writer, before); err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestUTCWindowAdvancesIndependentlyAndSurvivesRollbackRestart(t *testing.T) 
 func TestWindowPersistenceFailureCannotAdmit(t *testing.T) {
 	db := reportDB(t)
 	ctx := context.Background()
-	before, after := instant("2026-10-31T23:59:59Z"), instant("2026-11-01T00:00:00Z")
+	before, after := instant("2026-10-31T15:59:59Z"), instant("2026-10-31T16:00:00Z")
 	if err := reports.AdvanceWindow(ctx, db.Writer, before); err != nil {
 		t.Fatal(err)
 	}

@@ -12,13 +12,12 @@ import (
 const MaxDailyRetentionDays = 36500
 
 // Prune 删除一小批已日结的日或周统计；绝不操作尚未结算的源表。
-// 日保留包含今天在内的 retainDays 个 UTC 日期，周保留当前周与上一周。
+// 日保留包含今天在内的 retainDays 个 上海业务日期，周保留当前周与上一周。
 func Prune(ctx context.Context, writer *sql.DB, now time.Time, retainDays int, kind string, limit int) (int64, error) {
 	if retainDays < 1 || retainDays > MaxDailyRetentionDays || limit < 1 || (kind != periods.Day && kind != periods.Week) {
 		return 0, fmt.Errorf("invalid retention options")
 	}
-	today := now.UTC()
-	day := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC)
+	day := periods.StartOfDay(now)
 	bounds, err := periods.ForDay(day.Format(dayLayout))
 	if err != nil {
 		return 0, err

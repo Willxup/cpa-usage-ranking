@@ -4,6 +4,7 @@ import json
 import os
 import tempfile
 import time
+from business_day import business_day
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -61,7 +62,7 @@ class RetryCheckpointTest(unittest.TestCase):
                                  'boot_id': 'test-boot'}, 'error': error,
                       'plan': {'current': 500, 'lower': 400, 'upper': 600, 'uncertain_repeats': 0, 'done': False},
                       'stage_index': 5, 'reviewed_checkpoint': {'original_capacity_sha256': cp.OLD_BINARY_SHA},
-                      'preflight': {'utc_day': time.strftime('%Y-%m-%d', time.gmtime()),
+                      'preflight': {'business_day': business_day(),
                                     'remote': {'listener': listener}, 'runtime_hashes': {'old': 'hash'}},
                       'history': [{'event': 'begin', 'start_ns': first},
                                   {'event': 'failure', 'at_ns': first+612018194623},

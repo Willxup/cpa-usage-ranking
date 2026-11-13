@@ -8,7 +8,7 @@ migration, startup atomically registers the current catalog's canonical names.
 IDs are positive and stable; ID 0 is reserved for internal totals and is not a
 dictionary row. Removed names remain in the dictionary but are not active until
 reintroduced in the catalog. Version 3 adds the persistent report-window watermark;
-startup advances it to at least UTC yesterday. Version 4 adds daily report
+startup advances it to at least Shanghai yesterday. Version 4 adds daily report
 revision metadata and daily statistics tables. Version 5 adds storage for
 finalized daily, weekly, monthly and cumulative statistics. Opening a database alone does **not** make `/readyz` return success: the first complete leaderboard cache round must also succeed.
 
@@ -80,7 +80,7 @@ model ID 0 and tier 0 without inserting a model dictionary row; real details use
 positive model IDs. Version 5 adds `period_stats` with a composite primary key
 `(kind, start_day, model_id, tier, client_id)` and `WITHOUT ROWID`. Its daily
 rows are total-only; other periods keep totals and model/tier details separately.
-Weeks start Monday UTC and months start on day 1 UTC, both with inclusive starts
+Weeks start Monday in Asia/Shanghai and months start on day 1 in Asia/Shanghai, both with inclusive starts
 and exclusive ends. Cumulative rows use the fixed internal start `0001-01-01`.
 Each row stores the same 12 sums and counts, not averages. Totals and details
 are alternative views and must not be summed together. Existing databases
@@ -88,7 +88,7 @@ upgrade through the same path.
 Migrations do not silently adopt an untracked table with the same name.
 
 Internal candidate reads combine one period's finalized rows with all unsettled
-rows in that UTC period, in a single read-only SQLite transaction. Cumulative
+rows in that Shanghai business period, in a single read-only SQLite transaction. Cumulative
 reads include the full backlog. The transaction ends before derived processing;
 reads time out independently and reject overflow or more than 100,000 clients
 per candidate view. All-model totals and individual model/tier views are

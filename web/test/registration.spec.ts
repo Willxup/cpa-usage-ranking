@@ -18,7 +18,7 @@ test('registers and safely retries against the real production binary without ad
     const first = await send({ display_name: '  Ｂrowser 🙂  ', avatar_id: 66 })
     const retry = await send({ display_name: '\u0000', avatar_id: -1 })
     const minimal = await send({})
-    const day = new Date().toISOString().slice(0, 10)
+    const day = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai' }).format(new Date())
     const snapshot = {
       schema_version: 1, revision: '1', items: [{
         model: 'claude-fable-5', total_tokens: '10', input_tokens: '8', output_tokens: '2',

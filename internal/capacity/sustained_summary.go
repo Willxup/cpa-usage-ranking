@@ -188,7 +188,7 @@ func SummarizeSustained(path string, models []string, maxPending int, migrationP
 			}
 			day, parseErr := time.Parse(time.DateOnly, r.Header.Day)
 			if parseErr != nil || day.Format(time.DateOnly) != r.Header.Day {
-				return out, errors.New("invalid summary journal UTC day")
+				return out, errors.New("invalid summary journal business day")
 			}
 			today, yesterday = r.Header.Day, day.AddDate(0, 0, -1).Format(time.DateOnly)
 			header, attemptLimit = r.Header, r.Header.MaxAttempts
@@ -238,7 +238,7 @@ func SummarizeSustained(path string, models []string, maxPending int, migrationP
 			case yesterday:
 				s.result.YesterdayTasks++
 			default:
-				return out, errors.New("summary task outside fixture UTC days")
+				return out, errors.New("summary task outside fixture business days")
 			}
 			s.result.Created++
 			out.Produced++

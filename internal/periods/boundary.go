@@ -1,4 +1,4 @@
-// Package periods 定义日结使用的 UTC 周期键。
+// Package periods 定义日结使用的 上海业务日周期键。
 package periods
 
 import (
@@ -16,9 +16,9 @@ const (
 	dayLayout = "2006-01-02"
 )
 
-var ErrInvalidDay = errors.New("invalid UTC period day")
+var ErrInvalidDay = errors.New("invalid business period day")
 
-// Boundaries 返回包含给定 UTC 日的左闭右开周、月边界。
+// Boundaries 返回包含给定业务日的左闭右开周、月边界。
 type Boundaries struct {
 	Day                  string
 	WeekStart, WeekEnd   string

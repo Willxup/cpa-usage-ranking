@@ -206,7 +206,7 @@ func (m *Maintenance) observe(ctx context.Context) {
 	}
 	age := time.Duration(0)
 	if oldest.Valid {
-		if day, err := time.Parse(dayLayout, oldest.String); err == nil && now.After(day) {
+		if day, err := periods.ParseBusinessDay(oldest.String); err == nil && now.After(day) {
 			age = now.Sub(day)
 		}
 	}

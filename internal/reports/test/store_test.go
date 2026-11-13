@@ -201,7 +201,7 @@ func TestTransactionCrossingMidnightDoesNotCommit(t *testing.T) {
 	db := reportDB(t)
 	registry := reportRegistry(t, db, `{"model_name":"alpha","alias":[],"prices":{}}`)
 	client := createReportClient(t, db)
-	before, after := instant("2026-10-31T23:59:59Z"), instant("2026-11-01T00:00:00Z")
+	before, after := instant("2026-10-31T15:59:59Z"), instant("2026-10-31T16:00:00Z")
 	calls := 0
 	store := reports.NewStore(db.Writer, registry, func() time.Time {
 		calls++

@@ -4,6 +4,7 @@ package cache
 import (
 	"bytes"
 	"context"
+	"cpa-usage-ranking/internal/periods"
 	"errors"
 	"fmt"
 	"io"
@@ -142,7 +143,7 @@ func (c *Cache) refresh(ctx context.Context) error {
 func (c *Cache) build(ctx context.Context, item Item, when time.Time, max int) (Entry, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.opts.ItemTimeout)
 	defer cancel()
-	day := when.AddDate(0, 0, item.DayOffset).Format("2006-01-02")
+	day := periods.StartOfDay(when).AddDate(0, 0, item.DayOffset).Format(time.DateOnly)
 	s, err := c.reader.Read(ctx, statistics.Selection{Kind: item.Kind, Day: day, ModelID: item.ModelID, Tier: item.Tier, Public: item.Public})
 	if err != nil {
 		return Entry{}, err

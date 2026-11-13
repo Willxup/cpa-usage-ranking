@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"cpa-usage-ranking/internal/periods"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -37,7 +38,7 @@ func TestReviewedRetryMigrationRealCLI(t *testing.T) {
 	for _, m := range c.List() {
 		names = append(names, m.Name)
 	}
-	day := time.Now().UTC().Format(time.DateOnly)
+	day := periods.BusinessDay(time.Now())
 	var seed uint64
 	for i := uint64(1); i < 1000; i++ {
 		m, e := NewSustainedModel(day, names, 5, i)
