@@ -37,9 +37,9 @@ export function LeaderboardPanel({ board, period, selectionVersion = 0 }: { boar
       {data.entries.length === 0 ? <div className="ranking-empty">
         <div className="empty-symbol" aria-hidden="true"><BrandMark /><span className="empty-symbol-dot" /></div>
         <span className="empty-label">WAITING FOR DATA</span><h2>等待第一份真实数据</h2><p>该榜单在此周期暂无符合条件的已接纳记录。<br />不使用模拟名次或虚构统计。</p>
-      </div> : <table className="leaderboard-table">
-        <thead><tr><th scope="col">排名</th><th scope="col">参与者</th><th scope="col">{boards[data.board].metric}</th></tr></thead>
-        <tbody>{data.entries.map((entry) => <tr key={entry.client_id}><td><span className="rank-number">{entry.rank}</span></td><td><div className="participant"><Avatar id={entry.avatar_id} catalog={avatars} /><span>{entry.display_name}</span></div></td><td className="metric-value">{metric(entry.metric, data.board)} <span>{boards[data.board].unit}</span></td></tr>)}</tbody>
+      </div> : <table className={`leaderboard-table${data.board === 'usage' ? ' leaderboard-table--usage' : ''}`} role="table">
+        <thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">排名</th><th scope="col" role="columnheader">参与者</th><th scope="col" role="columnheader">{boards[data.board].metric}</th></tr></thead>
+        <tbody role="rowgroup">{data.entries.map((entry) => <tr key={entry.client_id} role="row"><td role="cell"><span className="rank-number">{entry.rank}</span></td><td role="cell"><div className="participant"><Avatar id={entry.avatar_id} catalog={avatars} /><span>{entry.display_name}</span></div></td><td className="metric-value" role="cell"><span className="metric-number">{metric(entry.metric, data.board)}</span> <span className="metric-unit">{boards[data.board].unit}</span></td></tr>)}</tbody>
       </table>}
       <div className="ranking-bottom"><span><i />显示真实缓存结果</span><span>最多展示 100 条</span></div>
     </>}

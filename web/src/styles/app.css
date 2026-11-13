@@ -47,7 +47,7 @@
 .avatar svg { width: 24px; }
 .avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .metric-value { font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.metric-value span { color: var(--muted); font-size: 12px; font-weight: 400; }
+.metric-unit { color: var(--muted); font-size: 12px; font-weight: 400; }
 @media (max-width: 760px) {
   .board-heading { align-items: start; flex-direction: column; gap: 4px; }
   .board-heading h2 { font-size: 18px; }
@@ -56,6 +56,15 @@
   .leaderboard-table th:last-child, .leaderboard-table td:last-child { width: 38%; }
   .participant { gap: 8px; }
   .avatar { width: 36px; height: 36px; border-radius: 11px; }
+  /* 用量行将完整数字放在参与者下方；保留表格语义，不截断或缩写int64。 */
+  .leaderboard-table--usage, .leaderboard-table--usage tbody { display: block; }
+  .leaderboard-table--usage thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+  .leaderboard-table--usage tbody tr { display: grid; grid-template-columns: 32px minmax(0, 1fr); border-bottom: 1px solid var(--line); }
+  .leaderboard-table--usage tbody td { border-bottom: 0; }
+  .leaderboard-table--usage tbody td:first-child { grid-row: 1 / 3; align-self: center; }
+  .leaderboard-table--usage tbody td:nth-child(2) { grid-column: 2; padding-bottom: 5px; }
+  .leaderboard-table--usage tbody td:last-child { grid-column: 2; width: auto; padding-top: 0; text-align: left; overflow-wrap: normal; }
+  .leaderboard-table--usage .metric-number { display: inline-block; white-space: nowrap; }
 }
 .period-control { display: flex; margin: 0; padding: 4px; border: 0; background: #f0f0f4; border-radius: 12px; }
 .period-control button { border: 0; border-radius: 8px; background: transparent; color: var(--muted); min-width: 94px; min-height: 42px; font-size: 15px; }
