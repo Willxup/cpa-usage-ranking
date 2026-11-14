@@ -8,3 +8,31 @@ import (
 func (s *Service) Users(ctx context.Context, query clients.ListQuery) (clients.Page, error) {
 	return s.clients.List(ctx, query)
 }
+
+// SetDisabled only writes the target column, using the existing serial writer.
+// The ordinary administrator is rechecked after acquiring the write transaction.
+func (s *Service) SetDisabled(ctx context.Context, actor Identity, id int64, disabled bool) error {
+	if id <= 0 {
+		return ErrInput
+	}
+	tx, err := s.writer.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := s.checkActor(ctx, tx, actor); err != nil {
+		return err
+	}
+	result, err := tx.ExecContext(ctx, "UPDATE clients SET disabled = ? WHERE id = ?", disabled, id)
+	if err != nil {
+		return err
+	}
+	count, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return ErrNotFound
+	}
+	return tx.Commit()
+}

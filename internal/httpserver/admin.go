@@ -23,6 +23,7 @@ type AdminHTTPOptions struct {
 	AllowLocalHTTP bool
 	TrustedProxies []string
 	GroupIPv6By64  bool
+	RequestRefresh func()
 }
 
 type adminHTTP struct {
@@ -46,6 +47,7 @@ func MountAdmin(router *gin.Engine, service *admin.Service, frontend *Frontend, 
 	router.POST("/v1/admin/session", h.sameOrigin, h.login)
 	router.DELETE("/v1/admin/session", h.sameOrigin, h.authorize, h.csrf, h.logout)
 	router.GET("/v1/admin/users", h.authorize, h.users)
+	router.PUT("/v1/admin/users/:id/ban", h.sameOrigin, h.authorize, h.csrf, h.ban)
 	router.GET("/v1/admin/accounts", h.authorize, h.ownerOnly, h.accounts)
 	router.POST("/v1/admin/accounts", h.sameOrigin, h.authorize, h.ownerOnly, h.csrf, h.createAccount)
 	router.DELETE("/v1/admin/accounts/:id", h.sameOrigin, h.authorize, h.ownerOnly, h.csrf, h.deleteAccount)

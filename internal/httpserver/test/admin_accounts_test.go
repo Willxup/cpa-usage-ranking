@@ -15,7 +15,7 @@ import (
 	"cpa-usage-ranking/internal/storage"
 )
 
-func adminDatabaseRouter(t *testing.T) (http.Handler, *admin.Service, *storage.DB) {
+func adminDatabaseRouter(t *testing.T, settings ...httpserver.AdminHTTPOptions) (http.Handler, *admin.Service, *storage.DB) {
 	t.Helper()
 	db, err := storage.Open(context.Background(), filepath.Join(t.TempDir(), "admin.db"))
 	if err != nil {
@@ -31,7 +31,11 @@ func adminDatabaseRouter(t *testing.T) (http.Handler, *admin.Service, *storage.D
 	}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	router := httpserver.NewRouter(logger)
-	if err := httpserver.MountAdmin(router, service, nil, logger, httpserver.AdminHTTPOptions{}); err != nil {
+	var options httpserver.AdminHTTPOptions
+	if len(settings) > 0 {
+		options = settings[0]
+	}
+	if err := httpserver.MountAdmin(router, service, nil, logger, options); err != nil {
 		t.Fatal(err)
 	}
 	return router, service, db

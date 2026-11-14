@@ -133,6 +133,42 @@ test('lists real registered users with bounded paging, literal names and filters
   await expect(page.getByText('未找到匹配的用户。')).toBeVisible()
 })
 
+test('bans and unbans a reporting identity and refreshes the five-minute cache', async ({ page, request, baseURL }, info) => {
+  const name = `ban-${randomBytes(4).toString('hex')}`
+  const headers = { Authorization: `Bearer ${randomBytes(32).toString('base64url')}` }
+  const registered = await request.post('/v1/clients/register', { headers, data: { display_name: name, avatar_id: 1 } })
+  expect(registered.status()).toBe(201)
+  const id = String((await registered.json()).client_id)
+  const day = new Date().toISOString().slice(0, 10)
+  const report = { schema_version: 1, revision: '1', items: [{ model: 'claude-fable-5', total_tokens: '1234567', input_tokens: '1000', output_tokens: '100', cache_read_tokens: '500', cache_write_tokens: '0', reasoning_tokens: '0', request_count: '10', success_count: '9', ttft_avg_ms: 12, ttft_samples: '10', latency_avg_ms: 20, latency_samples: '10' }] }
+  expect((await request.put(`/v1/reports/${day}`, { headers, data: report })).status()).toBe(200)
+  await page.setViewportSize({ width: 375, height: 812 })
+  await login(page)
+  const session = await (await page.request.get('/v1/admin/session')).json()
+  expect((await page.request.put(`/v1/admin/users/${id}/ban`, { headers: { Origin: baseURL!, 'X-CSRF-Token': session.csrf_token }, data: { disabled: false } })).status()).toBe(200)
+  const visible = async () => ((await (await request.get('/v1/leaderboards/usage/today')).json()).entries as { client_id: string }[]).some((entry) => entry.client_id === id)
+  await expect.poll(visible).toBe(true)
+  await page.getByRole('link', { name: '用户管理', exact: true }).click()
+  await page.getByLabel('查询内容', { exact: true }).fill(name)
+  await page.getByRole('button', { name: '查询', exact: true }).click()
+  let row = page.getByRole('row').filter({ hasText: name })
+  page.once('dialog', (dialog) => { expect(dialog.message()).toContain('停止上报并退出全部榜单，保留统计'); return dialog.dismiss() })
+  await row.getByRole('button', { name: '封禁', exact: true }).click()
+  await expect(row.getByText('正常', { exact: true })).toBeVisible()
+  page.once('dialog', (dialog) => dialog.accept())
+  await row.getByRole('button', { name: '封禁', exact: true }).click()
+  await expect(page.getByRole('status').filter({ hasText: '设置已保存，榜单刷新后生效' })).toBeVisible()
+  row = page.getByRole('row').filter({ hasText: name })
+  await expect(row.getByText('已封禁', { exact: true })).toBeVisible()
+  expect((await request.put(`/v1/reports/${day}`, { headers, data: report })).status()).toBe(403)
+  await expect.poll(visible).toBe(false)
+  await page.screenshot({ path: info.outputPath('banned-user-375.png'), fullPage: true })
+  await row.getByRole('button', { name: '解封', exact: true }).click()
+  await expect(page.getByRole('status').filter({ hasText: '已解封' })).toBeVisible()
+  await expect.poll(visible).toBe(true)
+  expect((await request.put(`/v1/reports/${day}`, { headers, data: report })).status()).toBe(200)
+})
+
 test('expired public session changes the top right entry without navigation', async ({ page, context }) => {
   await page.clock.install()
   await login(page)

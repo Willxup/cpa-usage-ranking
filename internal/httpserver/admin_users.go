@@ -18,6 +18,33 @@ type adminUser struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+func (h *adminHTTP) ban(c *gin.Context) {
+	id, err := positiveAdminID(c.Param("id"))
+	if err != nil {
+		h.adminError(c, err)
+		return
+	}
+	var input struct {
+		Disabled *bool `json:"disabled"`
+	}
+	if !decodeAdmin(c, &input) {
+		return
+	}
+	if input.Disabled == nil {
+		h.adminError(c, admin.ErrInput)
+		return
+	}
+	if err := h.service.SetDisabled(c.Request.Context(), adminIdentity(c), id, *input.Disabled); err != nil {
+		h.adminError(c, err)
+		return
+	}
+	if h.options.RequestRefresh != nil {
+		h.options.RequestRefresh()
+	}
+	h.logger.Info("admin action", "actor", adminIdentity(c).ID, "action", "set_ban", "target", c.Param("id"), "disabled", *input.Disabled, "result", "saved")
+	c.JSON(http.StatusOK, gin.H{"disabled": *input.Disabled, "leaderboards": "refresh_requested"})
+}
+
 func (h *adminHTTP) users(c *gin.Context) {
 	query := clients.ListQuery{Limit: 50, Name: c.Query("name")}
 	var err error

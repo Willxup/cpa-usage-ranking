@@ -57,12 +57,13 @@ func (s Snapshot) Get(id string) (Entry, bool) { e, ok := s.entries[id]; return 
 func (s Snapshot) Len() int                    { return len(s.entries) }
 
 type Cache struct {
-	reader  *statistics.Reader
-	items   []Item
-	opts    Options
-	logger  *slog.Logger
-	current atomic.Pointer[Snapshot]
-	running atomic.Bool
+	reader           *statistics.Reader
+	items            []Item
+	opts             Options
+	logger           *slog.Logger
+	current          atomic.Pointer[Snapshot]
+	running          atomic.Bool
+	refreshRequested chan struct{}
 }
 
 func New(reader *statistics.Reader, items []Item, opts Options, logger *slog.Logger) (*Cache, error) {
@@ -79,7 +80,7 @@ func New(reader *statistics.Reader, items []Item, opts Options, logger *slog.Log
 		}
 		seen[item.ID] = true
 	}
-	return &Cache{reader: reader, items: append([]Item(nil), items...), opts: opts, logger: logger}, nil
+	return &Cache{reader: reader, items: append([]Item(nil), items...), opts: opts, logger: logger, refreshRequested: make(chan struct{}, 1)}, nil
 }
 
 // Current 返回快照值副本；调用方覆盖自己的副本不会改写已发布快照。
@@ -91,8 +92,17 @@ func (c *Cache) Current() (Snapshot, error) {
 	return *s, nil
 }
 
-// Run 启动即尝试一次，之后由唯一计时器触发；停止时等待正在运行的构建响应取消。
-// 长轮次期间的旧 tick 被丢弃，不重叠也不补跑。
+// RequestRefresh coalesces management changes without doing work on a request
+// goroutine. A signal arriving during a build remains pending for a later round.
+func (c *Cache) RequestRefresh() {
+	select {
+	case c.refreshRequested <- struct{}{}:
+	default:
+	}
+}
+
+// Run 启动即尝试一次，之后由原计时器或合并信号触发；构建始终串行。
+// 长轮次的旧定时 tick 被丢弃，管理变更信号则保留一次后续构建。
 func (c *Cache) Run(ctx context.Context) error {
 	if !c.running.CompareAndSwap(false, true) {
 		return ErrRunning
@@ -115,6 +125,7 @@ func (c *Cache) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
+		case <-c.refreshRequested:
 		}
 	}
 }

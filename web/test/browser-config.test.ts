@@ -36,6 +36,12 @@ describe('reusable browser configuration', () => {
     expect((defaults.webServer as { env: Record<string, string> }).env.RANKING_WEB_DIR).toMatch(/\/web\/dist$/)
   })
 
+  it('tests console mutations with the real five-minute timer rather than a shortened interval', async () => {
+    vi.stubEnv('RANKING_TEST_ADMIN_CONFIG', '/isolated/admin.json')
+    const enabled = await config()
+    expect((enabled.webServer as { env: Record<string, string> }).env.RANKING_CACHE_REFRESH_INTERVAL).toBe('5m')
+  })
+
   it('rejects ambiguous path and channel settings', async () => {
     await expect(config('/shared/chromium', 'chrome')).rejects.toThrow('not both')
   })

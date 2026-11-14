@@ -149,6 +149,7 @@ func run(logger *slog.Logger) (err error) {
 	}
 	if err := httpserver.MountAdmin(router, adminService, frontend, logger, httpserver.AdminHTTPOptions{
 		AllowLocalHTTP: cfg.AdminAllowLocalHTTP, TrustedProxies: cfg.TrustedProxies, GroupIPv6By64: cfg.RegistrationIPv6By64,
+		RequestRefresh: cacheService.RequestRefresh,
 	}); err != nil {
 		return err
 	}

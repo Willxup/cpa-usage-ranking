@@ -41,7 +41,7 @@ export default defineConfig({
       ...(adminConfig ? { RANKING_ADMIN_CONFIG_FILE: resolve(adminConfig), RANKING_ADMIN_ALLOW_INSECURE_LOCAL_HTTP: 'true' } : {}),
       RANKING_MODELS_PATH: fileURLToPath(new URL('../../config/models.json', import.meta.url)),
       RANKING_SHUTDOWN_TIMEOUT: '5s',
-      RANKING_CACHE_REFRESH_INTERVAL: '200ms',
+      RANKING_CACHE_REFRESH_INTERVAL: adminConfig ? '5m' : '200ms',
       RANKING_SQLITE_PATH: resolve(outputDir, '..', 'databases', String(port), 'ranking.db'),
     },
     reuseExistingServer: false,
