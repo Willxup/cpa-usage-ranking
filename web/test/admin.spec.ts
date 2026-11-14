@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import { randomBytes } from 'node:crypto'
+import { seedUsers } from './admin-fixtures'
 
 const config = process.env.RANKING_TEST_ADMIN_CONFIG
 const owner: { username: string; password: string } = config ? JSON.parse(readFileSync(config, 'utf8')) : { username: '', password: '' }
@@ -104,6 +105,32 @@ test('owner manages ordinary accounts and deletion revokes the live session', as
     await ordinary.goto('/admin/leaderboards')
     await expect(ordinary).toHaveURL(/\/admin\/login$/)
   } finally { await ordinaryContext.close() }
+})
+
+test('lists real registered users with bounded paging, literal names and filters', async ({ page }, info) => {
+  const prefix = `adm3-${randomBytes(3).toString('hex')}`
+  const users = seedUsers(prefix, 51)
+  await page.setViewportSize({ width: 320, height: 812 })
+  await login(page)
+  await page.getByRole('link', { name: '用户管理', exact: true }).click()
+  await page.getByLabel('查询内容', { exact: true }).fill(prefix)
+  await page.getByRole('button', { name: '查询', exact: true }).click()
+  await expect(page.getByText('第 1 页 · 50 位用户')).toBeVisible()
+  await expect(page.getByText(users[0].name, { exact: true })).toBeVisible()
+  expect(await page.locator('.admin-users img').count()).toBeGreaterThan(0)
+  expect(await page.locator('.admin-users img[src="x"]').count()).toBe(0)
+  await page.getByRole('button', { name: '下一页' }).focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByText('第 2 页 · 1 位用户')).toBeVisible()
+  await page.getByLabel('封禁状态', { exact: true }).selectOption('true')
+  await page.getByRole('button', { name: '查询', exact: true }).click()
+  await expect(page.getByText('第 1 页 · 1 位用户')).toBeVisible()
+  await expect(page.getByText(users[0].name, { exact: true })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: info.outputPath('users-320.png'), fullPage: true })
+  await page.getByLabel('查询内容', { exact: true }).fill(`${prefix}-missing`)
+  await page.getByRole('button', { name: '查询', exact: true }).click()
+  await expect(page.getByText('未找到匹配的用户。')).toBeVisible()
 })
 
 test('expired public session changes the top right entry without navigation', async ({ page, context }) => {

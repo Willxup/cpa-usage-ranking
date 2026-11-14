@@ -1,0 +1,75 @@
+package clients
+
+import (
+	"context"
+	"errors"
+	"strings"
+	"time"
+	"unicode/utf8"
+)
+
+var ErrQuery = errors.New("invalid client list query")
+
+type ListQuery struct {
+	ID       int64
+	Name     string
+	Disabled *bool
+	After    int64
+	Limit    int
+}
+
+type Page struct {
+	Clients []Client
+	NextID  int64
+}
+
+// List returns metadata only, in stable ascending ID order. Name matching is a
+// literal substring, not a SQL pattern or a second full-text search system.
+func (r *Repository) List(ctx context.Context, query ListQuery) (Page, error) {
+	if query.Limit == 0 {
+		query.Limit = 50
+	}
+	if query.Limit < 1 || query.Limit > 100 || query.ID < 0 || query.After < 0 || (query.ID != 0 && query.Name != "") || !utf8.ValidString(query.Name) || utf8.RuneCountInString(query.Name) > 80 {
+		return Page{}, ErrQuery
+	}
+	conditions := []string{"id > ?"}
+	args := []any{query.After}
+	if query.ID != 0 {
+		conditions = append(conditions, "id = ?")
+		args = append(args, query.ID)
+	}
+	if query.Name != "" {
+		conditions = append(conditions, "instr(display_name, ?) > 0")
+		args = append(args, query.Name)
+	}
+	if query.Disabled != nil {
+		conditions = append(conditions, "disabled = ?")
+		args = append(args, *query.Disabled)
+	}
+	args = append(args, query.Limit+1)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	rows, err := r.reader.QueryContext(ctx, selectClient+" WHERE "+strings.Join(conditions, " AND ")+" ORDER BY id LIMIT ?", args...)
+	if err != nil {
+		return Page{}, err
+	}
+	defer rows.Close()
+	page := Page{Clients: make([]Client, 0, query.Limit)}
+	for rows.Next() {
+		var client Client
+		var created int64
+		if err := rows.Scan(&client.ID, &client.DisplayName, &client.AvatarID, &client.Disabled, &created); err != nil {
+			return Page{}, err
+		}
+		client.CreatedAt = time.UnixMilli(created).UTC()
+		page.Clients = append(page.Clients, client)
+	}
+	if err := rows.Err(); err != nil {
+		return Page{}, err
+	}
+	if len(page.Clients) > query.Limit {
+		page.Clients = page.Clients[:query.Limit]
+		page.NextID = page.Clients[len(page.Clients)-1].ID
+	}
+	return page, nil
+}

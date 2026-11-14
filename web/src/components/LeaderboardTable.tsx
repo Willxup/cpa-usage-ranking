@@ -13,7 +13,7 @@ const columns: { key: keyof OverallDetails; label: string; kind: MetricKind }[] 
 ]
 const kinds: Record<Board, MetricKind> = { overall: 'points', usage: 'count', cache: 'percent', success: 'points', ttft: 'duration' }
 
-function Avatar({ id, catalog }: { id: string; catalog: AvatarCatalog | null }) {
+export function Avatar({ id, catalog }: { id: string; catalog: AvatarCatalog | null }) {
   const src = catalog?.paths.get(id) ?? catalog?.defaultPath
   return <span className="avatar" aria-hidden="true"><BrandMark />{src && <img key={src} src={src} alt="" width="44" height="44" onError={(event) => {
     const image = event.currentTarget

@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"cpa-usage-ranking/internal/clients"
 	"cpa-usage-ranking/internal/storage"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -54,6 +55,7 @@ type Session struct {
 }
 
 type Service struct {
+	clients   *clients.Repository
 	reader    *sql.DB
 	writer    *sql.DB
 	owner     Identity
@@ -74,6 +76,7 @@ func New(owner Owner, db *storage.DB) (*Service, error) {
 	s := &Service{owner: Identity{ID: "owner", Username: owner.Username, Owner: true}, ownerHash: hash, sessions: make(map[string]Session), now: time.Now}
 	if db != nil {
 		s.reader, s.writer = db.Reader, db.Writer
+		s.clients = clients.NewRepository(db)
 		var count int
 		if err := s.reader.QueryRow("SELECT count(*) FROM admin_accounts WHERE username = ?", owner.Username).Scan(&count); err != nil {
 			return nil, errors.New("read administrator accounts")

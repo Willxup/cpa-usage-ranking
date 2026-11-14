@@ -45,11 +45,12 @@ func MountAdmin(router *gin.Engine, service *admin.Service, frontend *Frontend, 
 	}
 	router.POST("/v1/admin/session", h.sameOrigin, h.login)
 	router.DELETE("/v1/admin/session", h.sameOrigin, h.authorize, h.csrf, h.logout)
+	router.GET("/v1/admin/users", h.authorize, h.users)
 	router.GET("/v1/admin/accounts", h.authorize, h.ownerOnly, h.accounts)
 	router.POST("/v1/admin/accounts", h.sameOrigin, h.authorize, h.ownerOnly, h.csrf, h.createAccount)
 	router.DELETE("/v1/admin/accounts/:id", h.sameOrigin, h.authorize, h.ownerOnly, h.csrf, h.deleteAccount)
 	if frontend != nil {
-		for _, path := range []string{"/admin/login", "/admin/leaderboards", "/admin/accounts"} {
+		for _, path := range []string{"/admin/login", "/admin/leaderboards", "/admin/accounts", "/admin/users"} {
 			router.GET(path, func(c *gin.Context) { frontend.serveIndex(c) })
 			router.HEAD(path, func(c *gin.Context) { frontend.serveIndex(c) })
 		}
