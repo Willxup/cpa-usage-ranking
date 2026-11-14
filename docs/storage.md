@@ -10,7 +10,12 @@ dictionary row. Removed names remain in the dictionary but are not active until
 reintroduced in the catalog. Version 3 adds the persistent report-window watermark;
 startup advances it to at least UTC yesterday. Version 4 adds daily report
 revision metadata and daily statistics tables. Version 5 adds storage for
-finalized daily, weekly, monthly and cumulative statistics. Opening a database alone does **not** make `/readyz` return success: the first complete leaderboard cache round must also succeed.
+finalized daily, weekly, monthly and cumulative statistics. Version 6 adds
+ordinary administrator accounts; version 7 adds the default-false
+`clients.ranking_hidden` flag and its lookup index. These migrations preserve
+existing client credentials, disabled state and usage statistics; see the
+[administrator console](admin.md). Opening a database alone does **not** make
+`/readyz` return success: the first complete leaderboard cache round must also succeed.
 
 ## Build and file location
 

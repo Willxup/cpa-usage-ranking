@@ -1,5 +1,6 @@
 """Safety checks for the Docker smoke runner; no Docker daemon is used."""
 import json
+import sqlite3
 import subprocess
 from types import SimpleNamespace
 import unittest
@@ -16,6 +17,46 @@ class SmokeSafetyTests(unittest.TestCase):
 
     def response(self, value, code=0):
         return subprocess.CompletedProcess([], code, json.dumps(value).encode(), b"")
+
+    def schema_fixture(self):
+        db = sqlite3.connect(":memory:")
+        self.addCleanup(db.close)
+        db.executescript("""
+            CREATE TABLE schema_migrations(version INTEGER PRIMARY KEY);
+            INSERT INTO schema_migrations VALUES (1),(2),(3),(4),(5),(6),(7);
+            CREATE TABLE clients(id INTEGER PRIMARY KEY, token_hash BLOB, disabled INTEGER,
+                ranking_hidden INTEGER NOT NULL DEFAULT 0 CHECK(ranking_hidden IN (0,1)));
+            CREATE INDEX clients_ranking_hidden_id ON clients(ranking_hidden,id);
+            INSERT INTO clients VALUES(1,x'1234',1,0);
+            CREATE TABLE daily_reports(day TEXT,client_id INTEGER,revision INTEGER,digest BLOB);
+            INSERT INTO daily_reports VALUES('2026-11-17',1,7,x'abcd');
+            CREATE TABLE daily_stats(client_id INTEGER,total_tokens INTEGER);
+            INSERT INTO daily_stats VALUES(1,120);
+            CREATE TABLE period_stats(kind TEXT);
+            CREATE TABLE admin_accounts(id INTEGER);
+        """)
+        return db
+
+    def test_current_schema_requires_all_admin_migrations(self):
+        db = self.schema_fixture()
+        docker_smoke.require_current_schema(db)
+        db.execute("DELETE FROM schema_migrations WHERE version >= 6")
+        with self.assertRaisesRegex(AssertionError, "database migrations"):
+            docker_smoke.require_current_schema(db)
+
+    def test_v4_fixture_removes_new_schema_but_preserves_client_and_reports(self):
+        db = self.schema_fixture()
+        docker_smoke.prepare_v4_fixture(db)
+        self.assertEqual(db.execute("SELECT version FROM schema_migrations ORDER BY version").fetchall(),
+                         [(1,), (2,), (3,), (4,)])
+        self.assertEqual(db.execute("SELECT * FROM clients").fetchall(), [(1, b'\x12\x34', 1)])
+        self.assertEqual(db.execute("SELECT * FROM daily_reports").fetchall(),
+                         [('2026-11-17', 1, 7, b'\xab\xcd')])
+        self.assertEqual(db.execute("SELECT * FROM daily_stats").fetchall(), [(1, 120)])
+        names = {row[0] for row in db.execute("SELECT name FROM sqlite_master")}
+        self.assertTrue({'admin_accounts', 'period_stats', 'clients_ranking_hidden_id'}.isdisjoint(names))
+        self.assertEqual([row[1] for row in db.execute("PRAGMA table_info(clients)")],
+                         ['id', 'token_hash', 'disabled'])
 
     def test_cleanup_refuses_unowned_container_and_volume(self):
         smoke = self.make_smoke()

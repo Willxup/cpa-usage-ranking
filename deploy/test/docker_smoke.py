@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Exercise an already-built image with a disposable Docker volume.
 
-Linux Docker host, Python 3 and Docker CLI required. Pass a static user-mode
+Linux Docker host, Python 3 with SQLite 3.35+ and Docker CLI required.
+SQLite DROP COLUMN reconstructs the disposable v4 fixture. Pass a static user-mode
 QEMU executable to run an ARM64 image on an AMD64 host without binfmt changes.
 No ports are published, no production data is used, and resources are removed.
 """
@@ -51,6 +52,20 @@ def text(*args, **kwargs):
 def require(condition, message):
     if not condition:
         raise AssertionError(message)
+
+
+def require_current_schema(db):
+    versions = [row[0] for row in db.execute("SELECT version FROM schema_migrations ORDER BY version")]
+    require(versions == [1, 2, 3, 4, 5, 6, 7], f"database migrations: {versions}")
+
+
+def prepare_v4_fixture(db):
+    """Remove later schema only from the runner's freshly generated test fixture."""
+    db.execute("DROP INDEX clients_ranking_hidden_id")
+    db.execute("ALTER TABLE clients DROP COLUMN ranking_hidden")
+    db.execute("DROP TABLE admin_accounts")
+    db.execute("DROP TABLE period_stats")
+    db.execute("DELETE FROM schema_migrations WHERE version >= 5")
 
 
 def request(base, path, method="GET", body=None, secret=None):
@@ -268,8 +283,7 @@ class Smoke:
         first_db = self.database_copy(first, self.workdir / "before-upgrade")
         with closing(sqlite3.connect(first_db)) as db:
             require(db.execute("PRAGMA integrity_check").fetchone() == ("ok",), "SQLite integrity")
-            versions = [row[0] for row in db.execute("SELECT version FROM schema_migrations ORDER BY version")]
-            require(versions == [1, 2, 3, 4, 5], f"empty-volume migrations: {versions}")
+            require_current_schema(db)
             client = db.execute("SELECT token_hash, display_name FROM clients WHERE id=?", (client_id,)).fetchone()
             require(client == (hashlib.sha256(raw_secret).digest(), "Docker Smoke"), "persisted credential hash")
             revision = db.execute("SELECT revision, digest FROM daily_reports WHERE day=? AND client_id=?", (day, client_id)).fetchone()
@@ -278,15 +292,14 @@ class Smoke:
             require(revision is not None and revision[0] == 7 and len(revision[1]) == 32, "persisted revision")
             require(len(stats) == 2 and stats[0] == (0, 120, 80, 40, 2) and stats[1][0] > 0
                     and stats[1][1:] == (120, 80, 40, 2), "persisted metrics")
-            # Construct a v4 fixture from this freshly created database to verify
-            # the real v4 -> v5 migration preserves an existing client and report.
-            db.execute("DROP TABLE period_stats")
-            db.execute("DELETE FROM schema_migrations WHERE version=5")
+            # Construct a genuine v4 fixture, removing v5-v7 schema together
+            # with their ledger entries, then verify the real upgrade to v7.
+            prepare_v4_fixture(db)
             db.commit()
             db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
         require(not (first_db.parent / "ranking.db-wal").exists(), "fixture WAL not closed")
         self.restore_copy(first, first_db)
-        print("PASS: real registration/report, schema 1-5, SQLite integrity and persisted credential/revision/metrics", flush=True)
+        print("PASS: real registration/report, schema 1-7, SQLite integrity and persisted credential/revision/metrics", flush=True)
 
         self.run(second)
         base = self.ready(second)
@@ -302,15 +315,17 @@ class Smoke:
         self.stop(second)
         second_db = self.database_copy(second, self.workdir / "after-upgrade")
         with closing(sqlite3.connect(second_db)) as db:
-            require([row[0] for row in db.execute("SELECT version FROM schema_migrations ORDER BY version")]
-                    == [1, 2, 3, 4, 5], "v4 to v5 migration")
+            require_current_schema(db)
             require(db.execute("SELECT count(*) FROM period_stats").fetchone() == (0,), "v5 table not created")
+            require(db.execute("SELECT count(*) FROM admin_accounts").fetchone() == (0,), "v6 table not created")
+            require(db.execute("SELECT ranking_hidden FROM clients WHERE id=?", (client_id,)).fetchone()
+                    == (0,), "v7 visibility default changed")
             require(db.execute("SELECT revision,digest FROM daily_reports WHERE day=? AND client_id=?", (day, client_id)).fetchone()
                     == revision, "revision/digest changed after recreation")
             require(db.execute("SELECT model_id,total_tokens,input_tokens,output_tokens,request_count "
                                "FROM daily_stats WHERE day=? AND client_id=? ORDER BY model_id", (day, client_id)).fetchall()
                     == stats, "metrics changed after recreation")
-        print("PASS: v4->v5 migration, same-volume recreation, credential/revision/metrics and SIGTERM exit 0", flush=True)
+        print("PASS: v4->v7 migration, same-volume recreation, credential/revision/metrics and SIGTERM exit 0", flush=True)
 
         self.invalid("empty", "RANKING_SQLITE_PATH=", "RANKING_SQLITE_PATH")
         self.invalid("address", "RANKING_HTTP_ADDR=not-a-host-port", "RANKING_HTTP_ADDR")

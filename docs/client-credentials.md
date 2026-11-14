@@ -21,9 +21,11 @@ unambiguous Authorization header and returns only that digest. Invalid-input
 errors are generic and contain no credential text. The database stores a unique
 32-byte BLOB digest; clients and API responses do not carry that digest.
 
-This is a high-entropy machine credential, not a human password. The service
-does not generate or return secrets, add a password KDF, issue sessions, send
-OTP, rotate credentials or recover a lost secret. Clients must preserve their
+This is a high-entropy machine credential, not a human password. Client
+credential handling does not generate or return secrets, add a password KDF,
+issue sessions, send OTP, rotate credentials or recover a lost secret.
+The optional [administrator console](admin.md) uses separate passwords and
+sessions; client Bearer credentials never grant administrator access. Clients must preserve their
 secret and reuse it for safe retries; keeping only `client_id` is insufficient.
 There is no client SDK or Keeper integration in this service.
 

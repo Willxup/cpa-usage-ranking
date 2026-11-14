@@ -4,7 +4,7 @@
 
 An independent usage-ranking service under construction. Protected client
 registration, daily snapshot ingestion, background settlement and SQLite persistence
-are available. Five real leaderboards are built in a unified cache for six fixed UTC periods; see [leaderboard calculations](docs/leaderboards.md). No website account UI is provided. The
+are available. Five real leaderboards are built in a unified cache for six fixed UTC periods; see [leaderboard calculations](docs/leaderboards.md). There is no public-user account UI; an optional [administrator console](docs/admin.md) provides password login and moderation. The
 [model catalog](docs/model-catalog.md) is validated at startup and maps exact
 names and aliases to stable IDs; there is no model management API. Reference
 prices are not independently verified live quotes and may be outdated.
