@@ -9,6 +9,31 @@ import (
 	"cpa-usage-ranking/internal/config"
 )
 
+func TestAdminConfigurationCannotBeServedAsStaticAsset(t *testing.T) {
+	root := t.TempDir()
+	assets := filepath.Join(root, "assets")
+	if err := os.Mkdir(assets, 0700); err != nil {
+		t.Fatal(err)
+	}
+	private := filepath.Join(assets, "admin.json")
+	if err := os.WriteFile(private, []byte(`{"username":"owner","password":"isolated-test-password"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("RANKING_WEB_DIR", root)
+	t.Setenv("RANKING_ADMIN_CONFIG_FILE", private)
+	if _, err := config.Load(); err == nil {
+		t.Fatal("private file under public assets accepted")
+	}
+	link := filepath.Join(t.TempDir(), "admin.json")
+	if err := os.Symlink(private, link); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("RANKING_ADMIN_CONFIG_FILE", link)
+	if _, err := config.Load(); err == nil {
+		t.Fatal("symlink into public assets accepted")
+	}
+}
+
 func TestAdminConfiguration(t *testing.T) {
 	cfg, err := config.Load()
 	if err != nil || cfg.AdminOwner != nil || cfg.AdminAllowLocalHTTP {

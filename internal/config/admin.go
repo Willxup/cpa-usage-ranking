@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -30,6 +31,21 @@ func loadAdmin(cfg *Config) error {
 		// Group-read is useful for a service identity; never allow public access or group writes.
 		if info.Mode().Perm()&0037 != 0 {
 			return errors.New("administrator configuration permissions must be 0600 or 0640 (or stricter)")
+		}
+		if cfg.WebDir != "" {
+			root, _ := filepath.Abs(cfg.WebDir)
+			if resolved, err := filepath.EvalSymlinks(root); err == nil {
+				root = resolved
+			}
+			target, err := filepath.EvalSymlinks(path)
+			if err != nil {
+				return errors.New("cannot resolve administrator configuration file")
+			}
+			target, _ = filepath.Abs(target)
+			relative, err := filepath.Rel(root, target)
+			if err == nil && relative != ".." && !strings.HasPrefix(relative, ".."+string(os.PathSeparator)) && !filepath.IsAbs(relative) {
+				return errors.New("administrator configuration must be outside the frontend directory")
+			}
 		}
 		decoder := json.NewDecoder(io.LimitReader(file, 8193))
 		decoder.DisallowUnknownFields()
