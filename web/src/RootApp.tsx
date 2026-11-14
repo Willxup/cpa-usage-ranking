@@ -1,10 +1,12 @@
-import { lazy, Suspense } from 'react'
 import App from './App'
-
-const AdminApp = lazy(() => import('./admin/AdminApp'))
+import AdminApp from './admin/AdminApp'
+import { SessionProvider } from './admin/SessionProvider'
+import { usePathname } from './navigation'
 
 export default function RootApp() {
-  return <Suspense fallback={<p role="status">正在加载…</p>}>
-    {window.location.pathname.startsWith('/admin/') ? <AdminApp /> : <App />}
-  </Suspense>
+  const admin = usePathname().startsWith('/admin/')
+  return <SessionProvider>
+    <div hidden={admin}><App active={!admin} /></div>
+    {admin && <AdminApp />}
+  </SessionProvider>
 }

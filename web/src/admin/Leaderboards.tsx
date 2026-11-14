@@ -35,7 +35,7 @@ export function Leaderboards({ session, onExpired }: { session: AdminSession; on
         <fieldset className="board-control"><legend className="sr-only">榜单类型</legend>{(Object.keys(boards) as Board[]).map((item) => <button key={item} type="button" aria-pressed={board === item} onClick={() => setSelection((old) => ({ ...old, board: item, version: old.version + 1 }))}>{boards[item].label}</button>)}</fieldset>
         <fieldset className="period-control"><legend className="sr-only">时间范围</legend>{(Object.keys(periods) as Period[]).map((item) => <button key={item} type="button" aria-pressed={period === item} onClick={() => setSelection((old) => ({ ...old, period: item, version: old.version + 1 }))}>{periods[item]}</button>)}</fieldset>
       </div>
-      <LeaderboardPanel board={board} period={period} selectionVersion={selection.version} renderAction={(entry, generatedAt) => <button className="admin-button admin-button--danger" type="button" disabled={!!busy} onClick={() => void hide(entry, generatedAt)}>{busy === entry.client_id ? '正在保存…' : '全部下榜'}</button>} />
+      <LeaderboardPanel compactLoading board={board} period={period} selectionVersion={selection.version} renderAction={(entry, generatedAt) => <button className="admin-button admin-button--danger" type="button" disabled={!!busy} onClick={() => void hide(entry, generatedAt)}>{busy === entry.client_id ? '正在保存…' : '全部下榜'}</button>} />
       <button className="admin-button" type="button" disabled={!!busy} onClick={() => setSelection((old) => ({ ...old, version: old.version + 1 }))}>刷新榜单</button>
     </>}
   </section>

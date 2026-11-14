@@ -37,6 +37,7 @@
 @media (max-width: 1199px) { .leaderboard-table--overall .admin-row-action { grid-column: 1 / -1; text-align: left; } }
 @media (max-width: 760px) { .leaderboard-table:not(.leaderboard-table--overall) .admin-row-action { grid-column: 2 / -1; grid-row: 3; text-align: left; } }
 .admin-owner { margin-block: 20px; color: var(--muted); overflow-wrap: anywhere; font-size: 14px; }
+.admin-progress { height: 4px; margin-block: 16px; border-radius: 4px; background: linear-gradient(90deg, var(--line), var(--accent), var(--line)); }
 .admin-empty { padding: 32px 16px; text-align: center; color: var(--muted); }
 .admin-table { width: 100%; border-collapse: collapse; font-size: 14px; table-layout: fixed; }
 .admin-table th, .admin-table td { padding: 14px 12px; text-align: left; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }

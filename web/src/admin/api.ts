@@ -11,6 +11,7 @@ export async function adminRequest<T>(path: string, init: RequestInit = {}): Pro
   try {
     const response = await fetch(`/v1/admin/${path}`, { ...init, credentials: 'same-origin', cache: 'no-store', signal: controller.signal })
     if (!response.ok) {
+      if (response.status === 401 && !(path === 'session' && init.method === 'POST')) window.dispatchEvent(new Event('ranking:session-expired'))
       const messages: Record<number, string> = { 400: '输入无效，请检查后重试。', 401: path === 'session' && init.method === 'POST' ? '用户名或密码错误。' : '会话已过期，请重新登录。', 403: '无操作权限或安全校验失败，请刷新后重试。', 404: '目标不存在，请刷新后重试。', 409: path.startsWith('users/') ? '该用户仍被封禁，请先到用户管理解封。' : '该用户名已存在或不可使用。', 429: '登录尝试过多，请稍后再试。' }
       throw new AdminError(response.status, messages[response.status] ?? `服务暂时不可用（${response.status}），请重试。`)
     }

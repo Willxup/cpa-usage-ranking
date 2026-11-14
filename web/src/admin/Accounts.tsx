@@ -44,7 +44,7 @@ export function Accounts({ session, onExpired }: { session: AdminSession; onExpi
     <div className="admin-heading"><div><p className="eyebrow">ADMINISTRATORS</p><h1 id="accounts-title">管理员管理</h1></div><p className="admin-note">主管理员来自配置文件，仅可在此增删普通管理员。</p></div>
     {notice && <p className="admin-notice" role="status">{notice}</p>}
     {error && <div><p className="admin-error" role="alert">{error}</p><button className="admin-button" disabled={loading || !!busy} onClick={() => setVersion((old) => old + 1)}>重新加载列表</button></div>}
-    {loading && <p role="status" className="admin-note">正在加载管理员…</p>}
+    {loading && <div className="admin-progress" role="progressbar" aria-label="读取管理员列表" />}
     {data && <div aria-busy={loading}>
       <p className="admin-owner">{data.owner.username} · 主管理员（配置文件，只读）</p>
       {data.accounts.length === 0 ? <p className="admin-empty">暂无普通管理员。</p> : <table className="admin-table"><caption className="sr-only">普通管理员</caption><thead><tr><th scope="col">ID</th><th scope="col">用户名</th><th scope="col">创建时间（UTC）</th><th scope="col">操作</th></tr></thead><tbody>{data.accounts.map((account) => <tr key={account.id}>

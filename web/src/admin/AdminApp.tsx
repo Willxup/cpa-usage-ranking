@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Leaderboards } from './Leaderboards'
-import { adminRequest, jsonRequest } from './api'
+import { adminRequest, jsonRequest, type AdminSession } from './api'
+import { Link } from '../Link'
+import { navigate, usePathname } from '../navigation'
 import { useSession } from './useSession'
 import { Accounts } from './Accounts'
 import { Users } from './Users'
@@ -8,6 +10,7 @@ import '../styles/app.css'
 import './admin.css'
 
 function Login() {
+  const { accept } = useSession()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const errorRef = useRef<HTMLParagraphElement>(null)
@@ -18,8 +21,9 @@ function Login() {
     const form = new FormData(event.currentTarget)
     setBusy(true); setError('')
     try {
-      await adminRequest('session', jsonRequest('POST', { username: form.get('username'), password: form.get('password') }))
-      window.location.assign('/admin/leaderboards')
+      const value = await adminRequest<AdminSession>('session', jsonRequest('POST', { username: form.get('username'), password: form.get('password') }))
+      accept(value)
+      navigate('/admin/leaderboards', true)
     } catch (error) { setError((error as Error).message); setBusy(false) }
   }
   useEffect(() => { if (error) errorRef.current?.focus() }, [error])
@@ -37,38 +41,39 @@ function Login() {
 }
 
 export default function AdminApp() {
-  const { session, error, refresh } = useSession()
+  const { session, error, refresh, accept } = useSession()
+  const path = usePathname()
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState('')
-  const login = window.location.pathname === '/admin/login'
-  const accounts = window.location.pathname === '/admin/accounts'
-  const users = window.location.pathname === '/admin/users'
+  const login = path === '/admin/login'
+  const accounts = path === '/admin/accounts'
+  const users = path === '/admin/users'
   const main = useRef<HTMLElement>(null)
-  useEffect(() => { main.current?.focus() }, [])
+  useEffect(() => { main.current?.focus() }, [path])
   useEffect(() => {
-    if (session?.enabled && !session.authenticated && !login) window.location.replace('/admin/login')
-    if (session?.authenticated && login) window.location.replace('/admin/leaderboards')
+    if (session?.enabled && !session.authenticated && !login) navigate('/admin/login', true)
+    if (session?.authenticated && login) navigate('/admin/leaderboards', true)
   }, [session, login])
   async function logout() {
     if (busy) return
     setBusy(true); setActionError('')
-    try { await adminRequest('session', jsonRequest('DELETE', {}, session?.csrf_token)); window.location.assign('/') }
+    try { await adminRequest('session', jsonRequest('DELETE', {}, session?.csrf_token)); accept({ enabled: true, authenticated: false }); navigate('/') }
     catch (error) { setActionError((error as Error).message); setBusy(false); void refresh() }
   }
   return <div className="app-shell admin-shell">
     <header className="header-wrap"><div className="site-header page-width">
-      <a className="brand" href="/" aria-label="CPA Usage Ranking 首页"><img className="project-icon" src="/assets/brand/project-icon.svg" width="40" height="40" alt="" /><span>CPA Usage Ranking</span></a>
-      <a className="admin-entry" href="/">公开榜单</a>
+      <Link className="brand" href="/" aria-label="CPA Usage Ranking 首页"><img className="project-icon" src="/assets/brand/project-icon.svg" width="40" height="40" alt="" /><span>CPA Usage Ranking</span></Link>
+      <Link className="admin-entry" href="/">公开榜单</Link>
     </div></header>
     <main id="main" className="page-width admin-main" tabIndex={-1} ref={main}>
-      {!session && !error && <p role="status">正在检查会话…</p>}
+      {!session && !error && <div className="admin-progress" role="progressbar" aria-label="验证会话" />}
       {error && <div role="alert"><p className="admin-error">{error}</p><button className="admin-button" onClick={() => void refresh()}>重试</button></div>}
-      {session && !session.enabled && <section className="admin-card"><h1>管理后台未启用</h1><a className="primary-link" href="/">返回公开榜单</a></section>}
+      {session && !session.enabled && <section className="admin-card"><h1>管理后台未启用</h1><Link className="primary-link" href="/">返回公开榜单</Link></section>}
       {session?.enabled && !session.authenticated && login && <Login />}
       {session?.authenticated && !login && <>
-        <div className="admin-nav-wrap"><nav className="admin-nav" aria-label="控制台导航"><a href="/admin/leaderboards" aria-current={!accounts && !users ? 'page' : undefined}>榜单管理</a><a href="/admin/users" aria-current={users ? 'page' : undefined}>用户管理</a>{session.user?.owner && <a href="/admin/accounts" aria-current={accounts ? 'page' : undefined}>管理员管理</a>}</nav><div className="admin-identity"><span>{session.user?.username} · {session.user?.owner ? '主管理员' : '普通管理员'}</span><button className="admin-button" disabled={busy} onClick={() => void logout()}>{busy ? '正在退出…' : '退出'}</button></div></div>
+        <div className="admin-nav-wrap"><nav className="admin-nav" aria-label="控制台导航"><Link href="/admin/leaderboards" aria-current={!accounts && !users ? 'page' : undefined}>榜单管理</Link><Link href="/admin/users" aria-current={users ? 'page' : undefined}>用户管理</Link>{session.user?.owner && <Link href="/admin/accounts" aria-current={accounts ? 'page' : undefined}>管理员管理</Link>}</nav><div className="admin-identity"><span>{session.user?.username} · {session.user?.owner ? '主管理员' : '普通管理员'}</span><button className="admin-button" disabled={busy} onClick={() => void logout()}>{busy ? '正在退出…' : '退出'}</button></div></div>
         {actionError && <p className="admin-error" role="alert">{actionError}</p>}
-        {accounts ? session.user?.owner ? <Accounts session={session} onExpired={refresh} /> : <section className="admin-card"><h1>仅主管理员可管理账号</h1><a className="primary-link" href="/admin/leaderboards">返回榜单</a></section> : users ? <Users session={session} onExpired={refresh} /> : <Leaderboards session={session} onExpired={refresh} />}
+        {accounts ? session.user?.owner ? <Accounts session={session} onExpired={refresh} /> : <section className="admin-card"><h1>仅主管理员可管理账号</h1><Link className="primary-link" href="/admin/leaderboards">返回榜单</Link></section> : users ? <Users session={session} onExpired={refresh} /> : <Leaderboards session={session} onExpired={refresh} />}
       </>}
     </main>
     <footer className="site-footer page-width"><span>CPA Usage Ranking · 控制台</span><p>统计周期保持 UTC</p></footer>

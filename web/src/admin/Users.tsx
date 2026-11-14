@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { fetchAvatarCatalog, type AvatarCatalog } from '../api/leaderboards'
 import { Avatar } from '../components/LeaderboardTable'
 import { AdminError, adminRequest, jsonRequest, type AdminSession } from './api'
+import { Link } from '../Link'
 
 type User = { id: string; display_name: string; avatar_id: string; created_at: string; disabled: boolean; ranking_hidden: boolean }
 type UserPage = { users: User[]; next_cursor: string }
@@ -20,7 +21,7 @@ export function Users({ session, onExpired, hiddenOnly = false }: { session: Adm
   const path = `users?${query}${hiddenOnly ? '&hidden=true' : ''}${cursor ? `&after=${cursor}` : ''}`
   const key = `${path}/${attempt}`
   const loading = result.key !== key
-  const data = loading ? undefined : result.data
+  const data = result.data
   useEffect(() => {
     let active = true
     adminRequest<UserPage>(path).then((value) => { if (active) setResult({ key, data: value }) }).catch((error: Error) => {
@@ -76,13 +77,13 @@ export function Users({ session, onExpired, hiddenOnly = false }: { session: Adm
     </form>
     {notice && <p className="admin-notice" role="status">{notice}</p>}
     {actionError && <p className="admin-error" role="alert">{actionError}</p>}
-    {loading && <p className="admin-empty" role="status">正在加载用户…</p>}
+    {loading && <div className="admin-progress" role="progressbar" aria-label="读取用户列表" />}
     {!loading && result.error && <div className="admin-list-error"><p className="admin-error" role="alert">{result.error}</p><button className="admin-button" onClick={() => setAttempt((old) => old + 1)}>重试用户列表</button></div>}
     {data && <>
-      {data.users.length === 0 ? <p className="admin-empty">未找到匹配的用户。</p> : <table className="admin-table admin-users"><caption className="sr-only">已注册用户</caption><thead><tr><th scope="col">ID</th><th scope="col">用户</th><th scope="col">注册时间（UTC）</th><th scope="col">封禁状态</th><th scope="col">下榜状态</th><th scope="col">操作</th></tr></thead><tbody>{data.users.map((user) => <tr key={user.id}>
-        <td data-label="ID">{user.id}</td><td data-label="用户"><div className="participant"><Avatar id={user.avatar_id} catalog={avatars} /><span>{user.display_name}</span></div></td><td data-label="注册时间（UTC）">{user.created_at.slice(0, 19).replace('T', ' ')}</td><td data-label="封禁状态">{user.disabled ? '已封禁' : '正常'}</td><td data-label="下榜状态">{user.ranking_hidden ? '已下榜' : '未下榜'}</td><td data-label="操作">{hiddenOnly ? <div className="admin-restore-actions"><button className="admin-button" disabled={!!busy || user.disabled} onClick={() => void restore(user)}>{busy === user.id ? '正在保存…' : '恢复上榜'}</button>{user.disabled && <><p className="admin-note">先解封，再恢复</p><a href="/admin/users">前往用户管理</a></>}</div> : <button className={`admin-button${user.disabled ? '' : ' admin-button--danger'}`} disabled={!!busy} onClick={() => void setBan(user)}>{busy === user.id ? '正在保存…' : user.disabled ? '解封' : '封禁'}</button>}</td>
+      {data.users.length === 0 ? <p className="admin-empty">未找到匹配的用户。</p> : <table className="admin-table admin-users" aria-busy={loading}><caption className="sr-only">已注册用户</caption><thead><tr><th scope="col">ID</th><th scope="col">用户</th><th scope="col">注册时间（UTC）</th><th scope="col">封禁状态</th><th scope="col">下榜状态</th><th scope="col">操作</th></tr></thead><tbody>{data.users.map((user) => <tr key={user.id}>
+        <td data-label="ID">{user.id}</td><td data-label="用户"><div className="participant"><Avatar id={user.avatar_id} catalog={avatars} /><span>{user.display_name}</span></div></td><td data-label="注册时间（UTC）">{user.created_at.slice(0, 19).replace('T', ' ')}</td><td data-label="封禁状态">{user.disabled ? '已封禁' : '正常'}</td><td data-label="下榜状态">{user.ranking_hidden ? '已下榜' : '未下榜'}</td><td data-label="操作">{hiddenOnly ? <div className="admin-restore-actions"><button className="admin-button" disabled={loading || !!busy || user.disabled} onClick={() => void restore(user)}>{busy === user.id ? '正在保存…' : '恢复上榜'}</button>{user.disabled && <><p className="admin-note">先解封，再恢复</p><Link href="/admin/users">前往用户管理</Link></>}</div> : <button className={`admin-button${user.disabled ? '' : ' admin-button--danger'}`} disabled={loading || !!busy} onClick={() => void setBan(user)}>{busy === user.id ? '正在保存…' : user.disabled ? '解封' : '封禁'}</button>}</td>
       </tr>)}</tbody></table>}
-      <div className="admin-pagination"><span>第 {cursors.length} 页 · {data.users.length} 位用户</span><button className="admin-button" disabled={!!busy || cursors.length === 1} onClick={() => setCursors((old) => old.slice(0, -1))}>上一页</button><button className="admin-button" disabled={!!busy || !data.next_cursor} onClick={() => setCursors((old) => [...old, data.next_cursor])}>下一页</button></div>
+      <div className="admin-pagination"><span>第 {cursors.length} 页 · {data.users.length} 位用户</span><button className="admin-button" disabled={loading || !!busy || cursors.length === 1} onClick={() => setCursors((old) => old.slice(0, -1))}>上一页</button><button className="admin-button" disabled={loading || !!busy || !data.next_cursor} onClick={() => setCursors((old) => [...old, data.next_cursor])}>下一页</button></div>
     </>}
   </section>
 }
