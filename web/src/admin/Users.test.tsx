@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { Users } from './Users'
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
-const user = { id: '9007199254740993', display_name: '<img src=x>', avatar_id: '1', created_at: '2026-11-16T00:00:00Z', disabled: true }
+const user = { id: '9007199254740993', display_name: '<img src=x>', avatar_id: '1', created_at: '2026-11-16T00:00:00Z', disabled: true, ranking_hidden: true }
 afterEach(() => vi.unstubAllGlobals())
 
 it('renders names as text, preserves ID precision and resets paging on query', async () => {
@@ -38,6 +38,33 @@ it('sends an explicit target state once and reports failed writes without changi
   finish(json({}, 503))
   expect(await screen.findByRole('alert')).toHaveTextContent('服务暂时不可用')
   expect(screen.getByRole('button', { name: '解封' })).toBeEnabled()
+})
+
+it('uses the global hidden filter and requires unbanning before restoration', async () => {
+  const fetcher = vi.fn((path: RequestInfo | URL) => Promise.resolve(json(String(path).includes('avatars') ? {} : { users: [user], next_cursor: '' })))
+  vi.stubGlobal('fetch', fetcher)
+  render(<Users session={{ enabled: true, authenticated: true }} hiddenOnly onExpired={vi.fn()} />)
+  expect(await screen.findByRole('button', { name: '恢复上榜' })).toBeDisabled()
+  expect(screen.getByText('先解封，再恢复')).toBeVisible()
+  expect(screen.getByRole('link', { name: '前往用户管理' })).toHaveAttribute('href', '/admin/users')
+  expect(screen.queryByLabelText('下榜状态')).not.toBeInTheDocument()
+  expect(fetcher.mock.calls.some(([path]) => String(path) === '/v1/admin/users?limit=50&hidden=true')).toBe(true)
+})
+
+it('restores eligibility with an explicit false state and refreshes the user list', async () => {
+  let restored = false
+  const fetcher = vi.fn((path: RequestInfo | URL, init?: RequestInit) => {
+    if (String(path).includes('avatars')) return Promise.resolve(json({}))
+    if (init?.method === 'PUT') { restored = true; return Promise.resolve(json({ hidden: false })) }
+    return Promise.resolve(json({ users: restored ? [] : [{ ...user, disabled: false }], next_cursor: '' }))
+  })
+  vi.stubGlobal('fetch', fetcher)
+  const events = userEvent.setup()
+  render(<Users session={{ enabled: true, authenticated: true, csrf_token: 'csrf' }} hiddenOnly onExpired={vi.fn()} />)
+  await events.click(await screen.findByRole('button', { name: '恢复上榜' }))
+  expect(await screen.findByText('未找到匹配的用户。')).toBeVisible()
+  expect(screen.getByRole('status')).toHaveTextContent('不保证进入前 100 或恢复原名次')
+  expect(fetcher.mock.calls.filter(([, init]) => init?.method === 'PUT').map(([, init]) => JSON.parse(String(init?.body)))).toEqual([{ hidden: false }])
 })
 
 it('distinguishes load failure, retry and an empty list', async () => {

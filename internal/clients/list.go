@@ -14,6 +14,7 @@ type ListQuery struct {
 	ID       int64
 	Name     string
 	Disabled *bool
+	Hidden   *bool
 	After    int64
 	Limit    int
 }
@@ -46,6 +47,10 @@ func (r *Repository) List(ctx context.Context, query ListQuery) (Page, error) {
 		conditions = append(conditions, "disabled = ?")
 		args = append(args, *query.Disabled)
 	}
+	if query.Hidden != nil {
+		conditions = append(conditions, "ranking_hidden = ?")
+		args = append(args, *query.Hidden)
+	}
 	args = append(args, query.Limit+1)
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -58,7 +63,7 @@ func (r *Repository) List(ctx context.Context, query ListQuery) (Page, error) {
 	for rows.Next() {
 		var client Client
 		var created int64
-		if err := rows.Scan(&client.ID, &client.DisplayName, &client.AvatarID, &client.Disabled, &created); err != nil {
+		if err := rows.Scan(&client.ID, &client.DisplayName, &client.AvatarID, &client.Disabled, &created, &client.RankingHidden); err != nil {
 			return Page{}, err
 		}
 		client.CreatedAt = time.UnixMilli(created).UTC()

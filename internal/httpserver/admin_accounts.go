@@ -83,6 +83,8 @@ func (h *adminHTTP) adminError(c *gin.Context, err error) {
 		writeError(c, http.StatusForbidden, "permission_denied", "Permission denied")
 	case errors.Is(err, admin.ErrNotFound):
 		writeError(c, http.StatusNotFound, "not_found", "Target not found")
+	case errors.Is(err, admin.ErrBanned):
+		writeError(c, http.StatusConflict, "client_banned", "Unban client before restoring rankings")
 	case errors.Is(err, admin.ErrConflict):
 		writeError(c, http.StatusConflict, "username_unavailable", "Username unavailable")
 	default:

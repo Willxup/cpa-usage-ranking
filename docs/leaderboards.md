@@ -43,18 +43,21 @@ Formatting is presentation only: the API, score calculation and sorting remain u
 
 The cache builds five views from all eligible clients: overall, token usage,
 cache reuse, conservative success score, and measured mean time to first token
-(TTFT). Eligibility requires an enabled client and at least one accepted
-execution in the selected UTC period. There is no minimum sample count or success
-rate. Only all-model totals are used; totals and model details are not added.
+(TTFT). Eligibility requires an enabled client without the administrator-set
+`ranking_hidden` exclusion and at least one accepted execution in the selected
+UTC period. There is no minimum sample count or success rate. Only all-model totals are used; totals and model details are not added.
 
 The six fixed periods are today, yesterday, current Monday-start week, current
 month, current calendar year, and all time. Period ends are exclusive. Yearly
 raw totals combine finalized monthly sums and all unsettled daily sums of that
 calendar year in one SQLite read snapshot; there is no year table. Cumulative
-statistics remain persisted and maintained. Profiles, disabled state and raw
-statistics are read in the same snapshot before scoring; disabled clients are
-excluded from all references. Daily and weekly retention follows the
-[daily report storage rules](report-snapshots.md).
+statistics remain persisted and maintained. Profiles, disabled/excluded state and
+raw statistics are read in the same snapshot before scoring; banned and excluded
+clients are filtered before candidate limits and all scoring references. Global
+exclusion continues to accept reports; banning rejects reports. Both states are
+independent, survive restarts and apply even when the [admin console](admin.md) is
+disabled. Restoration uses only retained statistics under the original rules.
+Daily and weekly retention follows the [daily report storage rules](report-snapshots.md).
 
 Overall has at most 100 points: usage 40, success 30, cache 20, TTFT 10.
 Positive token totals use their mid-percentile among positive totals (equal

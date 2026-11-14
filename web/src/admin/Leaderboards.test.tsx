@@ -1,0 +1,31 @@
+import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, expect, it, vi } from 'vitest'
+import { Leaderboards } from './Leaderboards'
+
+const json = (body: unknown) => new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } })
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks() })
+
+it('confirms global exclusion and replaces the whole table with published server ranks and scores', async () => {
+  let hidden = false
+  const fetcher = vi.fn((path: RequestInfo | URL, init?: RequestInit) => {
+    if (String(path).includes('ranking-visibility') && init?.method === 'PUT') { hidden = true; return Promise.resolve(json({ hidden: true })) }
+    if (String(path).includes('avatars')) return Promise.resolve(json({ default_avatar_id: 1, avatars: [{ avatar_id: 1, path: 'images/001.webp' }] }))
+    return Promise.resolve(json({ board: 'overall', period: 'today', start: '2026-11-16', end: '2026-11-17', generated_at: hidden ? '2026-11-16T01:00:01Z' : '2026-11-16T01:00:00Z', entries: hidden ? [{ client_id: '2', display_name: 'other', avatar_id: '1', rank: 1, metric: '95.00' }] : [{ client_id: '1', display_name: 'target', avatar_id: '1', rank: 1, metric: '90.00' }, { client_id: '2', display_name: 'other', avatar_id: '1', rank: 2, metric: '80.00' }] }))
+  })
+  vi.stubGlobal('fetch', fetcher)
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValue(true)
+  const events = userEvent.setup()
+  render(<Leaderboards session={{ enabled: true, authenticated: true, csrf_token: 'csrf' }} onExpired={vi.fn()} />)
+  let row = await screen.findByRole('row', { name: /target/ })
+  await events.click(within(row).getByRole('button', { name: '全部下榜' }))
+  expect(fetcher.mock.calls.some(([path]) => String(path).includes('ranking-visibility'))).toBe(false)
+  await events.click(within(row).getByRole('button', { name: '全部下榜' }))
+  expect(confirm).toHaveBeenLastCalledWith(expect.stringContaining('退出全部榜单，保留数据且继续接收上报'))
+  expect(await screen.findByTitle('95.00 分')).toBeVisible()
+  expect(screen.queryByRole('row', { name: /target/ })).not.toBeInTheDocument()
+  row = screen.getByRole('row', { name: /other/ })
+  expect(within(row).getByText('1', { exact: true })).toBeVisible()
+  const write = fetcher.mock.calls.find(([path]) => String(path).includes('ranking-visibility'))
+  expect(JSON.parse(String(write?.[1]?.body))).toEqual({ hidden: true })
+})

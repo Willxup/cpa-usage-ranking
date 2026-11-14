@@ -14,7 +14,14 @@ func MigrateSchema(ctx context.Context, writer *sql.DB) error {
 		{Version: 4, Apply: createDailySnapshotsV4},
 		{Version: 5, Apply: createPeriodStatsV5},
 		{Version: 6, Apply: createAdminAccountsV6},
+		{Version: 7, Apply: addRankingHiddenV7},
 	})
+}
+
+func addRankingHiddenV7(ctx context.Context, tx *sql.Tx) error {
+	_, err := tx.ExecContext(ctx, `ALTER TABLE clients ADD COLUMN ranking_hidden INTEGER NOT NULL DEFAULT 0 CHECK (ranking_hidden IN (0, 1));
+	CREATE INDEX clients_ranking_hidden_id ON clients(ranking_hidden, id)`)
+	return err
 }
 
 func createAdminAccountsV6(ctx context.Context, tx *sql.Tx) error {

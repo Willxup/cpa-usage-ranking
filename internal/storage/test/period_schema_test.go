@@ -27,7 +27,7 @@ func TestPeriodSchemaFreshAndV4Upgrade(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			if queryInt(t, db.Reader, `SELECT count(*) FROM schema_migrations`) != 6 || queryInt(t, db.Reader, `SELECT count(*) FROM sqlite_schema WHERE name='period_stats' AND sql LIKE '%WITHOUT ROWID%'`) != 1 {
+			if queryInt(t, db.Reader, `SELECT count(*) FROM schema_migrations`) != 7 || queryInt(t, db.Reader, `SELECT count(*) FROM sqlite_schema WHERE name='period_stats' AND sql LIKE '%WITHOUT ROWID%'`) != 1 {
 				t.Fatal("migration missing")
 			}
 			if upgrade && queryInt(t, db.Reader, `SELECT revision FROM daily_reports`) != 4 {

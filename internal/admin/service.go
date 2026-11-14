@@ -28,6 +28,7 @@ var (
 	ErrForbidden   = errors.New("administrator permission denied")
 	ErrNotFound    = errors.New("administrator target not found")
 	ErrConflict    = errors.New("administrator username unavailable")
+	ErrBanned      = errors.New("unban client before restoring rankings")
 )
 
 var usernamePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{2,63}$`)

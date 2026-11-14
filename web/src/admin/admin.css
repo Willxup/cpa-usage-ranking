@@ -28,13 +28,21 @@
 .admin-heading h1 { margin-top: 8px; }
 .admin-button--danger { color: var(--danger); }
 .admin-notice { margin-bottom: 18px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); color: var(--ink); font-size: 14px; line-height: 1.8; }
+.admin-view-control { margin-bottom: 24px; }
+.admin-heading h2 { font-size: 22px; font-weight: 650; }
+.admin-action-column { width: 110px; }
+.leaderboard-table .admin-row-action { text-align: right; }
+.admin-restore-actions { display: grid; justify-items: start; gap: 8px; }
+.admin-restore-actions a { display: inline-flex; align-items: center; min-height: 44px; color: var(--accent); font-size: 13px; }
+@media (max-width: 1199px) { .leaderboard-table--overall .admin-row-action { grid-column: 1 / -1; text-align: left; } }
+@media (max-width: 760px) { .leaderboard-table:not(.leaderboard-table--overall) .admin-row-action { grid-column: 2 / -1; grid-row: 3; text-align: left; } }
 .admin-owner { margin-block: 20px; color: var(--muted); overflow-wrap: anywhere; font-size: 14px; }
 .admin-empty { padding: 32px 16px; text-align: center; color: var(--muted); }
 .admin-table { width: 100%; border-collapse: collapse; font-size: 14px; table-layout: fixed; }
 .admin-table th, .admin-table td { padding: 14px 12px; text-align: left; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .admin-table th { background: #faf9fc; color: var(--muted); font-size: 12px; font-weight: 500; }
 .admin-table td { font-variant-numeric: tabular-nums; }
-.admin-main .admin-filters { display: grid; grid-template-columns: minmax(120px, .65fr) minmax(150px, 1.5fr) minmax(120px, .65fr) 100px auto; align-items: end; gap: 14px; margin: 0 0 24px; }
+.admin-main .admin-filters { display: grid; grid-template-columns: minmax(120px, .65fr) minmax(150px, 1.5fr) minmax(120px, .65fr) minmax(120px, .65fr) 100px auto; align-items: end; gap: 14px; margin: 0 0 24px; }
 .admin-filters .admin-field { display: grid; gap: 8px; min-width: 0; }
 .admin-pagination { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 20px; font-size: 13px; color: var(--muted); }
 .admin-list-error { padding-block: 24px; }

@@ -29,11 +29,11 @@ func TestAdminMigrationPreservesVersionFiveData(t *testing.T) {
 		}
 	}
 	var name string
-	var disabled, revision, daily, period int
-	if err := db.Reader.QueryRow(`SELECT c.display_name,c.disabled,r.revision,d.total_tokens,p.total_tokens FROM clients c JOIN daily_reports r ON r.client_id=c.id JOIN daily_stats d ON d.client_id=c.id JOIN period_stats p ON p.client_id=c.id WHERE c.id=41`).Scan(&name, &disabled, &revision, &daily, &period); err != nil {
+	var disabled, hidden, revision, daily, period int
+	if err := db.Reader.QueryRow(`SELECT c.display_name,c.disabled,c.ranking_hidden,r.revision,d.total_tokens,p.total_tokens FROM clients c JOIN daily_reports r ON r.client_id=c.id JOIN daily_stats d ON d.client_id=c.id JOIN period_stats p ON p.client_id=c.id WHERE c.id=41`).Scan(&name, &disabled, &hidden, &revision, &daily, &period); err != nil {
 		t.Fatal(err)
 	}
-	if name != "migration-user" || disabled != 1 || revision != 7 || daily != 100 || period != 100 {
+	if name != "migration-user" || disabled != 1 || hidden != 0 || revision != 7 || daily != 100 || period != 100 {
 		t.Fatal("migration modified existing data")
 	}
 	var count int

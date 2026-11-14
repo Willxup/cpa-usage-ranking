@@ -1,10 +1,11 @@
+import type { ReactNode } from 'react'
 import { BrandMark } from './Brand'
 import { LeaderboardTable } from './LeaderboardTable'
 import { useLeaderboard } from '../hooks/useLeaderboard'
-import type { Board, Period } from '../api/leaderboards'
+import type { Board, Entry, Period } from '../api/leaderboards'
 import { boards, periods } from '../leaderboardLabels'
 
-export function LeaderboardPanel({ board, period, selectionVersion = 0 }: { board: Board; period: Period; selectionVersion?: number }) {
+export function LeaderboardPanel({ board, period, selectionVersion = 0, renderAction }: { board: Board; period: Period; selectionVersion?: number; renderAction?: (entry: Entry, generatedAt: string) => ReactNode }) {
   const { data, loading, error, avatars, retry } = useLeaderboard(board, period, selectionVersion)
   const previous = data && (loading || error || data.board !== board || data.period !== period)
   return <div className="board-content" aria-busy={loading}>
@@ -23,7 +24,7 @@ export function LeaderboardPanel({ board, period, selectionVersion = 0 }: { boar
       {data.entries.length === 0 ? <div className="ranking-empty">
         <div className="empty-symbol" aria-hidden="true"><BrandMark /><span className="empty-symbol-dot" /></div>
         <span className="empty-label">WAITING FOR DATA</span><h2>等待第一份真实数据</h2><p>该榜单在此周期暂无符合条件的已接纳记录。<br />不使用模拟名次或虚构统计。</p>
-      </div> : <LeaderboardTable key={`${data.board}/${data.period}`} data={data} avatars={avatars} />}
+      </div> : <LeaderboardTable key={`${data.board}/${data.period}`} data={data} avatars={avatars} renderAction={renderAction && !previous ? (entry) => renderAction(entry, data.generated_at) : undefined} />}
       <div className="ranking-bottom"><span>已显示 {data.entries.length} 位 · 最多 100 位</span></div>
     </>}
   </div>

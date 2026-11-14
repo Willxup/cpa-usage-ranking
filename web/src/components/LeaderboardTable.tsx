@@ -1,5 +1,6 @@
+import type { ReactNode } from 'react'
 import { BrandMark } from './Brand'
-import type { AvatarCatalog, Board, Leaderboard, OverallDetails } from '../api/leaderboards'
+import type { AvatarCatalog, Board, Entry, Leaderboard, OverallDetails } from '../api/leaderboards'
 import { boards, periods } from '../leaderboardLabels'
 import { exactMetric, formatMetric, type MetricKind } from '../formatMetrics'
 
@@ -31,14 +32,15 @@ function Amount({ value, kind }: { value: string | null | undefined; kind: Metri
   </span>
 }
 
-export function LeaderboardTable({ data, avatars }: { data: Leaderboard; avatars: AvatarCatalog | null }) {
+export function LeaderboardTable({ data, avatars, renderAction }: { data: Leaderboard; avatars: AvatarCatalog | null; renderAction?: (entry: Entry) => ReactNode }) {
   const overall = data.board === 'overall'
-  return <table className={`leaderboard-table leaderboard-table--${data.board}`} role="table">
+  return <table className={`leaderboard-table leaderboard-table--${data.board}${renderAction ? ' leaderboard-table--managed' : ''}`} role="table">
     <caption className="table-caption">{periods[data.period]} · {boards[data.board].label}</caption>
-    <colgroup><col className="rank-column" /><col className="participant-column" /><col className="primary-column" />{overall && columns.map(({ key }) => <col key={key} />)}</colgroup>
+    <colgroup><col className="rank-column" /><col className="participant-column" /><col className="primary-column" />{overall && columns.map(({ key }) => <col key={key} />)}{renderAction && <col className="admin-action-column" />}</colgroup>
     <thead role="rowgroup"><tr role="row">
       <th scope="col" role="columnheader">排名</th><th scope="col" role="columnheader">参与者</th><th scope="col" role="columnheader" className="numeric-heading">{boards[data.board].metric}</th>
       {overall && columns.map(({ key, label }) => <th key={key} scope="col" role="columnheader" className="numeric-heading">{label}</th>)}
+      {renderAction && <th scope="col" role="columnheader">操作</th>}
     </tr></thead>
     {data.entries.map((entry) => {
       return <tbody key={entry.client_id} role="rowgroup" className="leaderboard-group">
@@ -47,6 +49,7 @@ export function LeaderboardTable({ data, avatars }: { data: Leaderboard; avatars
           <td role="cell" className="participant-cell"><div className="participant"><Avatar id={entry.avatar_id} catalog={avatars} /><span id={`participant-${entry.client_id}`}>{entry.display_name}</span></div></td>
           <td role="cell" className="metric-value" data-label={boards[data.board].metric}><Amount value={entry.metric} kind={kinds[data.board]} /></td>
           {overall && columns.map(({ key, label, kind }) => <td key={key} role="cell" className="detail-cell" data-label={label}><Amount value={entry.details?.[key]} kind={kind} /></td>)}
+          {renderAction && <td role="cell" className="admin-row-action">{renderAction(entry)}</td>}
         </tr>
       </tbody>
     })}

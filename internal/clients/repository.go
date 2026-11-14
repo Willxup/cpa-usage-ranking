@@ -23,11 +23,12 @@ type CredentialHash [32]byte
 
 // Client 是存储层元数据，不是公开 API 响应结构；不携带凭据摘要。
 type Client struct {
-	ID          int64
-	DisplayName string
-	AvatarID    int64
-	Disabled    bool
-	CreatedAt   time.Time
+	ID            int64
+	DisplayName   string
+	AvatarID      int64
+	Disabled      bool
+	RankingHidden bool
+	CreatedAt     time.Time
 }
 
 type NewClient struct {
@@ -65,7 +66,7 @@ func (r *Repository) Create(ctx context.Context, input NewClient) (Client, error
 	return Client{ID: id, DisplayName: input.DisplayName, AvatarID: input.AvatarID, CreatedAt: createdAt}, nil
 }
 
-const selectClient = "SELECT id, display_name, avatar_id, disabled, created_at_ms FROM clients"
+const selectClient = "SELECT id, display_name, avatar_id, disabled, created_at_ms, ranking_hidden FROM clients"
 
 func (r *Repository) ByID(ctx context.Context, id int64) (Client, error) {
 	return scanClient(r.reader.QueryRowContext(ctx, selectClient+" WHERE id = ?", id))
@@ -79,7 +80,7 @@ func (r *Repository) ByCredentialHash(ctx context.Context, hash CredentialHash) 
 func scanClient(row *sql.Row) (Client, error) {
 	var client Client
 	var createdAt int64
-	if err := row.Scan(&client.ID, &client.DisplayName, &client.AvatarID, &client.Disabled, &createdAt); err != nil {
+	if err := row.Scan(&client.ID, &client.DisplayName, &client.AvatarID, &client.Disabled, &createdAt, &client.RankingHidden); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Client{}, ErrNotFound
 		}
