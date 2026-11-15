@@ -23,7 +23,7 @@ export function LeaderboardView({ board, period, renderAction, compactLoading = 
     {loading && compactLoading && <div className="admin-progress" role="progressbar" aria-label="读取榜单" />}
     {!data && loading && !compactLoading && <div className="ranking-empty"><span className="empty-label">LOADING</span><h2>正在加载真实榜单</h2></div>}
     {!data && error && <div className="ranking-empty"><div className="empty-symbol"><BrandMark /></div><h2>暂时无法加载榜单</h2><p>请检查连接后重试。</p></div>}
-    {data && <>
+    {data && <div className="leaderboard-result" key={`${data.board}/${data.period}`}>
       <div className="board-heading">
         <div><h2>{periods[data.period]} · {boards[data.board].label}{previous && !(quietSwitch && loading) && <span className="previous-label">上次结果</span>}</h2><p>UTC {data.start} 至 {data.end}（不含结束日）</p></div>
         {headingAction ? <div className="admin-board-generation">{headingAction}<p>缓存生成于 {data.generated_at.slice(0, 19).replace('T', ' ')} UTC</p></div> : <p>缓存生成于 {data.generated_at.slice(0, 19).replace('T', ' ')} UTC</p>}
@@ -33,6 +33,6 @@ export function LeaderboardView({ board, period, renderAction, compactLoading = 
         <span className="empty-label">WAITING FOR DATA</span><h2>等待第一份真实数据</h2><p>该榜单在此周期暂无符合条件的已接纳记录。<br />不使用模拟名次或虚构统计。</p>
       </div> : <LeaderboardTable key={`${data.board}/${data.period}`} data={data} avatars={avatars} renderAction={renderAction && !previous ? (entry) => renderAction(entry, data.generated_at) : undefined} />}
       <div className="ranking-bottom"><span>已显示 {data.entries.length} 位 · 最多 100 位</span></div>
-    </>}
+    </div>}
   </div>
 }

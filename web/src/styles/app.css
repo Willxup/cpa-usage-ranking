@@ -1,4 +1,8 @@
 .app-shell { min-height: 100vh; background: radial-gradient(ellipse 55% 360px at 0 80px, #fff4ee88, transparent), radial-gradient(ellipse 45% 360px at 100% 100px, #f2ecff99, transparent); }
+@media (prefers-reduced-motion: no-preference) {
+  .route-view, .tab-view, .leaderboard-result { animation: view-enter 160ms ease-out; }
+}
+@keyframes view-enter { from { opacity: .98; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
 .page-width { width: calc(100% - clamp(40px, 7vw, 160px)); max-width: 1920px; margin-inline: auto; }
 .header-wrap { border-bottom: 1px solid var(--line); background: #ffffffc9; }
 .site-header { min-height: 88px; display: flex; align-items: center; gap: 42px; }

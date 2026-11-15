@@ -196,6 +196,51 @@ test('keeps the existing result while switching back and ignores a delayed super
   }
 })
 
+test('keeps a real mobile result until a rapid board and period choice is ready', async ({ page, baseURL }, info) => {
+  const observed = observePage(page, baseURL!)
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.addInitScript(() => {
+    const nativeFetch = window.fetch.bind(window)
+    window.fetch = (input, init) => input === '/v1/leaderboards/usage/today'
+      ? nativeFetch(input, { ...init, signal: undefined }).then((response) => { document.documentElement.dataset.usageDelivered = 'true'; return response })
+      : nativeFetch(input, init)
+  })
+  await page.goto('/')
+  await expect(page.getByRole('row', { name: new RegExp(participant) })).toBeVisible()
+  const started = deferred<void>()
+  const release = deferred<void>()
+  const delivered = deferred<void>()
+  await page.route('**/v1/leaderboards/usage/today', async (route) => {
+    const response = await route.fetch()
+    started.resolve()
+    await release.promise
+    await route.fulfill({ response })
+    delivered.resolve()
+  })
+  try {
+    await page.getByRole('button', { name: '用量榜' }).click()
+    await started.promise
+    await expect(page.getByText(/正在加载|上次结果/)).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: '今日 · 综合总榜' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '综合总榜' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('row', { name: new RegExp(participant) })).toBeVisible()
+    await page.screenshot({ path: info.outputPath('switch-pending-375.png'), fullPage: true })
+    await page.getByRole('button', { name: '本周' }).click()
+    await expect(page.getByRole('heading', { name: '本周 · 用量榜' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '用量榜' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('button', { name: '本周' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('row', { name: new RegExp(participant) })).toContainText(usage)
+    await expect(page.locator('.metric-value').first()).toHaveAttribute('data-label', 'Token 用量')
+    await page.screenshot({ path: info.outputPath('switch-latest-375.png'), fullPage: true })
+    release.resolve()
+    await delivered.promise
+    await expect(page.locator('html')).toHaveAttribute('data-usage-delivered', 'true')
+    await expect(page.getByRole('heading', { name: '本周 · 用量榜' })).toBeVisible()
+    await expect(page.getByRole('row', { name: new RegExp(participant) })).toContainText(usage)
+    await expectObservedClean(page, observed)
+  } finally { release.resolve() }
+})
+
 test.describe('touch leaderboard', () => {
   test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true })
   test('changes the real board and period without hover', async ({ page, baseURL }, info) => {

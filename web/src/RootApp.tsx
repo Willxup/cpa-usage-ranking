@@ -6,7 +6,7 @@ import { usePathname } from './navigation'
 export default function RootApp() {
   const admin = usePathname().startsWith('/admin/')
   return <SessionProvider>
-    <div hidden={admin}><App active={!admin} /></div>
-    {admin && <AdminApp />}
+    <div className="route-view" hidden={admin}><App active={!admin} /></div>
+    {admin && <div className="route-view"><AdminApp /></div>}
   </SessionProvider>
 }
