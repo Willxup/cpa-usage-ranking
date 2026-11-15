@@ -15,6 +15,29 @@ async function login(page: Page) {
   await expect(page.getByRole('navigation', { name: '控制台导航' })).toBeVisible()
 }
 
+test('aligns a 12px compact refresh button above the cache timestamp, never on the public page', async ({ page }, info) => {
+  await login(page)
+  for (const width of [1440, 375]) {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 812 })
+    const button = page.getByRole('button', { name: '刷新榜单', exact: true })
+    const timestamp = page.locator('.admin-shell .board-heading').getByText(/^缓存生成于/)
+    await expect(timestamp).toBeVisible()
+    const box = (await button.boundingBox())!
+    const time = (await timestamp.boundingBox())!
+    expect(box.y + box.height).toBeLessThanOrEqual(time.y)
+    expect(width === 1440 ? Math.abs(box.x + box.width - time.x - time.width) : Math.abs(box.x - time.x)).toBeLessThan(2)
+    expect(box.height).toBeGreaterThanOrEqual(30)
+    expect(box.height).toBeLessThanOrEqual(36)
+    expect(await button.evaluate((node) => getComputedStyle(node).fontSize)).toBe('12px')
+    await page.screenshot({ path: info.outputPath(`refresh-${width}.png`), fullPage: true })
+  }
+  const response = page.waitForResponse((response) => new URL(response.url()).pathname === '/v1/leaderboards/overall/today')
+  await page.getByRole('button', { name: '刷新榜单', exact: true }).click()
+  expect((await response).status()).toBe(200)
+  await page.getByRole('link', { name: '公开榜单', exact: true }).click()
+  await expect(page.getByRole('button', { name: '刷新榜单', exact: true })).toHaveCount(0)
+})
+
 test('uses one compact server-side nickname-or-ID search in both user lists', async ({ page, request, baseURL }, info) => {
   const prefix = `compact-${randomBytes(3).toString('hex')}`
   seedUsers(prefix, 51)

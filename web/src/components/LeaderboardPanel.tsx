@@ -5,7 +5,7 @@ import { useLeaderboard } from '../hooks/useLeaderboard'
 import type { Board, Entry, Period } from '../api/leaderboards'
 import { boards, periods } from '../leaderboardLabels'
 
-export function LeaderboardPanel({ board, period, selectionVersion = 0, renderAction, compactLoading = false }: { board: Board; period: Period; selectionVersion?: number; renderAction?: (entry: Entry, generatedAt: string) => ReactNode; compactLoading?: boolean }) {
+export function LeaderboardPanel({ board, period, selectionVersion = 0, renderAction, compactLoading = false, headingAction }: { board: Board; period: Period; selectionVersion?: number; renderAction?: (entry: Entry, generatedAt: string) => ReactNode; compactLoading?: boolean; headingAction?: ReactNode }) {
   const { data, loading, error, avatars, retry } = useLeaderboard(board, period, selectionVersion)
   const previous = data && (loading || error || data.board !== board || data.period !== period)
   return <div className="board-content" aria-busy={loading}>
@@ -20,7 +20,7 @@ export function LeaderboardPanel({ board, period, selectionVersion = 0, renderAc
     {data && <>
       <div className="board-heading">
         <div><h2>{periods[data.period]} · {boards[data.board].label}{previous && <span className="previous-label">上次结果</span>}</h2><p>UTC {data.start} 至 {data.end}（不含结束日）</p></div>
-        <p>缓存生成于 {data.generated_at.slice(0, 19).replace('T', ' ')} UTC</p>
+        {headingAction ? <div className="admin-board-generation">{headingAction}<p>缓存生成于 {data.generated_at.slice(0, 19).replace('T', ' ')} UTC</p></div> : <p>缓存生成于 {data.generated_at.slice(0, 19).replace('T', ' ')} UTC</p>}
       </div>
       {data.entries.length === 0 ? <div className="ranking-empty">
         <div className="empty-symbol" aria-hidden="true"><BrandMark /><span className="empty-symbol-dot" /></div>

@@ -6,6 +6,17 @@ import { Leaderboards } from './Leaderboards'
 const json = (body: unknown) => new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } })
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
+it('places a compact refresh action before the cache time in the same header', async () => {
+  vi.stubGlobal('fetch', vi.fn((path: RequestInfo | URL) => Promise.resolve(json(String(path).includes('avatars') ? { default_avatar_id: 1, avatars: [{ avatar_id: 1, path: 'images/001.webp' }] } : { board: 'overall', period: 'today', start: '2026-11-16', end: '2026-11-17', generated_at: '2026-11-16T01:00:00Z', entries: [] }))))
+  render(<Leaderboards session={{ enabled: true, authenticated: true }} onExpired={vi.fn()} />)
+  const button = await screen.findByRole('button', { name: '刷新榜单' })
+  const time = screen.getByText('缓存生成于 2026-11-16 01:00:00 UTC')
+  expect(button).toHaveClass('admin-refresh')
+  expect(button.parentElement).toBe(time.parentElement)
+  expect(button.compareDocumentPosition(time) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
+  expect(button.closest('.board-heading')).not.toBeNull()
+})
+
 it('confirms global exclusion and replaces the whole table with published server ranks and scores', async () => {
   let hidden = false
   const fetcher = vi.fn((path: RequestInfo | URL, init?: RequestInit) => {
