@@ -11,6 +11,20 @@ const catalog = { default_avatar_id: 1, avatars: [{ avatar_id: 1, path: 'images/
 afterEach(() => vi.unstubAllGlobals())
 
 describe('application shell', () => {
+  it.each([
+    [{ enabled: false, authenticated: false }, null, null],
+    [{ enabled: true, authenticated: false }, '登录', '/admin/login'],
+    [{ enabled: true, authenticated: true }, '控制台', '/admin/leaderboards'],
+  ])('keeps the public navigation ordered for session %j', async (session, label, href) => {
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => Promise.resolve(json(String(input).includes('/admin/session') ? session : String(input).includes('avatars') ? catalog : empty))))
+    render(<App />)
+    const navigation = screen.getByRole('navigation', { name: '页面导航' })
+    if (label) expect(await within(navigation).findByRole('link', { name: label })).toHaveAttribute('href', href)
+    else await screen.findByRole('heading', { name: '今日 · 综合总榜' })
+    expect(within(navigation).getAllByRole('link').map((link) => link.textContent)).toEqual(label ? ['排行榜', label] : ['排行榜'])
+    expect(within(navigation).queryByRole('link', { name: '关于' })).not.toBeInTheDocument()
+  })
+
   it('loads the real empty view without fabricated counts or filters', async () => {
     const fetcher = vi.fn((input: RequestInfo | URL) => Promise.resolve(json(String(input).includes('avatars') ? catalog : empty)))
     vi.stubGlobal('fetch', fetcher)

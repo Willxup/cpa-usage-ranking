@@ -16,8 +16,7 @@ export default function App({ active = true }: { active?: boolean }) {
       <header className="header-wrap">
         <div className="site-header page-width">
           <a className="brand" href="#overview" aria-label="CPA Usage Ranking 首页"><img className="project-icon" src="/assets/brand/project-icon.svg" width="40" height="40" alt="" /><span>CPA Usage Ranking</span></a>
-          <nav aria-label="页面导航"><a className="nav-current" href="#ranking">排行榜</a><a href="#foundation">关于</a></nav>
-          <AdminEntry />
+          <nav aria-label="页面导航"><a className="nav-current" href="#ranking">排行榜</a><AdminEntry /></nav>
         </div>
       </header>
       <main id="main" className="page-width">

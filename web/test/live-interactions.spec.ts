@@ -101,7 +101,7 @@ test('uses keyboard navigation to change the real board and period', async ({ pa
   const observed = observePage(page, baseURL!)
   await page.goto('/')
   await expect(page.getByRole('row', { name: new RegExp(participant) })).toBeVisible()
-  for (const name of ['CPA Usage Ranking 首页', '排行榜', '关于']) {
+  for (const name of ['CPA Usage Ranking 首页', '排行榜']) {
     await page.keyboard.press('Tab')
     await expect(page.getByRole('link', { name, exact: true })).toBeFocused()
   }

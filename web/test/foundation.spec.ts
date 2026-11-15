@@ -60,7 +60,7 @@ for (const width of [320, 375, 768]) {
 test('supports normal tab navigation and keyboard-only health checks', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('link', { name: '跳到主要内容' })).toHaveCount(0)
-  for (const name of ['CPA Usage Ranking 首页', '排行榜', '关于']) {
+  for (const name of ['CPA Usage Ranking 首页', '排行榜']) {
     await page.keyboard.press('Tab')
     await expect(page.getByRole('link', { name, exact: true })).toBeFocused()
   }

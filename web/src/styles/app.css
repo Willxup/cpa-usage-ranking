@@ -12,20 +12,17 @@
 .site-header nav a { display: inline-flex; align-items: center; min-height: 44px; padding: 10px 18px; border-radius: 10px; font-size: 16px; font-weight: 550; text-decoration: none; }
 .site-header nav a:hover { background: #f5f3f8; }
 .site-header nav .nav-current { color: var(--accent); background: #fff0e9; }
-.admin-entry { display: inline-flex; flex: none; align-items: center; justify-content: center; min-height: 44px; padding: 9px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-raised); color: var(--muted); font-size: 14px; text-decoration: none; white-space: nowrap; }
-.admin-entry:hover { background: var(--surface-soft); }
-.site-header:has(.admin-entry) { column-gap: 18px; }
-.admin-shell .admin-entry { margin-left: auto; }
+.admin-shell .admin-entry { display: inline-flex; flex: none; align-items: center; justify-content: center; min-height: 44px; margin-left: auto; padding: 9px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-raised); color: var(--muted); font-size: 14px; text-decoration: none; white-space: nowrap; }
+.admin-shell .admin-entry:hover { background: var(--surface-soft); }
+.admin-shell .site-header { column-gap: 18px; }
 @media (max-width: 760px) {
-  .site-header:has(.admin-entry) .brand { min-width: 0; flex: 1; }
-  .site-header:has(.admin-entry) nav { order: 3; }
-  .site-header:has(.admin-entry) > .admin-entry { margin-left: auto; }
+  .admin-shell .site-header .brand { min-width: 0; flex: 1; }
 }
 @media (max-width: 400px) {
-  .site-header:has(.admin-entry) { column-gap: 8px; }
-  .site-header:has(.admin-entry) .brand { font-size: 15px; letter-spacing: -.5px; }
-  .site-header:has(.admin-entry) .brand .project-icon { width: 40px; height: 40px; }
-  .site-header:has(.admin-entry) > .admin-entry { padding-inline: 10px; }
+  .admin-shell .site-header { column-gap: 8px; }
+  .admin-shell .site-header .brand { font-size: 15px; letter-spacing: -.5px; }
+  .admin-shell .site-header .brand .project-icon { width: 40px; height: 40px; }
+  .admin-shell .site-header > .admin-entry { padding-inline: 10px; }
 }
 .management-button { min-height: 44px; padding: 10px 18px; border: 1px solid #dedee7; background: white; color: var(--muted); border-radius: 10px; font-size: 14px; }
 .overview { display: flex; justify-content: space-between; align-items: center; gap: 48px; padding: 52px 0 42px; }
