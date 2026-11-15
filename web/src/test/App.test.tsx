@@ -104,6 +104,28 @@ describe('application shell', () => {
     expect(screen.getByRole('row', { name: /新成功榜/ })).toBeVisible()
   })
 
+  it('stays quiet before the first result and when switching after an initial failure', async () => {
+    const pending = new Map<string, (response: Response) => void>()
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('avatars')) return Promise.resolve(json(catalog))
+      if (url.includes('/admin/session')) return Promise.resolve(json({ enabled: false, authenticated: false }))
+      return new Promise<Response>((resolve) => pending.set(url, resolve))
+    }))
+    const user = userEvent.setup()
+    render(<App />)
+    expect(screen.queryByText(/正在加载|LOADING/)).not.toBeInTheDocument()
+    await waitFor(() => expect(pending.has('/v1/leaderboards/overall/today')).toBe(true))
+    await act(async () => pending.get('/v1/leaderboards/overall/today')!(json({}, 503)))
+    expect(await screen.findByRole('button', { name: '重试榜单' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: '用量榜' }))
+    await waitFor(() => expect(pending.has('/v1/leaderboards/usage/today')).toBe(true))
+    expect(screen.queryByText(/正在加载|LOADING/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    await act(async () => pending.get('/v1/leaderboards/usage/today')!(json({ ...empty, board: 'usage' })))
+    expect(await screen.findByRole('heading', { name: '今日 · 用量榜' })).toBeVisible()
+  })
+
   it('reports a failed switch and bases the next choice on the still-visible result', async () => {
     const fetcher = vi.fn((input: RequestInfo | URL) => {
       const url = String(input)

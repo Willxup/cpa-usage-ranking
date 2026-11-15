@@ -65,7 +65,7 @@ test.beforeAll(async ({ playwright }, workerInfo) => {
   }
 })
 
-test('shows initial loading and a simulated first failure, then retries the real API', async ({ page, baseURL }) => {
+test('keeps initial loading quiet and reports a simulated first failure, then retries the real API', async ({ page, baseURL }) => {
   const observed = observePage(page, baseURL!)
   const started = deferred<void>()
   const release = deferred<void>()
@@ -79,7 +79,7 @@ test('shows initial loading and a simulated first failure, then retries the real
     await page.goto('/', { waitUntil: 'domcontentloaded' })
     await started.promise
     await expect(page.locator('.board-content')).toHaveAttribute('aria-busy', 'true')
-    await expect(page.getByRole('heading', { name: '正在加载真实榜单' })).toBeVisible()
+    await expect(page.getByText(/正在加载|^LOADING$/)).toHaveCount(0)
     await expect(page.getByRole('heading', { name: '等待第一份真实数据' })).toHaveCount(0)
     release.resolve()
     await expect(page.getByText(/榜单缓存尚未就绪/)).toBeVisible()

@@ -16,12 +16,12 @@ export function LeaderboardView({ board, period, renderAction, compactLoading = 
   const previous = data && (loading || error || data.board !== board || data.period !== period)
   return <div className="board-content" aria-busy={loading}>
     <div className="board-message" role="status" aria-live="polite" aria-atomic="true">
-      {loading && !compactLoading && !(quietSwitch && data) && <p>正在加载{periods[period]} · {boards[board].label}…{previous && ' 以下保留上次结果。'}</p>}
+      {loading && !compactLoading && !quietSwitch && <p>正在加载{periods[period]} · {boards[board].label}…{previous && ' 以下保留上次结果。'}</p>}
       {error && <p>{error}{data && ' 以下保留上次结果。'}</p>}
     </div>
     {error && <button className="retry-button" type="button" onClick={retry}>重试榜单</button>}
     {loading && compactLoading && <div className="admin-progress" role="progressbar" aria-label="读取榜单" />}
-    {!data && loading && !compactLoading && <div className="ranking-empty"><span className="empty-label">LOADING</span><h2>正在加载真实榜单</h2></div>}
+    {!data && loading && !compactLoading && (quietSwitch ? <div className="ranking-empty" aria-hidden="true" /> : <div className="ranking-empty"><span className="empty-label">LOADING</span><h2>正在加载真实榜单</h2></div>)}
     {!data && error && <div className="ranking-empty"><div className="empty-symbol"><BrandMark /></div><h2>暂时无法加载榜单</h2><p>请检查连接后重试。</p></div>}
     {data && <div className="leaderboard-result" key={`${data.board}/${data.period}`}>
       <div className="board-heading">
