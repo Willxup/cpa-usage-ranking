@@ -26,7 +26,7 @@ export function Leaderboards({ session, onExpired }: { session: AdminSession; on
     finally { setBusy('') }
   }
   return <section aria-label="榜单管理">
-    <div className="admin-heading"><div><p className="eyebrow">LEADERBOARDS</p><h1>榜单管理</h1></div><p className="admin-note">直接读取公开榜单。下榜作用于全部五榜、所有周期。</p></div>
+    <div className="admin-heading"><div><p className="eyebrow">LEADERBOARDS</p><h1>榜单管理</h1></div></div>
     <fieldset className="board-control admin-view-control"><legend className="sr-only">管理视图</legend><button type="button" aria-pressed={!hiddenView} onClick={() => setHiddenView(false)}>当前榜单</button><button type="button" aria-pressed={hiddenView} onClick={() => setHiddenView(true)}>已下榜用户</button></fieldset>
     {notice && <p className="admin-notice" role="status">{notice}</p>}
     {error && <p className="admin-error" role="alert">{error}</p>}

@@ -98,7 +98,7 @@ test('owner manages ordinary accounts and deletion revokes the live session', as
     await expect(ordinary.getByRole('link', { name: '管理员管理', exact: true })).toHaveCount(0)
     expect((await ordinaryContext.request.get('/v1/admin/accounts')).status()).toBe(403)
     await ordinary.goto('/admin/accounts')
-    await expect(ordinary.getByRole('heading', { name: '仅主管理员可管理账号' })).toBeVisible()
+    await expect(ordinary.getByRole('heading', { name: '无访问权限' })).toBeVisible()
     page.once('dialog', (dialog) => dialog.accept())
     await row.getByRole('button', { name: '删除', exact: true }).click()
     await expect(page.getByRole('status').filter({ hasText: '管理员已删除' })).toBeVisible()
@@ -222,7 +222,7 @@ test('ordinary admin excludes and restores globally while ban remains independen
     report.revision = '2'; report.items[0].total_tokens = '7654321'
     expect((await request.put(`/v1/reports/${day}`, { headers: bearer, data: report })).status()).toBe(200)
     await staff.getByRole('button', { name: '已下榜用户', exact: true }).click()
-    await expect(staff.getByText('全局名单，与当前选择的榜单、周期无关。已封禁用户须先解封，再恢复上榜。')).toBeVisible()
+    await expect(staff.getByRole('heading', { name: '已下榜用户', exact: true })).toBeVisible()
     row = staff.getByRole('row').filter({ hasText: name })
     await expect(row.getByRole('button', { name: '恢复上榜' })).toBeEnabled()
     await page.getByRole('link', { name: '用户管理', exact: true }).click()

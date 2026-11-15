@@ -64,7 +64,7 @@ export function Users({ session, onExpired, hiddenOnly = false }: { session: Adm
     finally { setBusy('') }
   }
   return <section aria-labelledby="users-title">
-    <div className="admin-heading"><div><p className="eyebrow">{hiddenOnly ? 'EXCLUDED USERS' : 'REGISTERED USERS'}</p><Heading id="users-title">{hiddenOnly ? '已下榜用户' : '用户管理'}</Heading></div><p className="admin-note">{hiddenOnly ? '全局名单，与当前选择的榜单、周期无关。已封禁用户须先解封，再恢复上榜。' : '所有已注册客户端，包括无上报、已下榜和已封禁身份。状态修改不删除统计。'}</p></div>
+    <div className="admin-heading"><div><p className="eyebrow">{hiddenOnly ? 'EXCLUDED USERS' : 'REGISTERED USERS'}</p><Heading id="users-title">{hiddenOnly ? '已下榜用户' : '用户管理'}</Heading></div></div>
     <form className="admin-search" onSubmit={search}>
       <label className="sr-only" htmlFor="user-search-query">昵称或ID</label><input id="user-search-query" name="query" type="search" placeholder="搜索昵称或 ID" maxLength={80} autoComplete="off" />
       <button className="admin-button" type="submit" disabled={loading || !!busy}>查询</button>

@@ -28,9 +28,20 @@ it('ordinary administrator cannot render account management or fetch its data', 
   const fetcher = vi.fn().mockResolvedValue(json({ enabled: true, authenticated: true, user: { id: '17', username: 'staff', owner: false } }))
   vi.stubGlobal('fetch', fetcher)
   render(<AdminApp />)
-  expect(await screen.findByRole('heading', { name: '仅主管理员可管理账号' })).toBeVisible()
+  expect(await screen.findByRole('heading', { name: '无访问权限' })).toBeVisible()
   expect(screen.queryByRole('link', { name: '管理员管理' })).not.toBeInTheDocument()
   expect(fetcher.mock.calls.every(([path]) => path === '/v1/admin/session')).toBe(true)
+})
+
+it('shows one administrator identity without role/config explanations and retains input validation', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({ owner: { username: 'configuration-account' }, accounts: [{ id: '2', username: 'reviewer', created_at: '2026-11-16T00:00:00Z' }] })))
+  render(<Accounts session={{ enabled: true, authenticated: true }} onExpired={vi.fn()} />)
+  expect(await screen.findByText('reviewer')).toBeVisible()
+  expect(screen.queryByText('configuration-account')).not.toBeInTheDocument()
+  expect(screen.queryByText(/主管理员|普通管理员|配置文件|只读|用户名 3–64/)).not.toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: '添加管理员' })).toBeVisible()
+  expect(screen.getByLabelText('用户名')).toHaveAttribute('minlength', '3')
+  expect(screen.getByLabelText('初始密码')).toHaveAttribute('minlength', '12')
 })
 
 it('does not retry a failed account creation automatically', async () => {
@@ -38,7 +49,7 @@ it('does not retry a failed account creation automatically', async () => {
   vi.stubGlobal('fetch', fetcher)
   const user = userEvent.setup()
   render(<Accounts session={{ enabled: true, authenticated: true, csrf_token: 'test-csrf' }} onExpired={vi.fn()} />)
-  expect(await screen.findByText('暂无普通管理员。')).toBeVisible()
+  expect(await screen.findByText('暂无管理员。')).toBeVisible()
   await user.type(screen.getByLabelText('用户名'), 'staff')
   await user.type(screen.getByLabelText('初始密码'), 'isolated-test-password')
   await user.click(screen.getByRole('button', { name: '添加管理员' }))

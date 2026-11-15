@@ -7,13 +7,49 @@ const config = process.env.RANKING_TEST_ADMIN_CONFIG
 const owner: { username: string; password: string } = config ? JSON.parse(readFileSync(config, 'utf8')) : { username: '', password: '' }
 test.skip(!config, 'Requires the separate enabled test service')
 
-async function login(page: Page) {
+async function login(page: Page, credentials = owner) {
   await page.goto('/admin/login')
-  await page.getByLabel('用户名', { exact: true }).fill(owner.username)
-  await page.getByLabel('密码', { exact: true }).fill(owner.password)
+  await page.getByLabel('用户名', { exact: true }).fill(credentials.username)
+  await page.getByLabel('密码', { exact: true }).fill(credentials.password)
   await page.getByRole('button', { name: '登录', exact: true }).click()
   await expect(page.getByRole('navigation', { name: '控制台导航' })).toBeVisible()
 }
+
+test('uses the same administrator presentation, with only the account tab differing', async ({ page, browser, baseURL }, info) => {
+  await page.setViewportSize({ width: 375, height: 812 })
+  await login(page)
+  const forbidden = /主管理员|普通管理员|配置文件|只读|直接读取公开榜单|所有已注册客户端|用户名 3–64/
+  for (const tab of ['用户管理', '管理员管理', '榜单管理']) {
+    await page.getByRole('link', { name: tab, exact: true }).click()
+    await expect(page.getByRole('heading', { name: tab, exact: true })).toBeVisible()
+    expect(await page.locator('.admin-shell').innerText()).not.toMatch(forbidden)
+  }
+  await page.getByRole('link', { name: '管理员管理', exact: true }).click()
+  await expect(page.getByRole('heading', { name: '添加管理员', exact: true })).toBeVisible()
+  await page.screenshot({ path: info.outputPath('administrator-owner-375.png'), fullPage: true })
+  const session = await (await page.request.get('/v1/admin/session')).json()
+  const headers = { Origin: baseURL!, 'X-CSRF-Token': session.csrf_token }
+  const credentials = { username: `display-${randomBytes(3).toString('hex')}`, password: randomBytes(24).toString('base64url') }
+  const response = await page.request.post('/v1/admin/accounts', { headers, data: credentials })
+  expect(response.status()).toBe(201)
+  const id = (await response.json()).id
+  const context = await browser.newContext({ baseURL, viewport: { width: 375, height: 812 } })
+  try {
+    const staff = await context.newPage()
+    await login(staff, credentials)
+    await expect(staff.getByRole('navigation', { name: '控制台导航' }).getByRole('link')).toHaveCount(2)
+    expect(await staff.locator('.admin-shell').innerText()).not.toMatch(forbidden)
+    await staff.getByRole('link', { name: '用户管理', exact: true }).click()
+    await expect(staff.getByRole('heading', { name: '用户管理', exact: true })).toBeVisible()
+    await staff.screenshot({ path: info.outputPath('administrator-staff-375.png'), fullPage: true })
+    expect((await context.request.get('/v1/admin/accounts')).status()).toBe(403)
+    await staff.goto('/admin/accounts')
+    await expect(staff.getByRole('heading', { name: '无访问权限', exact: true })).toBeVisible()
+  } finally {
+    await context.close()
+    expect((await page.request.delete(`/v1/admin/accounts/${id}`, { headers, data: {} })).status()).toBe(204)
+  }
+})
 
 test('aligns a 12px compact refresh button above the cache timestamp, never on the public page', async ({ page }, info) => {
   await login(page)
