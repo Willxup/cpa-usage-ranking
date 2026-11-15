@@ -51,8 +51,10 @@
 .admin-pagination { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 20px; font-size: 13px; color: var(--muted); }
 .admin-list-error { padding-block: 24px; }
 .admin-list-error .admin-button { margin-top: 12px; }
-.admin-account-form { max-width: 520px; margin-top: 32px; }
-.admin-account-form h2 { font-size: 20px; margin-bottom: 10px; }
+.admin-accounts-layout { display: grid; grid-template-columns: 360px minmax(0, 1fr); align-items: start; gap: 28px; }
+.admin-account-form, .admin-account-list { min-width: 0; }
+.admin-account-form h2, .admin-account-list h2 { font-size: 20px; margin-bottom: 10px; }
+@media (max-width: 900px) { .admin-accounts-layout { grid-template-columns: 1fr; gap: 20px; } }
 @media (max-width: 760px) {
   .admin-main .admin-search input { min-height: 40px; font-size: 16px; }
   .admin-search .admin-button { min-height: 40px; }

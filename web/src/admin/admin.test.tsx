@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import { renderWithSession as render } from '../test/renderWithSession'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
@@ -31,6 +31,17 @@ it('ordinary administrator cannot render account management or fetch its data', 
   expect(await screen.findByRole('heading', { name: '无访问权限' })).toBeVisible()
   expect(screen.queryByRole('link', { name: '管理员管理' })).not.toBeInTheDocument()
   expect(fetcher.mock.calls.every(([path]) => path === '/v1/admin/session')).toBe(true)
+})
+
+it('orders the add form before a separately named administrator list', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json({ owner: { username: 'owner' }, accounts: [{ id: '2', username: 'demo-iris', created_at: '2026-11-16T00:00:00Z' }] })))
+  render(<Accounts session={{ enabled: true, authenticated: true }} onExpired={vi.fn()} />)
+  const add = screen.getByRole('region', { name: '添加管理员' })
+  const list = screen.getByRole('region', { name: '管理员列表' })
+  expect(add.parentElement).toBe(list.parentElement)
+  expect(add.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
+  expect(within(add).getByLabelText('初始密码')).toBeVisible()
+  expect(await within(list).findByText('demo-iris')).toBeVisible()
 })
 
 it('shows one administrator identity without role/config explanations and retains input validation', async () => {

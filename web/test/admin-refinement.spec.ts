@@ -6,14 +6,51 @@ import { seedUsers } from './admin-fixtures'
 const config = process.env.RANKING_TEST_ADMIN_CONFIG
 const owner: { username: string; password: string } = config ? JSON.parse(readFileSync(config, 'utf8')) : { username: '', password: '' }
 test.skip(!config, 'Requires the separate enabled test service')
+test.setTimeout(100_000)
+let attempts: number[] = []
 
 async function login(page: Page, credentials = owner) {
   await page.goto('/admin/login')
   await page.getByLabel('用户名', { exact: true }).fill(credentials.username)
   await page.getByLabel('密码', { exact: true }).fill(credentials.password)
+  attempts = attempts.filter((time) => Date.now() - time < 61_000)
+  if (attempts.length >= 5) {
+    await new Promise((resolve) => setTimeout(resolve, 61_000 - (Date.now() - attempts[0])))
+    attempts = attempts.filter((time) => Date.now() - time < 61_000)
+  }
+  attempts.push(Date.now())
   await page.getByRole('button', { name: '登录', exact: true }).click()
   await expect(page.getByRole('navigation', { name: '控制台导航' })).toBeVisible()
 }
+
+test('places add administrator on the left and a live simulated list on the right, stacking on phones', async ({ page }, info) => {
+  await login(page)
+  await page.getByRole('link', { name: '管理员管理', exact: true }).click()
+  const suffix = randomBytes(2).toString('hex')
+  const names = ['demo-iris', 'demo-mira', 'demo-river'].map((name) => `${name}-${suffix}`)
+  const add = async (name: string) => {
+    await page.getByLabel('用户名', { exact: true }).fill(name)
+    await page.getByLabel('初始密码', { exact: true }).fill(randomBytes(24).toString('base64url'))
+    await page.getByRole('button', { name: '添加管理员', exact: true }).click()
+  }
+  await add(names[0])
+  await expect(page.getByRole('row').filter({ hasText: names[0] })).toBeVisible()
+  await add(names[1])
+  await expect(page.getByRole('row').filter({ hasText: names[1] })).toBeVisible()
+  await add(names[0])
+  await expect(page.getByRole('alert')).toContainText('用户名已存在')
+  await add(names[2])
+  await expect(page.getByRole('row').filter({ hasText: names[2] })).toBeVisible()
+  for (const width of [1440, 375]) {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 812 })
+    const form = (await page.getByRole('region', { name: '添加管理员', exact: true }).boundingBox())!
+    const list = (await page.getByRole('region', { name: '管理员列表', exact: true }).boundingBox())!
+    if (width === 1440) { expect(form.x + form.width).toBeLessThan(list.x); expect(Math.abs(form.y - list.y)).toBeLessThan(2) }
+    else { expect(form.y + form.height).toBeLessThan(list.y); expect(Math.abs(form.x - list.x)).toBeLessThan(2) }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: info.outputPath(`administrators-layout-${width}.png`), fullPage: true })
+  }
+})
 
 test('uses the same administrator presentation, with only the account tab differing', async ({ page, browser, baseURL }, info) => {
   await page.setViewportSize({ width: 375, height: 812 })
