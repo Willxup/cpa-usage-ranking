@@ -28,7 +28,7 @@ export default function App({ active = true }: { active?: boolean }) {
           <LeaderboardPanel board={board} period={period} selectionVersion={selection.version * 2 + (active ? 1 : 0)} />
         </section>
       </main>
-      <footer className="site-footer page-width"><span>CPA Usage Ranking</span><p>真实数据，不使用示例统计。</p></footer>
+      <footer className="site-footer public-footer page-width"><span><img className="project-icon" src="/assets/brand/project-icon.svg" width="40" height="40" alt="" />CPA Usage Ranking</span></footer>
     </div>
   )
 }

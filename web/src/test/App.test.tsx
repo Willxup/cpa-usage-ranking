@@ -82,6 +82,16 @@ describe('application shell', () => {
     expect(await screen.findByRole('heading', { name: '今日 · 综合总榜' })).toBeVisible()
   })
 
+  it('keeps only the project logo and name in the public footer', async () => {
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => Promise.resolve(json(String(input).includes('avatars') ? catalog : empty))))
+    render(<App />)
+    const footer = screen.getByRole('contentinfo')
+    expect(footer).toHaveTextContent(/^CPA Usage Ranking$/)
+    expect(footer.querySelector('img')).toHaveAttribute('src', '/assets/brand/project-icon.svg')
+    expect(footer.querySelector('p')).not.toBeInTheDocument()
+    await screen.findByRole('heading', { name: '今日 · 综合总榜' })
+  })
+
   it('shows only the leaderboard without an introduction or health check', async () => {
     const fetcher = vi.fn((input: RequestInfo | URL) => Promise.resolve(json(String(input).includes('avatars') ? catalog : empty)))
     vi.stubGlobal('fetch', fetcher)
