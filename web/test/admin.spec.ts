@@ -152,6 +152,8 @@ test('bans and unbans a reporting identity and refreshes the five-minute cache',
   await page.getByLabel('昵称或ID', { exact: true }).fill(name)
   await page.getByRole('button', { name: '查询', exact: true }).click()
   let row = page.getByRole('row').filter({ hasText: name })
+  expect(await row.getByRole('button', { name: '封禁', exact: true }).evaluate((node) => Number(getComputedStyle(node).fontWeight))).toBeGreaterThanOrEqual(700)
+  await page.screenshot({ path: info.outputPath('ban-action-375.png'), fullPage: true })
   page.once('dialog', (dialog) => { expect(dialog.message()).toContain('停止上报并退出全部榜单，保留统计'); return dialog.dismiss() })
   await row.getByRole('button', { name: '封禁', exact: true }).click()
   await expect(row.getByText('正常', { exact: true })).toBeVisible()
@@ -194,6 +196,7 @@ test('ordinary admin excludes and restores globally while ban remains independen
     await login(staff, credentials)
     let row = staff.getByRole('row').filter({ hasText: name })
     await expect(row).toBeVisible()
+    expect(await row.getByRole('button', { name: '下榜', exact: true }).evaluate((node) => Number(getComputedStyle(node).fontWeight))).toBeGreaterThanOrEqual(700)
     for (const width of [1440, 375, 320]) {
       await staff.setViewportSize({ width, height: width === 1440 ? 1000 : 812 })
       expect(await staff.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
@@ -201,17 +204,17 @@ test('ordinary admin excludes and restores globally while ban remains independen
     }
     for (const board of ['用量榜', '缓存复用榜', '成功率榜', '首字响应榜']) {
       await staff.getByRole('button', { name: board, exact: true }).click()
-      await expect(staff.getByRole('row').filter({ hasText: name }).getByRole('button', { name: '全部下榜' })).toBeVisible()
+      await expect(staff.getByRole('row').filter({ hasText: name }).getByRole('button', { name: '下榜' })).toBeVisible()
       expect(await staff.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     }
     await staff.getByRole('button', { name: '用量榜', exact: true }).click()
-    await expect(staff.getByRole('row').filter({ hasText: name }).getByRole('button', { name: '全部下榜' })).toBeVisible()
+    await expect(staff.getByRole('row').filter({ hasText: name }).getByRole('button', { name: '下榜' })).toBeVisible()
     await expect(staff.getByRole('heading', { name: '今日 · 用量榜', exact: true })).toBeVisible()
     await staff.screenshot({ path: info.outputPath('managed-usage-320.png'), fullPage: true })
     await staff.getByRole('button', { name: '综合总榜', exact: true }).click()
-    await expect(staff.getByRole('row').filter({ hasText: name }).getByRole('button', { name: '全部下榜' })).toBeVisible()
+    await expect(staff.getByRole('row').filter({ hasText: name }).getByRole('button', { name: '下榜' })).toBeVisible()
     staff.once('dialog', (dialog) => { expect(dialog.message()).toContain('退出全部榜单，保留数据且继续接收上报'); return dialog.accept() })
-    await row.getByRole('button', { name: '全部下榜', exact: true }).focus()
+    await row.getByRole('button', { name: '下榜', exact: true }).focus()
     await staff.keyboard.press('Enter')
     await expect(staff.getByRole('status').filter({ hasText: '设置已保存，榜单刷新后生效' })).toBeVisible()
     await expect(staff.getByRole('row').filter({ hasText: name })).toHaveCount(0)
@@ -252,7 +255,7 @@ test('ordinary admin excludes and restores globally while ban remains independen
     await page.setViewportSize({ width: 375, height: 812 })
     await page.getByRole('link', { name: '公开榜单', exact: true }).click()
     await expect(page.getByRole('row').filter({ hasText: name })).toBeVisible()
-    await expect(page.getByRole('button', { name: '全部下榜', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: '下榜', exact: true })).toHaveCount(0)
     await expect(page.getByText('原值', { exact: true })).toHaveCount(0)
     await page.screenshot({ path: info.outputPath('public-preserved-375.png'), fullPage: true })
   } finally {

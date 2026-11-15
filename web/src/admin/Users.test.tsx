@@ -16,6 +16,7 @@ it('renders names as text, preserves ID precision and resets paging on query', a
   expect(screen.getByText('<img src=x>')).toBeVisible()
   expect(document.querySelector('img[src=x]')).toBeNull()
   expect(screen.getByRole('button', { name: '解封' })).toBeEnabled()
+  expect(screen.getByRole('button', { name: '解封' })).toHaveClass('admin-button--moderation')
   await events.click(screen.getByRole('button', { name: '下一页' }))
   expect(await screen.findByText('第 2 页 · 1 位用户')).toBeVisible()
   expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
