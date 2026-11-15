@@ -125,7 +125,7 @@ test('uses keyboard navigation to change the real board and period', async ({ pa
   await expectObservedClean(page, observed)
 })
 
-test('marks a revisited result as old and ignores a delayed superseded response', async ({ page, baseURL }) => {
+test('keeps the existing result while switching back and ignores a delayed superseded response', async ({ page, baseURL }, info) => {
   const observed = observePage(page, baseURL!)
   // 模拟底层网络不响应取消，让真实响应在切换后仍能到达 fetch。
   await page.addInitScript(() => {
@@ -147,7 +147,7 @@ test('marks a revisited result as old and ignores a delayed superseded response'
   const usageFinished = deferred<string>()
   const revisitStarted = deferred<void>()
   const releaseRevisit = deferred<void>()
-  // 先从真实服务取得用量响应，再延后转交浏览器；回访总榜也暂缓以检查旧标签。
+  // 先从真实服务取得用量响应，再延后转交浏览器；回访总榜也暂缓以检查内容保持。
   // 保持拦截器注册至测试结束，避免移除最后一个拦截器时自动放行仍在等待的请求。
   await page.route('**/v1/leaderboards/usage/today', async (route) => {
     try {
@@ -169,12 +169,16 @@ test('marks a revisited result as old and ignores a delayed superseded response'
   try {
     await page.getByRole('button', { name: '用量榜' }).click()
     expect(await usageStarted.promise).toBe(200)
-    await expect(page.getByText(/正在加载今日 · 用量榜/)).toBeVisible()
-    await expect(page.getByRole('heading', { name: /今日 · 综合总榜/ })).toContainText('上次结果')
+    await expect(page.getByText(/正在加载|上次结果/)).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: '今日 · 综合总榜', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: '综合总榜' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('row', { name: new RegExp(participant) })).toBeVisible()
+    await page.screenshot({ path: info.outputPath('switch-pending-desktop.png'), fullPage: true })
     await page.getByRole('button', { name: '综合总榜' }).click()
     await revisitStarted.promise
-    await expect(page.getByText(/正在加载今日 · 综合总榜/)).toBeVisible()
-    await expect(page.getByRole('heading', { name: /今日 · 综合总榜/ })).toContainText('上次结果')
+    await expect(page.getByText(/正在加载|上次结果/)).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: '今日 · 综合总榜', exact: true })).toBeVisible()
+    await expect(page.getByRole('row', { name: new RegExp(participant) })).toBeVisible()
     const response = page.waitForResponse((value) => new URL(value.url()).pathname === '/v1/leaderboards/overall/today')
     releaseRevisit.resolve()
     expect((await response).status()).toBe(200)

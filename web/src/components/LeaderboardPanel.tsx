@@ -5,12 +5,18 @@ import { useLeaderboard } from '../hooks/useLeaderboard'
 import type { Board, Entry, Period } from '../api/leaderboards'
 import { boards, periods } from '../leaderboardLabels'
 
-export function LeaderboardPanel({ board, period, selectionVersion = 0, renderAction, compactLoading = false, headingAction }: { board: Board; period: Period; selectionVersion?: number; renderAction?: (entry: Entry, generatedAt: string) => ReactNode; compactLoading?: boolean; headingAction?: ReactNode }) {
-  const { data, loading, error, avatars, retry } = useLeaderboard(board, period, selectionVersion)
+type PanelProps = { board: Board; period: Period; selectionVersion?: number; renderAction?: (entry: Entry, generatedAt: string) => ReactNode; compactLoading?: boolean; headingAction?: ReactNode }
+
+export function LeaderboardPanel(props: PanelProps) {
+  const result = useLeaderboard(props.board, props.period, props.selectionVersion ?? 0)
+  return <LeaderboardView {...props} result={result} />
+}
+
+export function LeaderboardView({ board, period, renderAction, compactLoading = false, headingAction, quietSwitch = false, result: { data, loading, error, avatars, retry } }: PanelProps & { quietSwitch?: boolean; result: ReturnType<typeof useLeaderboard> }) {
   const previous = data && (loading || error || data.board !== board || data.period !== period)
   return <div className="board-content" aria-busy={loading}>
     <div className="board-message" role="status" aria-live="polite" aria-atomic="true">
-      {loading && !compactLoading && <p>正在加载{periods[period]} · {boards[board].label}…{previous && ' 以下保留上次结果。'}</p>}
+      {loading && !compactLoading && !(quietSwitch && data) && <p>正在加载{periods[period]} · {boards[board].label}…{previous && ' 以下保留上次结果。'}</p>}
       {error && <p>{error}{data && ' 以下保留上次结果。'}</p>}
     </div>
     {error && <button className="retry-button" type="button" onClick={retry}>重试榜单</button>}
@@ -19,7 +25,7 @@ export function LeaderboardPanel({ board, period, selectionVersion = 0, renderAc
     {!data && error && <div className="ranking-empty"><div className="empty-symbol"><BrandMark /></div><h2>暂时无法加载榜单</h2><p>请检查连接后重试。</p></div>}
     {data && <>
       <div className="board-heading">
-        <div><h2>{periods[data.period]} · {boards[data.board].label}{previous && <span className="previous-label">上次结果</span>}</h2><p>UTC {data.start} 至 {data.end}（不含结束日）</p></div>
+        <div><h2>{periods[data.period]} · {boards[data.board].label}{previous && !(quietSwitch && loading) && <span className="previous-label">上次结果</span>}</h2><p>UTC {data.start} 至 {data.end}（不含结束日）</p></div>
         {headingAction ? <div className="admin-board-generation">{headingAction}<p>缓存生成于 {data.generated_at.slice(0, 19).replace('T', ' ')} UTC</p></div> : <p>缓存生成于 {data.generated_at.slice(0, 19).replace('T', ' ')} UTC</p>}
       </div>
       {data.entries.length === 0 ? <div className="ranking-empty">

@@ -2,12 +2,22 @@ import { useState } from 'react'
 import { AdminEntry } from './admin/AdminEntry'
 import type { Board, Period } from './api/leaderboards'
 import { boards, periods } from './leaderboardLabels'
-import { LeaderboardPanel } from './components/LeaderboardPanel'
+import { LeaderboardView } from './components/LeaderboardPanel'
+import { useLeaderboard } from './hooks/useLeaderboard'
 import './styles/app.css'
 
 export default function App({ active = true }: { active?: boolean }) {
   const [selection, setSelection] = useState<{ board: Board; period: Period; version: number }>({ board: 'overall', period: 'today', version: 0 })
   const { board, period } = selection
+  const result = useLeaderboard(board, period, selection.version * 2 + (active ? 1 : 0))
+  const shown = result.data ?? selection
+  function select(change: Partial<{ board: Board; period: Period }>) {
+    setSelection((current) => {
+      const base = result.error && result.data ? result.data : current
+      const next = { board: change.board ?? base.board, period: change.period ?? base.period }
+      return !result.error && next.board === current.board && next.period === current.period ? current : { ...next, version: current.version + 1 }
+    })
+  }
   return (
     <div className="app-shell">
       <header className="header-wrap">
@@ -22,10 +32,10 @@ export default function App({ active = true }: { active?: boolean }) {
         </section>
         <section id="ranking" className="ranking-section" aria-label="排行榜">
           <div className="ranking-toolbar">
-            <fieldset className="board-control"><legend className="sr-only">榜单类型</legend>{(Object.keys(boards) as Board[]).map((item) => <button key={item} type="button" aria-pressed={board === item} onClick={() => setSelection((current) => current.board === item ? current : { ...current, board: item, version: current.version + 1 })}>{boards[item].label}</button>)}</fieldset>
-            <fieldset className="period-control"><legend className="sr-only">时间范围</legend>{(Object.keys(periods) as Period[]).map((item) => <button key={item} type="button" aria-pressed={period === item} onClick={() => setSelection((current) => current.period === item ? current : { ...current, period: item, version: current.version + 1 })}>{periods[item]}</button>)}</fieldset>
+            <fieldset className="board-control"><legend className="sr-only">榜单类型</legend>{(Object.keys(boards) as Board[]).map((item) => <button key={item} type="button" aria-pressed={shown.board === item} onClick={() => select({ board: item })}>{boards[item].label}</button>)}</fieldset>
+            <fieldset className="period-control"><legend className="sr-only">时间范围</legend>{(Object.keys(periods) as Period[]).map((item) => <button key={item} type="button" aria-pressed={shown.period === item} onClick={() => select({ period: item })}>{periods[item]}</button>)}</fieldset>
           </div>
-          <LeaderboardPanel board={board} period={period} selectionVersion={selection.version * 2 + (active ? 1 : 0)} />
+          <LeaderboardView board={board} period={period} result={result} quietSwitch />
         </section>
       </main>
       <footer className="site-footer public-footer page-width"><span><img className="project-icon" src="/assets/brand/project-icon.svg" width="40" height="40" alt="" />CPA Usage Ranking</span></footer>

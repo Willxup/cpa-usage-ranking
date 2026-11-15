@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import { renderWithSession as render } from './renderWithSession'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -60,26 +60,67 @@ describe('application shell', () => {
     expect(screen.getByRole('button', { name: '昨日' })).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('marks an earlier result while switching away and back', async () => {
-    let first = true
-    let finish!: (response: Response) => void
-    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+  it('keeps the displayed selection and rows until the latest board and period are ready', async () => {
+    const pending = new Map<string, { resolve: (response: Response) => void; signal: AbortSignal }>()
+    const row = { rank: 1, client_id: '1', display_name: '原总榜', avatar_id: '1', metric: '12.34' }
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       if (url.includes('avatars')) return Promise.resolve(json(catalog))
       if (url.includes('/admin/session')) return Promise.resolve(json({ enabled: false, authenticated: false }))
-      if (first) { first = false; return Promise.resolve(json(empty)) }
-      if (url.includes('/overall/')) return new Promise<Response>((resolve) => { finish = resolve })
-      return new Promise<Response>(() => {})
+      if (url.endsWith('/overall/today')) return Promise.resolve(json({ ...empty, entries: [row] }))
+      return new Promise<Response>((resolve) => pending.set(url, { resolve, signal: init!.signal as AbortSignal }))
     }))
     const user = userEvent.setup()
     render(<App />)
-    expect(await screen.findByRole('heading', { name: '今日 · 综合总榜' })).toBeVisible()
+    const oldRow = await screen.findByRole('row', { name: /原总榜/ })
     await user.click(screen.getByRole('button', { name: '用量榜' }))
-    await user.click(screen.getByRole('button', { name: '综合总榜' }))
-    expect(screen.getByText(/正在加载今日 · 综合总榜/)).toBeVisible()
+    await waitFor(() => expect(pending.has('/v1/leaderboards/usage/today')).toBe(true))
+    expect(screen.getByRole('heading', { name: '今日 · 综合总榜' })).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: '总分' })).toBeVisible()
+    expect(screen.getByRole('row', { name: /原总榜/ })).toBe(oldRow)
+    expect(screen.getByRole('button', { name: '综合总榜' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: '今日' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByText(/正在加载|上次结果/)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '昨日' }))
+    await waitFor(() => expect(pending.has('/v1/leaderboards/usage/yesterday')).toBe(true))
+    await user.click(screen.getByRole('button', { name: '成功率榜' }))
+    await waitFor(() => expect(pending.has('/v1/leaderboards/success/yesterday')).toBe(true))
+    expect(pending.get('/v1/leaderboards/usage/today')!.signal.aborted).toBe(true)
+    expect(pending.get('/v1/leaderboards/usage/yesterday')!.signal.aborted).toBe(true)
+    await act(async () => pending.get('/v1/leaderboards/success/yesterday')!.resolve(json({ ...empty, board: 'success', period: 'yesterday', entries: [{ ...row, display_name: '新成功榜', metric: '78.90' }] })))
+    expect(await screen.findByRole('heading', { name: '昨日 · 成功率榜' })).toBeVisible()
+    expect(screen.getByRole('button', { name: '成功率榜' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: '昨日' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('columnheader', { name: '成功率得分' })).toBeVisible()
+    expect(screen.getByRole('row', { name: /新成功榜/ })).toHaveTextContent('78.90')
+    await act(async () => {
+      pending.get('/v1/leaderboards/usage/today')!.resolve(json({ ...empty, board: 'usage', entries: [{ ...row, metric: '1234' }] }))
+      pending.get('/v1/leaderboards/usage/yesterday')!.resolve(json({ ...empty, board: 'usage', period: 'yesterday', entries: [{ ...row, metric: '1234' }] }))
+    })
+    expect(screen.getByRole('heading', { name: '昨日 · 成功率榜' })).toBeVisible()
+    expect(screen.getByRole('row', { name: /新成功榜/ })).toBeVisible()
+  })
+
+  it('reports a failed switch and bases the next choice on the still-visible result', async () => {
+    const fetcher = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('avatars')) return Promise.resolve(json(catalog))
+      if (url.includes('/admin/session')) return Promise.resolve(json({ enabled: false, authenticated: false }))
+      if (url.endsWith('/cache/today')) return Promise.resolve(json({}, 503))
+      const [, board, period] = url.match(/leaderboards\/([^/]+)\/([^/]+)/) ?? []
+      return Promise.resolve(json({ ...empty, board, period }))
+    })
+    vi.stubGlobal('fetch', fetcher)
+    const user = userEvent.setup()
+    render(<App />)
+    await screen.findByRole('heading', { name: '今日 · 综合总榜' })
+    await user.click(screen.getByRole('button', { name: '缓存复用榜' }))
+    expect(await screen.findByText(/榜单缓存尚未就绪/)).toBeVisible()
     expect(screen.getByRole('heading', { name: /今日 · 综合总榜/ })).toHaveTextContent('上次结果')
-    finish(json(empty))
-    expect(await screen.findByRole('heading', { name: '今日 · 综合总榜' })).toBeVisible()
+    expect(screen.getByRole('button', { name: '综合总榜' })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: '昨日' }))
+    expect(await screen.findByRole('heading', { name: '昨日 · 综合总榜' })).toBeVisible()
+    expect(fetcher).toHaveBeenCalledWith('/v1/leaderboards/overall/yesterday', expect.anything())
   })
 
   it('keeps only the project logo and name in the public footer', async () => {

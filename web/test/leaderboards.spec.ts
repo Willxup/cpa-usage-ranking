@@ -72,8 +72,9 @@ test('retains correctly labeled old data on races and retries', async ({ page, r
   }, { times: 1 })
   await page.getByRole('button', { name: '用量榜' }).click()
   await started
-  await expect(page.getByText(/正在加载今日 · 用量榜/)).toBeVisible()
-  await expect(page.getByRole('heading', { name: /今日 · 综合总榜/ })).toContainText('上次结果')
+  await expect(page.getByText(/正在加载/)).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: '今日 · 综合总榜', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '综合总榜' })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByRole('heading', { name: /今日 · 用量榜/ })).toHaveCount(0)
   await page.getByRole('button', { name: '成功率榜' }).click()
   await expect(page.getByRole('heading', { name: '今日 · 成功率榜' })).toBeVisible()
