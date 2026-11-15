@@ -35,9 +35,12 @@ for (const width of [1440, 375, 320]) {
     const entry = page.getByRole('link', { name: '登录', exact: true })
     await expect(entry).toBeVisible()
     const brandBox = (await page.locator('.brand').boundingBox())!
+    const rankingBox = (await page.getByRole('link', { name: '排行榜', exact: true }).boundingBox())!
     const entryBox = (await entry.boundingBox())!
-    expect(brandBox.x + brandBox.width).toBeLessThanOrEqual(entryBox.x)
-    expect(Math.abs(brandBox.y - entryBox.y)).toBeLessThan(30)
+    expect(rankingBox.x + rankingBox.width).toBeLessThanOrEqual(entryBox.x)
+    expect(Math.abs(rankingBox.y - entryBox.y)).toBeLessThan(2)
+    if (width >= 761) expect(brandBox.x + brandBox.width).toBeLessThanOrEqual(rankingBox.x)
+    else expect(brandBox.y + brandBox.height).toBeLessThanOrEqual(rankingBox.y)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: info.outputPath(`public-login-${width}.png`), fullPage: true })
     await entry.click()
