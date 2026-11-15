@@ -8,23 +8,27 @@ test('hides the login entry and admin pages when not configured', async ({ page,
   expect((await request.get('/admin/login')).status()).toBe(404)
 })
 
-test('loads the real production build and checks the live Go process', async ({ page, baseURL, request }, info) => {
+test('loads the real leaderboard without an introduction or health card', async ({ page, baseURL, request }, info) => {
   await expect.poll(async () => (await request.get('/readyz')).status()).toBe(200)
+  const health = await request.get('/healthz')
+  expect(health.status()).toBe(200)
+  expect(await health.json()).toEqual({ status: 'ok' })
   const errors: string[] = []
   const externalRequests: string[] = []
+  const healthRequests: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()) })
-  page.on('request', (request) => { if (new URL(request.url()).origin !== baseURL) externalRequests.push(request.url()) })
+  page.on('request', (request) => {
+    if (new URL(request.url()).origin !== baseURL) externalRequests.push(request.url())
+    if (new URL(request.url()).pathname === '/healthz') healthRequests.push(request.url())
+  })
   await page.goto('/')
   await expect(page.getByRole('heading', { level: 1 })).toContainText('AI 用量排行榜')
-  const response = page.waitForResponse((value) => new URL(value.url()).pathname === '/healthz')
-  await page.getByRole('button', { name: '检查服务连接' }).click()
-  expect((await response).status()).toBe(200)
-  expect(await (await response).json()).toEqual({ status: 'ok' })
-  await expect(page.locator('#status').getByRole('status')).toContainText('服务在线')
-  await expect(page.getByText('以实际加载为准')).toBeVisible()
   await expect(page.getByRole('heading', { name: '等待第一份真实数据' })).toBeVisible()
+  await expect(page.getByText(/ABOUT THE RANKING|LIVE CONNECTION/)).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '检查服务连接' })).toHaveCount(0)
   await page.screenshot({ path: info.outputPath('desktop.png'), fullPage: true })
+  expect(healthRequests).toEqual([])
   expect(errors).toEqual([])
   expect(externalRequests).toEqual([])
 })
@@ -51,13 +55,12 @@ for (const width of [320, 375, 768]) {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
     await expect(page.getByRole('navigation')).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-    await page.getByRole('button', { name: '检查服务连接' }).click()
-    await expect(page.locator('#status').getByRole('status')).toContainText('服务在线')
+    await expect(page.getByText(/ABOUT THE RANKING|LIVE CONNECTION/)).toHaveCount(0)
     if (width === 375) await page.screenshot({ path: info.outputPath('mobile.png'), fullPage: true })
   })
 }
 
-test('supports normal tab navigation and keyboard-only health checks', async ({ page }) => {
+test('supports keyboard navigation of boards and periods', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('link', { name: '跳到主要内容' })).toHaveCount(0)
   for (const name of ['CPA Usage Ranking 首页', '排行榜']) {
@@ -71,35 +74,7 @@ test('supports normal tab navigation and keyboard-only health checks', async ({ 
   }
   await expect(page.getByRole('button', { name: '成功率榜' })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByRole('button', { name: '昨日' })).toHaveAttribute('aria-pressed', 'true')
-  await page.keyboard.press('Tab')
-  await expect(page.getByRole('button', { name: '检查服务连接' })).toBeFocused()
-  await page.keyboard.press('Enter')
-  await expect(page.locator('#status').getByRole('status')).toContainText('服务在线')
-})
-
-test('respects reduced motion and stops decorative animation offscreen', async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 500 })
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/')
-  const button = page.getByRole('button', { name: '检查服务连接' })
-  await button.scrollIntoViewIfNeeded()
-  await expect(button).toHaveAttribute('data-motion', 'off')
-  expect(await button.locator('.star-button__trail').first().evaluate((node) => getComputedStyle(node).animationName)).toBe('none')
-  await button.click()
-  await expect(page.locator('#status').getByRole('status')).toContainText('服务在线')
-  await page.emulateMedia({ reducedMotion: 'no-preference' })
-  await expect(button).toHaveAttribute('data-motion', 'on')
-  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }))
-  await expect(button).toHaveAttribute('data-motion', 'off')
-})
-
-test('shows a simulated service failure and retries against the real backend', async ({ page }) => {
-  await page.route('**/healthz', (route) => route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":"unavailable"}' }), { times: 1 })
-  await page.goto('/')
-  await page.getByRole('button', { name: '检查服务连接' }).click()
-  await expect(page.locator('#status').getByRole('status')).toContainText('服务返回 503')
-  await page.getByRole('button', { name: '检查服务连接' }).click()
-  await expect(page.locator('#status').getByRole('status')).toContainText('服务在线')
+  await expect(page.getByRole('heading', { name: '昨日 · 成功率榜' })).toBeVisible()
 })
 
 test('preserves API and missing-resource boundaries and ships source notices', async ({ request }) => {
@@ -140,11 +115,11 @@ test('serves decodable project icons and browser favicon variants', async ({ pag
 
 test.describe('touch interaction', () => {
   test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true })
-  test('can check health without hover', async ({ page }) => {
+  test('can switch the board and period without hover', async ({ page }) => {
     await page.goto('/')
+    await page.getByRole('button', { name: '用量榜' }).tap()
     await page.getByRole('button', { name: '昨日' }).tap()
     await expect(page.getByRole('button', { name: '昨日' })).toHaveAttribute('aria-pressed', 'true')
-    await page.getByRole('button', { name: '检查服务连接' }).tap()
-    await expect(page.locator('#status').getByRole('status')).toContainText('服务在线')
+    await expect(page.getByRole('heading', { name: '昨日 · 用量榜' })).toBeVisible()
   })
 })
