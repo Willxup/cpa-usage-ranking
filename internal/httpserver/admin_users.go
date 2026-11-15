@@ -74,7 +74,7 @@ func (h *adminHTTP) rankingVisibility(c *gin.Context) {
 }
 
 func (h *adminHTTP) users(c *gin.Context) {
-	query := clients.ListQuery{Limit: 50, Name: c.Query("name")}
+	query := clients.ListQuery{Limit: 50, Name: c.Query("name"), Search: c.Query("q")}
 	var err error
 	if value, ok := c.GetQuery("id"); ok {
 		query.ID, err = positiveAdminID(value)
@@ -114,7 +114,7 @@ func (h *adminHTTP) users(c *gin.Context) {
 		query.Hidden = &value
 	}
 	for key, values := range c.Request.URL.Query() {
-		if len(values) != 1 || values[0] == "" || (key != "id" && key != "name" && key != "after" && key != "disabled" && key != "hidden" && key != "limit") {
+		if len(values) != 1 || values[0] == "" || (key != "id" && key != "name" && key != "q" && key != "after" && key != "disabled" && key != "hidden" && key != "limit") {
 			h.adminError(c, admin.ErrInput)
 			return
 		}

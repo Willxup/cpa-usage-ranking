@@ -3,6 +3,7 @@ package clients
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -13,6 +14,7 @@ var ErrQuery = errors.New("invalid client list query")
 type ListQuery struct {
 	ID       int64
 	Name     string
+	Search   string
 	Disabled *bool
 	Hidden   *bool
 	After    int64
@@ -30,7 +32,7 @@ func (r *Repository) List(ctx context.Context, query ListQuery) (Page, error) {
 	if query.Limit == 0 {
 		query.Limit = 50
 	}
-	if query.Limit < 1 || query.Limit > 100 || query.ID < 0 || query.After < 0 || (query.ID != 0 && query.Name != "") || !utf8.ValidString(query.Name) || utf8.RuneCountInString(query.Name) > 80 {
+	if query.Limit < 1 || query.Limit > 100 || query.ID < 0 || query.After < 0 || (query.ID != 0 && query.Name != "") || !utf8.ValidString(query.Name) || utf8.RuneCountInString(query.Name) > 80 || !utf8.ValidString(query.Search) || utf8.RuneCountInString(query.Search) > 80 || (query.Search != "" && (query.ID != 0 || query.Name != "")) {
 		return Page{}, ErrQuery
 	}
 	conditions := []string{"id > ?"}
@@ -42,6 +44,17 @@ func (r *Repository) List(ctx context.Context, query ListQuery) (Page, error) {
 	if query.Name != "" {
 		conditions = append(conditions, "instr(display_name, ?) > 0")
 		args = append(args, query.Name)
+	}
+	if query.Search != "" {
+		// Numeric input still matches literal nicknames; never guess a search mode.
+		id, err := strconv.ParseInt(query.Search, 10, 64)
+		if err == nil && id > 0 && strconv.FormatInt(id, 10) == query.Search {
+			conditions = append(conditions, "(id = ? OR instr(display_name, ?) > 0)")
+			args = append(args, id, query.Search)
+		} else {
+			conditions = append(conditions, "instr(display_name, ?) > 0")
+			args = append(args, query.Search)
+		}
 	}
 	if query.Disabled != nil {
 		conditions = append(conditions, "disabled = ?")

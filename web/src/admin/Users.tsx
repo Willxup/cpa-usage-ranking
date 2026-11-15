@@ -37,11 +37,9 @@ export function Users({ session, onExpired, hiddenOnly = false }: { session: Adm
   function search(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
-    const params = new URLSearchParams({ limit: String(form.get('limit')) })
+    const params = new URLSearchParams({ limit: '50' })
     const term = String(form.get('query')).trim()
-    if (term) params.set(String(form.get('kind')), term)
-    if (form.get('disabled')) params.set('disabled', String(form.get('disabled')))
-    if (!hiddenOnly && form.get('hidden')) params.set('hidden', String(form.get('hidden')))
+    if (term) params.set('q', term)
     setCursors(['']); setQuery(params.toString()); setAttempt((old) => old + 1)
   }
   async function setBan(user: User) {
@@ -67,12 +65,8 @@ export function Users({ session, onExpired, hiddenOnly = false }: { session: Adm
   }
   return <section aria-labelledby="users-title">
     <div className="admin-heading"><div><p className="eyebrow">{hiddenOnly ? 'EXCLUDED USERS' : 'REGISTERED USERS'}</p><Heading id="users-title">{hiddenOnly ? '已下榜用户' : '用户管理'}</Heading></div><p className="admin-note">{hiddenOnly ? '全局名单，与当前选择的榜单、周期无关。已封禁用户须先解封，再恢复上榜。' : '所有已注册客户端，包括无上报、已下榜和已封禁身份。状态修改不删除统计。'}</p></div>
-    <form className="admin-filters" onSubmit={search}>
-      <div className="admin-field"><label htmlFor="user-search-kind">查询方式</label><select id="user-search-kind" name="kind" defaultValue="name"><option value="name">昵称包含</option><option value="id">ID 精确查询</option></select></div>
-      <div className="admin-field"><label htmlFor="user-search-query">查询内容</label><input id="user-search-query" name="query" type="search" maxLength={80} autoComplete="off" /></div>
-      <div className="admin-field"><label htmlFor="user-search-disabled">封禁状态</label><select id="user-search-disabled" name="disabled" defaultValue=""><option value="">全部状态</option><option value="false">正常</option><option value="true">已封禁</option></select></div>
-      {!hiddenOnly && <div className="admin-field"><label htmlFor="user-search-hidden">下榜状态</label><select id="user-search-hidden" name="hidden" defaultValue=""><option value="">全部状态</option><option value="false">未下榜</option><option value="true">已下榜</option></select></div>}
-      <div className="admin-field"><label htmlFor="user-search-limit">每页条数</label><select id="user-search-limit" name="limit" defaultValue="50"><option value="50">50</option><option value="100">100</option></select></div>
+    <form className="admin-search" onSubmit={search}>
+      <label className="sr-only" htmlFor="user-search-query">昵称或ID</label><input id="user-search-query" name="query" type="search" placeholder="搜索昵称或 ID" maxLength={80} autoComplete="off" />
       <button className="admin-button" type="submit" disabled={loading || !!busy}>查询</button>
     </form>
     {notice && <p className="admin-notice" role="status">{notice}</p>}

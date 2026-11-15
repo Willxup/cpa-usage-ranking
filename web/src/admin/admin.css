@@ -43,16 +43,17 @@
 .admin-table th, .admin-table td { padding: 14px 12px; text-align: left; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .admin-table th { background: #faf9fc; color: var(--muted); font-size: 12px; font-weight: 500; }
 .admin-table td { font-variant-numeric: tabular-nums; }
-.admin-main .admin-filters { display: grid; grid-template-columns: minmax(120px, .65fr) minmax(150px, 1.5fr) minmax(120px, .65fr) minmax(120px, .65fr) 100px auto; align-items: end; gap: 14px; margin: 0 0 24px; }
-.admin-filters .admin-field { display: grid; gap: 8px; min-width: 0; }
+.admin-main .admin-search { display: flex; align-items: center; gap: 8px; max-width: 440px; margin: 0 0 20px; }
+.admin-main .admin-search input { flex: 1; min-width: 0; min-height: 36px; padding: 7px 10px; font-size: 14px; }
+.admin-search .admin-button { min-height: 36px; padding: 7px 12px; font-size: 12px; }
 .admin-pagination { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 20px; font-size: 13px; color: var(--muted); }
 .admin-list-error { padding-block: 24px; }
 .admin-list-error .admin-button { margin-top: 12px; }
-@media (max-width: 1000px) { .admin-main .admin-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .admin-account-form { max-width: 520px; margin-top: 32px; }
 .admin-account-form h2 { font-size: 20px; margin-bottom: 10px; }
 @media (max-width: 760px) {
-  .admin-main .admin-filters { grid-template-columns: 1fr; }
+  .admin-main .admin-search input { min-height: 40px; font-size: 16px; }
+  .admin-search .admin-button { min-height: 40px; }
   .admin-table, .admin-table tbody { display: block; }
   .admin-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .admin-table tr { display: block; padding: 12px 0; border-bottom: 1px solid var(--line); }

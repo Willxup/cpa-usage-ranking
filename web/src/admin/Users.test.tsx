@@ -18,10 +18,12 @@ it('renders names as text, preserves ID precision and resets paging on query', a
   expect(screen.getByRole('button', { name: '解封' })).toBeEnabled()
   await events.click(screen.getByRole('button', { name: '下一页' }))
   expect(await screen.findByText('第 2 页 · 1 位用户')).toBeVisible()
-  await events.type(screen.getByLabelText('查询内容'), 'literal%')
+  expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+  expect(screen.getAllByRole('searchbox')).toHaveLength(1)
+  await events.type(screen.getByLabelText('昵称或ID'), 'literal%')
   await events.click(screen.getByRole('button', { name: '查询' }))
   expect(await screen.findByText('第 1 页 · 1 位用户')).toBeVisible()
-  expect(fetcher.mock.calls.some(([path]) => String(path) === '/v1/admin/users?limit=50&name=literal%25')).toBe(true)
+  expect(fetcher.mock.calls.some(([path]) => String(path) === '/v1/admin/users?limit=50&q=literal%25')).toBe(true)
 })
 
 it('sends an explicit target state once and reports failed writes without changing the row', async () => {
