@@ -25,6 +25,7 @@ test('uses the public text-navigation style for return and logout at both sizes'
     expect(await page.getByRole('link', { name: '公开榜单' }).evaluate(style)).toEqual(fonts.get(width))
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   }
+  expect(await page.getByRole('button', { name: '登录', exact: true }).evaluate((node) => getComputedStyle(node).fontSize)).toBe('14px')
   await page.getByLabel('用户名', { exact: true }).fill(credentials.username)
   await page.getByLabel('密码', { exact: true }).fill(credentials.password)
   await page.getByRole('button', { name: '登录', exact: true }).click()
@@ -32,6 +33,7 @@ test('uses the public text-navigation style for return and logout at both sizes'
     await page.setViewportSize({ width, height: 900 })
     expect(await page.getByRole('link', { name: '公开榜单' }).evaluate(style)).toEqual(fonts.get(width))
     expect(await page.getByRole('button', { name: '退出' }).evaluate(style)).toEqual(fonts.get(width))
+    expect(await page.getByRole('link', { name: '用户管理' }).evaluate((node) => getComputedStyle(node).fontSize)).toBe('14px')
     const selected = page.locator('.admin-shell .board-control button[aria-pressed="true"]:visible')
     for (const node of await selected.all()) expect(await node.evaluate((item) => { const css = getComputedStyle(item); return css.borderTopColor === css.backgroundColor })).toBe(true)
     await page.screenshot({ path: info.outputPath(`navigation-${width}.png`), fullPage: true })
