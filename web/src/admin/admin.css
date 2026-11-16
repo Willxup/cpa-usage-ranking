@@ -52,7 +52,7 @@
 .admin-pagination { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 20px; font-size: 13px; color: var(--muted); }
 .admin-list-error { padding-block: 24px; }
 .admin-list-error .admin-button { margin-top: 12px; }
-.admin-accounts-layout { display: grid; grid-template-columns: 360px minmax(0, 1fr); align-items: start; gap: 28px; }
+.admin-accounts-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); align-items: start; gap: 28px; }
 .admin-account-form, .admin-account-list { min-width: 0; }
 .admin-account-form h2, .admin-account-list h2 { font-size: 20px; margin-bottom: 10px; }
 @media (max-width: 900px) { .admin-accounts-layout { grid-template-columns: 1fr; gap: 20px; } }

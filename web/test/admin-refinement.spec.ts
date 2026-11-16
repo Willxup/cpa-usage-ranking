@@ -45,7 +45,7 @@ test('places add administrator on the left and a live simulated list on the righ
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 812 })
     const form = (await page.getByRole('region', { name: '添加管理员', exact: true }).boundingBox())!
     const list = (await page.getByRole('region', { name: '管理员列表', exact: true }).boundingBox())!
-    if (width === 1440) { expect(form.x + form.width).toBeLessThan(list.x); expect(Math.abs(form.y - list.y)).toBeLessThan(2) }
+    if (width === 1440) { expect(form.x + form.width).toBeLessThan(list.x); expect(Math.abs(form.y - list.y)).toBeLessThan(2); expect(Math.abs(list.width - 2 * form.width)).toBeLessThan(2) }
     else { expect(form.y + form.height).toBeLessThan(list.y); expect(Math.abs(form.x - list.x)).toBeLessThan(2) }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     const remove = page.getByRole('row').filter({ hasText: names[0] }).getByRole('button', { name: '删除' })
