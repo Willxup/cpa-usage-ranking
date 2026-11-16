@@ -88,7 +88,7 @@ test('uses the same administrator presentation, with only the account tab differ
   }
 })
 
-test('aligns a 12px compact refresh button above the cache timestamp, never on the public page', async ({ page }, info) => {
+test('aligns a 13px date-style refresh button above the cache timestamp, never on the public page', async ({ page }, info) => {
   await login(page)
   for (const width of [1440, 375]) {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 812 })
@@ -101,7 +101,8 @@ test('aligns a 12px compact refresh button above the cache timestamp, never on t
     expect(width === 1440 ? Math.abs(box.x + box.width - time.x - time.width) : Math.abs(box.x - time.x)).toBeLessThan(2)
     expect(box.height).toBeGreaterThanOrEqual(30)
     expect(box.height).toBeLessThanOrEqual(36)
-    expect(await button.evaluate((node) => getComputedStyle(node).fontSize)).toBe('12px')
+    const style = await button.evaluate((node) => { const css = getComputedStyle(node); return [css.fontSize, css.color, css.backgroundColor, css.borderColor] })
+    expect(style).toEqual(['13px', 'rgb(99, 61, 160)', 'rgb(255, 255, 255)', 'rgb(240, 240, 244)'])
     await page.screenshot({ path: info.outputPath(`refresh-${width}.png`), fullPage: true })
   }
   const response = page.waitForResponse((response) => new URL(response.url()).pathname === '/v1/leaderboards/overall/today')
