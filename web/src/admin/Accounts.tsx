@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { adminRequest, jsonRequest, type AdminSession } from './api'
+import { ConfirmDialog } from './ConfirmDialog'
 
 type Account = { id: string; username: string; created_at: string }
 type AccountsData = { owner: { username: string }; accounts: Account[] }
@@ -12,6 +13,7 @@ export function Accounts({ session, onExpired }: { session: AdminSession; onExpi
   const [loaded, setLoaded] = useState(-1)
   const loading = loaded !== version
   const [busy, setBusy] = useState('')
+  const [removing, setRemoving] = useState<Account | null>(null)
   useEffect(() => {
     let active = true
     adminRequest<AccountsData>('accounts').then((value) => {
@@ -32,12 +34,12 @@ export function Accounts({ session, onExpired }: { session: AdminSession; onExpi
     finally { setBusy('') }
   }
   async function remove(account: Account) {
-    if (busy || !window.confirm(`删除管理员“${account.username}”（ID ${account.id}）？其现有会话将失效。`)) return
+    if (busy) return
     setBusy(account.id); setError('')
     try {
       await adminRequest(`accounts/${account.id}`, jsonRequest('DELETE', {}, session.csrf_token))
       setVersion((old) => old + 1)
-    } catch (error) { setError((error as Error).message); onExpired() }
+    } catch (error) { onExpired(); throw error }
     finally { setBusy('') }
   }
   return <section aria-labelledby="accounts-title">
@@ -54,9 +56,10 @@ export function Accounts({ session, onExpired }: { session: AdminSession; onExpi
         <h2 id="accounts-list-title">管理员列表</h2>
         {loading && <div className="admin-progress" role="progressbar" aria-label="读取管理员列表" />}
         {data && (data.accounts.length === 0 ? <p className="admin-empty">暂无管理员。</p> : <table className="admin-table"><caption className="sr-only">管理员列表</caption><thead><tr><th scope="col">ID</th><th scope="col">用户名</th><th scope="col">创建时间（UTC）</th><th scope="col">操作</th></tr></thead><tbody>{data.accounts.map((account) => <tr key={account.id}>
-          <td data-label="ID">{account.id}</td><td data-label="用户名">{account.username}</td><td data-label="创建时间（UTC）">{account.created_at.slice(0, 19).replace('T', ' ')}</td><td data-label="操作"><button className="admin-button admin-button--danger admin-button--moderation" disabled={!!busy} onClick={() => void remove(account)}>{busy === account.id ? '正在删除…' : '删除'}</button></td>
+          <td data-label="ID">{account.id}</td><td data-label="用户名">{account.username}</td><td data-label="创建时间（UTC）">{account.created_at.slice(0, 19).replace('T', ' ')}</td><td data-label="操作"><button className="admin-button admin-button--danger admin-button--moderation" disabled={!!busy} onClick={() => setRemoving(account)}>{busy === account.id ? '正在删除…' : '删除'}</button></td>
         </tr>)}</tbody></table>)}
       </section>
     </div>
+    {removing && <ConfirmDialog title={`删除管理员“${removing.username}”？`} detail="其现有会话将失效。" onCancel={() => setRemoving(null)} onConfirm={() => remove(removing)} />}
   </section>
 }
