@@ -30,6 +30,8 @@ it('confirms global exclusion and replaces the whole table with published server
   render(<Leaderboards session={{ enabled: true, authenticated: true, csrf_token: 'csrf' }} onExpired={vi.fn()} />)
   let row = await screen.findByRole('row', { name: /target/ })
   expect(within(row).getByRole('button', { name: '下榜' })).toHaveClass('admin-button--moderation')
+  expect(screen.getByRole('columnheader', { name: '操作' })).toHaveClass('admin-row-action')
+  expect(within(row).getByRole('button', { name: '下榜' }).closest('td')).toHaveClass('admin-row-action')
   expect(screen.queryByRole('button', { name: '全部下榜' })).not.toBeInTheDocument()
   await events.click(within(row).getByRole('button', { name: '下榜' }))
   expect(fetcher.mock.calls.some(([path]) => String(path).includes('ranking-visibility'))).toBe(false)

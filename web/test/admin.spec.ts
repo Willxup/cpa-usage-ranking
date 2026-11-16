@@ -155,7 +155,7 @@ test('bans and unbans a reporting identity and refreshes the five-minute cache',
   await page.getByLabel('昵称或ID', { exact: true }).fill(name)
   await page.getByRole('button', { name: '查询', exact: true }).click()
   let row = page.getByRole('row').filter({ hasText: name })
-  expect(await row.getByRole('button', { name: '封禁', exact: true }).evaluate((node) => Number(getComputedStyle(node).fontWeight))).toBeGreaterThanOrEqual(700)
+  expect(await row.getByRole('button', { name: '封禁', exact: true }).evaluate((node) => [getComputedStyle(node).fontSize, getComputedStyle(node).fontWeight])).toEqual(['13px', '700'])
   await page.screenshot({ path: info.outputPath('ban-action-375.png'), fullPage: true })
   page.once('dialog', (dialog) => { expect(dialog.message()).toContain('停止上报并退出全部榜单，保留统计'); return dialog.dismiss() })
   await row.getByRole('button', { name: '封禁', exact: true }).click()
@@ -203,6 +203,14 @@ test('ordinary admin excludes and restores globally while ban remains independen
     for (const width of [1440, 375, 320]) {
       await staff.setViewportSize({ width, height: width === 1440 ? 1000 : 812 })
       expect(await staff.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      const action = row.getByRole('button', { name: '下榜' })
+      expect(await action.evaluate((node) => [getComputedStyle(node).fontSize, getComputedStyle(node).fontWeight])).toEqual(['13px', '700'])
+      if (width === 1440) {
+        const header = (await staff.getByRole('columnheader', { name: '操作' }).boundingBox())!
+        const button = (await action.boundingBox())!
+        expect(Math.abs(header.x + header.width / 2 - button.x - button.width / 2)).toBeLessThan(2)
+        expect(await staff.getByRole('columnheader', { name: '总分' }).evaluate((node) => getComputedStyle(node).textAlign)).toBe('right')
+      }
       await staff.screenshot({ path: info.outputPath(`managed-board-${width}.png`), fullPage: true })
     }
     for (const board of ['用量榜', '缓存复用榜', '成功率榜', '首字响应榜']) {

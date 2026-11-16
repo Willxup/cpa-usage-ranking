@@ -40,7 +40,7 @@ export function LeaderboardTable({ data, avatars, renderAction }: { data: Leader
     <thead role="rowgroup"><tr role="row">
       <th scope="col" role="columnheader">排名</th><th scope="col" role="columnheader">参与者</th><th scope="col" role="columnheader" className="numeric-heading">{boards[data.board].metric}</th>
       {overall && columns.map(({ key, label }) => <th key={key} scope="col" role="columnheader" className="numeric-heading">{label}</th>)}
-      {renderAction && <th scope="col" role="columnheader">操作</th>}
+      {renderAction && <th scope="col" role="columnheader" className="admin-row-action">操作</th>}
     </tr></thead>
     {data.entries.map((entry) => {
       return <tbody key={entry.client_id} role="rowgroup" className="leaderboard-group">

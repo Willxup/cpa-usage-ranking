@@ -48,6 +48,9 @@ test('places add administrator on the left and a live simulated list on the righ
     if (width === 1440) { expect(form.x + form.width).toBeLessThan(list.x); expect(Math.abs(form.y - list.y)).toBeLessThan(2) }
     else { expect(form.y + form.height).toBeLessThan(list.y); expect(Math.abs(form.x - list.x)).toBeLessThan(2) }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    const remove = page.getByRole('row').filter({ hasText: names[0] }).getByRole('button', { name: '删除' })
+    expect(await remove.evaluate((node) => [getComputedStyle(node).fontSize, getComputedStyle(node).fontWeight])).toEqual(['13px', '700'])
+    expect(await page.getByRole('button', { name: '添加管理员' }).evaluate((node) => getComputedStyle(node).fontSize)).toBe('14px')
     await page.screenshot({ path: info.outputPath(`administrators-layout-${width}.png`), fullPage: true })
   }
 })
@@ -138,6 +141,7 @@ test('uses one compact server-side nickname-or-ID search in both user lists', as
     const button = (await page.getByRole('button', { name: '查询', exact: true }).boundingBox())!
     expect(Math.abs(input.y - button.y)).toBeLessThan(4)
     expect(input.x + input.width).toBeLessThanOrEqual(button.x)
+    expect(await page.getByRole('button', { name: '查询', exact: true }).evaluate((node) => getComputedStyle(node).fontSize)).toBe('12px')
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: info.outputPath(`compact-users-${width}.png`), fullPage: true })
   }
