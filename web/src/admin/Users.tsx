@@ -25,6 +25,10 @@ export function Users({ session, onExpired, hiddenOnly = false, active = true }:
   const stale = loading || !!result.error
   useEffect(() => {
     if (!active) return
+    return () => { setAction(null); setAttempt((old) => old + 1) }
+  }, [active])
+  useEffect(() => {
+    if (!active) return
     let current = true
     adminRequest<UserPage>(path).then((value) => { if (current) setResult({ key, data: value, page: cursors.length }) }).catch((error: Error) => {
       if (current) { setResult((previous) => ({ ...previous, key, error: error.message })); if (error instanceof AdminError && error.status === 401) onExpired() }

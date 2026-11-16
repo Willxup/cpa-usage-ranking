@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
 import { Users } from './Users'
@@ -72,6 +72,28 @@ it('restores eligibility with an explicit false state and refreshes the user lis
   expect(await screen.findByText('未找到匹配的用户。')).toBeVisible()
   expect(document.querySelector('.admin-notice')).toBeNull()
   expect(fetcher.mock.calls.filter(([, init]) => init?.method === 'PUT').map(([, init]) => JSON.parse(String(init?.body)))).toEqual([{ hidden: false }])
+})
+
+it('keeps the prior list visible but disables actions while revisiting and revalidating', async () => {
+  let reads = 0
+  let finish!: (response: Response) => void
+  vi.stubGlobal('fetch', vi.fn((path: RequestInfo | URL) => {
+    if (String(path).includes('avatars')) return Promise.resolve(json({}))
+    reads++
+    return reads === 1 ? Promise.resolve(json({ users: [user], next_cursor: '' })) : new Promise<Response>((resolve) => { finish = resolve })
+  }))
+  const session = { enabled: true, authenticated: true }
+  const expired = vi.fn()
+  const view = render(<Users session={session} onExpired={expired} />)
+  const action = await screen.findByRole('button', { name: '解封' })
+  view.rerender(<Users session={session} onExpired={expired} active={false} />)
+  view.rerender(<Users session={session} onExpired={expired} active />)
+  await waitFor(() => expect(finish).toBeDefined())
+  expect(screen.getByText(user.id)).toBeVisible()
+  expect(action).toBeDisabled()
+  expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+  await act(async () => finish(json({ users: [user], next_cursor: '' })))
+  expect(action).toBeEnabled()
 })
 
 it('distinguishes load failure, retry and an empty list', async () => {

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Board, Entry, Period } from '../api/leaderboards'
 import { LeaderboardView } from '../components/LeaderboardPanel'
 import { useLeaderboard } from '../hooks/useLeaderboard'
@@ -16,6 +16,10 @@ export function Leaderboards({ session, onExpired, active = true }: { session: A
   const { board, period } = selection
   const result = useLeaderboard(board, period, selection.version, active && !hiddenView)
   const shown = result.data ?? selection
+  useEffect(() => {
+    if (!active || hiddenView) return
+    return () => { setTarget(null); setSelection((old) => ({ ...old, version: old.version + 1 })) }
+  }, [active, hiddenView])
   function select(change: Partial<{ board: Board; period: Period }>) {
     setSelection((current) => {
       const base = result.error && result.data ? result.data : current

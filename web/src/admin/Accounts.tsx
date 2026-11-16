@@ -16,6 +16,10 @@ export function Accounts({ session, onExpired, active = true }: { session: Admin
   const [removing, setRemoving] = useState<Account | null>(null)
   useEffect(() => {
     if (!active) return
+    return () => { setRemoving(null); setVersion((old) => old + 1) }
+  }, [active])
+  useEffect(() => {
+    if (!active) return
     let current = true
     adminRequest<AccountsData>('accounts').then((value) => {
       if (current) { setData(value); setError(''); setLoaded(version) }
