@@ -66,14 +66,16 @@ export default function AdminApp() {
       <Link className="admin-entry" href="/">公开榜单</Link>
     </div></header>
     <main id="main" className="page-width admin-main" tabIndex={-1} ref={main}>
-      {!session && !error && <div className="admin-progress" role="progressbar" aria-label="验证会话" />}
+      {!session && !error && <div className="admin-list-placeholder" aria-hidden="true" />}
       {error && <div role="alert"><p className="admin-error">{error}</p><button className="admin-button" onClick={() => void refresh()}>重试</button></div>}
       {session && !session.enabled && <section className="admin-card"><h1>管理后台未启用</h1><Link className="primary-link" href="/">返回公开榜单</Link></section>}
       {session?.enabled && !session.authenticated && login && <Login />}
       {session?.authenticated && !login && <>
         <div className="admin-nav-wrap"><nav className="admin-nav" aria-label="控制台导航"><Link href="/admin/leaderboards" aria-current={!accounts && !users ? 'page' : undefined}>榜单管理</Link><Link href="/admin/users" aria-current={users ? 'page' : undefined}>用户管理</Link>{session.user?.owner && <Link href="/admin/accounts" aria-current={accounts ? 'page' : undefined}>管理员管理</Link>}</nav><div className="admin-identity"><span>{session.user?.username}</span><button className="logout-link" disabled={busy} onClick={() => void logout()}>{busy ? '正在退出…' : '退出'}</button></div></div>
         {actionError && <p className="admin-error" role="alert">{actionError}</p>}
-        <div className="tab-view" key={path}>{accounts ? session.user?.owner ? <Accounts session={session} onExpired={refresh} /> : <section className="admin-card"><h1>无访问权限</h1><Link className="primary-link" href="/admin/leaderboards">返回榜单</Link></section> : users ? <Users session={session} onExpired={refresh} /> : <Leaderboards session={session} onExpired={refresh} />}</div>
+        <div className="tab-view" hidden={accounts || users}><Leaderboards active={!accounts && !users} session={session} onExpired={refresh} /></div>
+        <div className="tab-view" hidden={!users}><Users active={users} session={session} onExpired={refresh} /></div>
+        {session.user?.owner ? <div className="tab-view" hidden={!accounts}><Accounts active={accounts} session={session} onExpired={refresh} /></div> : accounts && <section className="admin-card"><h1>无访问权限</h1><Link className="primary-link" href="/admin/leaderboards">返回榜单</Link></section>}
       </>}
     </main>
     <footer className="site-footer page-width"><span>CPA Usage Ranking · 控制台</span><p>统计周期保持 UTC</p></footer>

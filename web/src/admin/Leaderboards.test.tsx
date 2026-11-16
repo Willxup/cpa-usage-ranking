@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
 import { Leaderboards } from './Leaderboards'
@@ -15,6 +15,31 @@ it('places a compact refresh action before the cache time in the same header', a
   expect(button.parentElement).toBe(time.parentElement)
   expect(button.compareDocumentPosition(time) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
   expect(button.closest('.board-heading')).not.toBeNull()
+})
+
+it('keeps the matching board and its disabled action until a requested board arrives', async () => {
+  let finish!: (response: Response) => void
+  const row = { client_id: '1', display_name: '旧参与者', avatar_id: '1', rank: 1, metric: '90.00' }
+  const base = { board: 'overall', period: 'today', start: '2026-11-16', end: '2026-11-17', generated_at: '2026-11-16T01:00:00Z', entries: [row] }
+  vi.stubGlobal('fetch', vi.fn((path: RequestInfo | URL) => {
+    if (String(path).includes('avatars')) return Promise.resolve(json({}))
+    if (String(path).includes('/usage/')) return new Promise<Response>((resolve) => { finish = resolve })
+    return Promise.resolve(json(base))
+  }))
+  const events = userEvent.setup()
+  render(<Leaderboards session={{ enabled: true, authenticated: true }} onExpired={vi.fn()} />)
+  await screen.findByRole('row', { name: /旧参与者/ })
+  await events.click(screen.getByRole('button', { name: '用量榜' }))
+  await waitFor(() => expect(finish).toBeDefined())
+  expect(screen.getByRole('heading', { name: '今日 · 综合总榜' })).toBeVisible()
+  expect(screen.getByRole('button', { name: '综合总榜' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('button', { name: '下榜' })).toBeDisabled()
+  expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+  expect(screen.queryByText(/正在加载|上次结果/)).not.toBeInTheDocument()
+  await act(async () => finish(json({ ...base, board: 'usage', entries: [{ ...row, display_name: '新参与者', metric: '1234' }] })))
+  expect(await screen.findByRole('heading', { name: '今日 · 用量榜' })).toBeVisible()
+  expect(screen.getByRole('row', { name: /新参与者/ })).toBeVisible()
+  expect(screen.getByRole('button', { name: '下榜' })).toBeEnabled()
 })
 
 it('confirms global exclusion and replaces the whole table with published server ranks and scores', async () => {

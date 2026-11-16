@@ -32,6 +32,26 @@ test('uses the public text-navigation style for return and logout at both sizes'
     expect(await page.getByRole('button', { name: '退出' }).evaluate(style)).toEqual(fonts.get(width))
     await page.screenshot({ path: info.outputPath(`navigation-${width}.png`), fullPage: true })
   }
+  const navigation = page.getByRole('navigation', { name: '控制台导航' })
+  await navigation.getByRole('link', { name: '用户管理' }).click()
+  await expect(page.getByText('未找到匹配的用户。')).toBeVisible()
+  await navigation.getByRole('link', { name: '管理员管理' }).click()
+  let release!: () => void
+  let begin!: () => void
+  const blocked = new Promise<void>((resolve) => { release = resolve })
+  const started = new Promise<void>((resolve) => { begin = resolve })
+  await page.route('**/v1/admin/users?*', async (route) => { begin(); await blocked; await route.continue().catch(() => {}) }, { times: 1 })
+  try {
+    await navigation.getByRole('link', { name: '用户管理' }).click()
+    await started
+    await expect(page.getByText('未找到匹配的用户。')).toBeVisible()
+    await expect(page.locator('.admin-progress')).toHaveCount(0)
+    await expect(page.getByRole('progressbar')).toHaveCount(0)
+    await navigation.getByRole('link', { name: '管理员管理' }).click()
+    release()
+    await navigation.getByRole('link', { name: '用户管理' }).click()
+    await expect(page.getByText('未找到匹配的用户。')).toBeVisible()
+  } finally { release() }
   await page.getByRole('button', { name: '退出' }).click()
   await expect(page.getByRole('link', { name: '登录', exact: true })).toBeVisible()
 })
