@@ -39,6 +39,7 @@ it('confirms global exclusion and replaces the whole table with published server
   expect(confirm).toHaveBeenLastCalledWith(expect.stringContaining('退出全部榜单，保留数据且继续接收上报'))
   expect(await screen.findByTitle('95.00 分')).toBeVisible()
   expect(screen.queryByRole('row', { name: /target/ })).not.toBeInTheDocument()
+  expect(document.querySelector('.admin-notice')).toBeNull()
   row = screen.getByRole('row', { name: /other/ })
   expect(within(row).getByText('1', { exact: true })).toBeVisible()
   const write = fetcher.mock.calls.find(([path]) => String(path).includes('ranking-visibility'))

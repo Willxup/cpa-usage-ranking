@@ -7,7 +7,7 @@ type AccountsData = { owner: { username: string }; accounts: Account[] }
 export function Accounts({ session, onExpired }: { session: AdminSession; onExpired: () => void }) {
   const [data, setData] = useState<AccountsData | null>(null)
   const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
+  const [createError, setCreateError] = useState('')
   const [version, setVersion] = useState(0)
   const [loaded, setLoaded] = useState(-1)
   const loading = loaded !== version
@@ -24,30 +24,30 @@ export function Accounts({ session, onExpired }: { session: AdminSession; onExpi
     if (busy) return
     const element = event.currentTarget
     const form = new FormData(element)
-    setBusy('create'); setError(''); setNotice('')
+    setBusy('create'); setCreateError('')
     try {
       await adminRequest('accounts', jsonRequest('POST', { username: form.get('username'), password: form.get('password') }, session.csrf_token))
-      element.reset(); setNotice('管理员已添加。'); setVersion((old) => old + 1)
-    } catch (error) { setError((error as Error).message); onExpired() }
+      element.reset(); setVersion((old) => old + 1)
+    } catch (error) { setCreateError((error as Error).message); onExpired() }
     finally { setBusy('') }
   }
   async function remove(account: Account) {
     if (busy || !window.confirm(`删除管理员“${account.username}”（ID ${account.id}）？其现有会话将失效。`)) return
-    setBusy(account.id); setError(''); setNotice('')
+    setBusy(account.id); setError('')
     try {
       await adminRequest(`accounts/${account.id}`, jsonRequest('DELETE', {}, session.csrf_token))
-      setNotice('管理员已删除，现有会话已撤销。'); setVersion((old) => old + 1)
+      setVersion((old) => old + 1)
     } catch (error) { setError((error as Error).message); onExpired() }
     finally { setBusy('') }
   }
   return <section aria-labelledby="accounts-title">
     <div className="admin-heading"><div><p className="eyebrow">ADMINISTRATORS</p><h1 id="accounts-title">管理员管理</h1></div></div>
-    {notice && <p className="admin-notice" role="status">{notice}</p>}
     {error && <div><p className="admin-error" role="alert">{error}</p><button className="admin-button" disabled={loading || !!busy} onClick={() => setVersion((old) => old + 1)}>重新加载列表</button></div>}
     <div className="admin-accounts-layout">
       <section className="admin-card admin-account-form" aria-labelledby="add-account-title"><h2 id="add-account-title">添加管理员</h2><form onSubmit={(event) => void create(event)} aria-busy={busy === 'create'}>
         <label htmlFor="account-username">用户名</label><input id="account-username" name="username" autoComplete="off" required minLength={3} maxLength={64} pattern="[A-Za-z0-9][A-Za-z0-9_.\-]{2,63}" />
         <label htmlFor="account-password">初始密码</label><input id="account-password" name="password" type="password" autoComplete="new-password" required minLength={12} maxLength={72} />
+        {createError && <p className="admin-error" role="alert">{createError}</p>}
         <button className="admin-button admin-button--primary" type="submit" disabled={!!busy}>{busy === 'create' ? '正在添加…' : '添加管理员'}</button>
       </form></section>
       <section className="admin-card admin-account-list" aria-labelledby="accounts-list-title" aria-busy={loading}>
