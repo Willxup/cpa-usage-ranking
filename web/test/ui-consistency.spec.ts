@@ -16,6 +16,8 @@ test('uses the public text-navigation style for return and logout at both sizes'
     await page.setViewportSize({ width, height: 900 })
     await expect(page.getByRole('link', { name: '登录', exact: true })).toBeVisible()
     fonts.set(width, await page.getByRole('link', { name: '排行榜', exact: true }).evaluate(style))
+    const selected = page.locator('.app-shell:visible .board-control button[aria-pressed="true"]')
+    expect(await selected.evaluate((node) => { const css = getComputedStyle(node); return css.borderTopColor === css.backgroundColor })).toBe(true)
   }
   await page.getByRole('link', { name: '登录', exact: true }).click()
   for (const width of [1440, 375]) {
@@ -30,8 +32,14 @@ test('uses the public text-navigation style for return and logout at both sizes'
     await page.setViewportSize({ width, height: 900 })
     expect(await page.getByRole('link', { name: '公开榜单' }).evaluate(style)).toEqual(fonts.get(width))
     expect(await page.getByRole('button', { name: '退出' }).evaluate(style)).toEqual(fonts.get(width))
+    const selected = page.locator('.admin-shell .board-control button[aria-pressed="true"]:visible')
+    for (const node of await selected.all()) expect(await node.evaluate((item) => { const css = getComputedStyle(item); return css.borderTopColor === css.backgroundColor })).toBe(true)
     await page.screenshot({ path: info.outputPath(`navigation-${width}.png`), fullPage: true })
   }
+  await page.keyboard.press('Tab')
+  const boardButton = page.getByRole('button', { name: '用量榜', exact: true })
+  await boardButton.focus()
+  expect(await boardButton.evaluate((node) => getComputedStyle(node).outlineStyle)).not.toBe('none')
   const navigation = page.getByRole('navigation', { name: '控制台导航' })
   await navigation.getByRole('link', { name: '用户管理' }).click()
   await expect(page.getByText('未找到匹配的用户。')).toBeVisible()
