@@ -74,6 +74,18 @@ it('restores eligibility with an explicit false state and refreshes the user lis
   expect(fetcher.mock.calls.filter(([, init]) => init?.method === 'PUT').map(([, init]) => JSON.parse(String(init?.body)))).toEqual([{ hidden: false }])
 })
 
+it('keeps the two retained list labels distinct and targets the active search', async () => {
+  vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(json({ users: [], next_cursor: '' }))))
+  const session = { enabled: true, authenticated: true }
+  const expired = vi.fn()
+  render(<><div hidden><Users session={session} onExpired={expired} hiddenOnly active={false} /></div><Users session={session} onExpired={expired} /></>)
+  const search = screen.getByLabelText('昵称或ID')
+  expect(search).toBeVisible()
+  expect(search).toHaveAttribute('id', 'user-search-query')
+  expect(screen.getByRole('region', { name: '用户管理' })).toBeVisible()
+  await screen.findByText('未找到匹配的用户。')
+})
+
 it('keeps the prior list visible but disables actions while revisiting and revalidating', async () => {
   let reads = 0
   let finish!: (response: Response) => void

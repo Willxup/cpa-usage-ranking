@@ -10,6 +10,8 @@ type UserPage = { users: User[]; next_cursor: string }
 
 export function Users({ session, onExpired, hiddenOnly = false, active = true }: { session: AdminSession; onExpired: () => void; hiddenOnly?: boolean; active?: boolean }) {
   const Heading = hiddenOnly ? 'h2' : 'h1'
+  const titleId = hiddenOnly ? 'hidden-users-title' : 'users-title'
+  const searchId = hiddenOnly ? 'hidden-users-search' : 'user-search-query'
   const [query, setQuery] = useState('limit=50')
   const [cursors, setCursors] = useState<string[]>([''])
   const [attempt, setAttempt] = useState(0)
@@ -67,10 +69,10 @@ export function Users({ session, onExpired, hiddenOnly = false, active = true }:
     } catch (error) { if (error instanceof AdminError && error.status === 401) onExpired(); throw error }
     finally { setBusy('') }
   }
-  return <section aria-labelledby="users-title">
-    <div className="admin-heading"><div><p className="eyebrow">{hiddenOnly ? 'EXCLUDED USERS' : 'REGISTERED USERS'}</p><Heading id="users-title">{hiddenOnly ? '已下榜用户' : '用户管理'}</Heading></div></div>
+  return <section aria-labelledby={titleId}>
+    <div className="admin-heading"><div><p className="eyebrow">{hiddenOnly ? 'EXCLUDED USERS' : 'REGISTERED USERS'}</p><Heading id={titleId}>{hiddenOnly ? '已下榜用户' : '用户管理'}</Heading></div></div>
     <form className="admin-search" onSubmit={search}>
-      <label className="sr-only" htmlFor="user-search-query">昵称或ID</label><input id="user-search-query" name="query" type="search" placeholder="搜索昵称或 ID" maxLength={80} autoComplete="off" />
+      <label className="sr-only" htmlFor={searchId}>{active ? '昵称或ID' : ''}</label><input id={searchId} name="query" type="search" placeholder="搜索昵称或 ID" maxLength={80} autoComplete="off" />
       <button className="admin-button" type="submit" disabled={loading || !!busy}>查询</button>
     </form>
     {!data && loading && <div className="admin-list-placeholder" aria-hidden="true" />}

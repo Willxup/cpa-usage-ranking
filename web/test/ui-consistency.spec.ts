@@ -40,6 +40,25 @@ test('uses the public text-navigation style for return and logout at both sizes'
   const boardButton = page.getByRole('button', { name: '用量榜', exact: true })
   await boardButton.focus()
   expect(await boardButton.evaluate((node) => getComputedStyle(node).outlineStyle)).not.toBe('none')
+  await expect(page.getByRole('heading', { name: '今日 · 综合总榜' })).toBeVisible()
+  let releaseBoard!: () => void
+  let beginBoard!: () => void
+  const boardBlocked = new Promise<void>((resolve) => { releaseBoard = resolve })
+  const boardStarted = new Promise<void>((resolve) => { beginBoard = resolve })
+  await page.route('**/v1/leaderboards/usage/today', async (route) => { beginBoard(); await boardBlocked; await route.continue().catch(() => {}) }, { times: 1 })
+  try {
+    await boardButton.click()
+    await boardStarted
+    for (const width of [1440, 375]) {
+      await page.setViewportSize({ width, height: 900 })
+      await expect(page.getByRole('heading', { name: '今日 · 综合总榜' })).toBeVisible()
+      await expect(page.getByText(/正在加载|上次结果/)).toHaveCount(0)
+      await expect(page.locator('.admin-progress')).toHaveCount(0)
+      await page.screenshot({ path: info.outputPath(`board-pending-${width}.png`), fullPage: true })
+    }
+    releaseBoard()
+    await expect(page.getByRole('heading', { name: '今日 · 用量榜' })).toBeVisible()
+  } finally { releaseBoard() }
   const navigation = page.getByRole('navigation', { name: '控制台导航' })
   await navigation.getByRole('link', { name: '用户管理' }).click()
   await expect(page.getByText('未找到匹配的用户。')).toBeVisible()
@@ -53,8 +72,14 @@ test('uses the public text-navigation style for return and logout at both sizes'
     await navigation.getByRole('link', { name: '用户管理' }).click()
     await started
     await expect(page.getByText('未找到匹配的用户。')).toBeVisible()
+    await expect(page.getByRole('region', { name: '用户管理' })).toBeVisible()
+    await expect(page.getByLabel('昵称或ID')).toBeVisible()
     await expect(page.locator('.admin-progress')).toHaveCount(0)
     await expect(page.getByRole('progressbar')).toHaveCount(0)
+    for (const width of [1440, 375]) {
+      await page.setViewportSize({ width, height: 900 })
+      await page.screenshot({ path: info.outputPath(`tab-pending-${width}.png`), fullPage: true })
+    }
     await navigation.getByRole('link', { name: '管理员管理' }).click()
     release()
     await navigation.getByRole('link', { name: '用户管理' }).click()
