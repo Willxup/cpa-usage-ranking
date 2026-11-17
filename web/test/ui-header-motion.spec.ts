@@ -15,6 +15,7 @@ async function settleAtTop(page: Page) {
     await Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => {})))
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
   })
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0)
 }
 
 async function sampleTransition(page: Page, link: Locator): Promise<Frame[]> {
@@ -58,17 +59,17 @@ test('keeps the header and brand stable in every frame across both routes', asyn
   const header = page.getByRole('navigation', { name: '页面导航' })
   for (const width of [1440, 375]) {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 812 })
-    await header.getByRole('link', { name: '排行榜' }).click()
+    if (new URL(page.url()).pathname !== '/') await header.getByRole('link', { name: '排行榜' }).click()
     await expect(header.getByRole('link', { name: '控制台' })).toBeVisible()
     const toAdmin = await sampleTransition(page, header.getByRole('link', { name: '控制台' }))
     const toPublic = await sampleTransition(page, header.getByRole('link', { name: '排行榜' }))
+    writeFileSync(info.outputPath(`frames-${width}.json`), JSON.stringify({ toAdmin, toPublic }, null, 2))
     for (const frames of [toAdmin, toPublic]) {
       expect(frames.length).toBeGreaterThan(10)
       expect(new Set(frames.map((frame) => frame.path)).size).toBe(2)
       expect(frames.every((frame) => frame.scroll === 0)).toBe(true)
       for (const key of ['header', 'icon', 'text'] as const) expect(range(frames, key), key).toBeLessThan(0.25)
     }
-    writeFileSync(info.outputPath(`frames-${width}.json`), JSON.stringify({ toAdmin, toPublic }, null, 2))
     await page.screenshot({ path: info.outputPath(`public-${width}.png`), fullPage: true })
   }
 })
@@ -82,7 +83,7 @@ test('records the previous full-shell animation across the same transitions', as
     const header = page.getByRole('navigation', { name: '页面导航' })
     for (const width of [1440, 375]) {
       await page.setViewportSize({ width, height: width === 1440 ? 1000 : 812 })
-      await header.getByRole('link', { name: '排行榜' }).click()
+      if (new URL(page.url()).pathname !== '/') await header.getByRole('link', { name: '排行榜' }).click()
       const toAdmin = await sampleTransition(page, header.getByRole('link', { name: '控制台' }))
       const toPublic = await sampleTransition(page, header.getByRole('link', { name: '排行榜' }))
       expect(range(toAdmin, 'header')).toBeGreaterThan(1)

@@ -50,7 +50,7 @@ export default function AdminApp() {
   const accounts = path === '/admin/accounts'
   const users = path === '/admin/users'
   const main = useRef<HTMLElement>(null)
-  useEffect(() => { main.current?.focus() }, [path])
+  useEffect(() => { main.current?.focus({ preventScroll: true }) }, [path])
   useEffect(() => {
     if (session?.enabled && !session.authenticated && !login) navigate('/admin/login', true)
     if (session?.authenticated && login) navigate('/admin/leaderboards', true)
