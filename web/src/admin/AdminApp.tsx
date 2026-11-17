@@ -6,6 +6,7 @@ import { navigate, usePathname } from '../navigation'
 import { useSession } from './useSession'
 import { Accounts } from './Accounts'
 import { Users } from './Users'
+import { SiteFooter } from '../components/SiteFooter'
 import '../styles/app.css'
 import './admin.css'
 
@@ -78,6 +79,6 @@ export default function AdminApp() {
         {session.user?.owner ? <div className="tab-view" hidden={!accounts}><Accounts active={accounts} session={session} onExpired={refresh} /></div> : accounts && <section className="admin-card"><h1>无访问权限</h1><Link className="primary-link" href="/admin/leaderboards">返回榜单</Link></section>}
       </>}
     </main>
-    <footer className="site-footer page-width"><span>CPA Usage Ranking · 控制台</span><p>统计周期保持 UTC</p></footer>
+    <SiteFooter />
   </div>
 }

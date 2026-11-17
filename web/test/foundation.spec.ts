@@ -27,11 +27,12 @@ test('loads the real leaderboard without an introduction or health card', async 
   await expect(page.getByRole('heading', { name: '等待第一份真实数据' })).toBeVisible()
   await expect(page.getByText(/ABOUT THE RANKING|LIVE CONNECTION/)).toHaveCount(0)
   await expect(page.getByRole('button', { name: '检查服务连接' })).toHaveCount(0)
-  const footer = page.locator('.public-footer')
+  const footer = page.locator('.brand-footer')
   await expect(footer).toHaveText('CPA Usage Ranking')
   await expect(footer.locator('img')).toHaveAttribute('src', '/assets/brand/project-icon.svg')
   const box = (await footer.locator('span').boundingBox())!
-  expect(Math.abs(box.x + box.width / 2 - 720)).toBeLessThan(1)
+  const footerBox = (await footer.boundingBox())!
+  expect(Math.abs(box.x + box.width / 2 - footerBox.x - footerBox.width / 2)).toBeLessThan(1)
   await page.screenshot({ path: info.outputPath('desktop.png'), fullPage: true })
   expect(healthRequests).toEqual([])
   expect(errors).toEqual([])
@@ -60,11 +61,12 @@ for (const width of [320, 375, 768]) {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
     await expect(page.getByRole('navigation')).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-    const footer = page.locator('.public-footer')
+    const footer = page.locator('.brand-footer')
     await expect(footer).toHaveText('CPA Usage Ranking')
     await expect(footer.locator('img')).toHaveAttribute('src', '/assets/brand/project-icon.svg')
     const box = (await footer.locator('span').boundingBox())!
-    expect(Math.abs(box.x + box.width / 2 - width / 2)).toBeLessThan(1)
+    const footerBox = (await footer.boundingBox())!
+    expect(Math.abs(box.x + box.width / 2 - footerBox.x - footerBox.width / 2)).toBeLessThan(1)
     await expect(page.getByText(/ABOUT THE RANKING|LIVE CONNECTION/)).toHaveCount(0)
     if (width === 375) await page.screenshot({ path: info.outputPath('mobile.png'), fullPage: true })
   })

@@ -44,6 +44,12 @@ test('keeps both levels of console tabs aligned when content height changes', as
     await page.getByRole('link', { name: '管理员管理', exact: true }).click()
     await expect(page.getByRole('heading', { name: '管理员管理', exact: true })).toBeVisible()
     const accounts = await position(page)
+    const footer = page.locator('.admin-shell .brand-footer')
+    await expect(footer).toHaveText('CPA Usage Ranking')
+    await expect(footer.locator('img')).toHaveAttribute('src', '/assets/brand/project-icon.svg')
+    const footerBox = (await footer.boundingBox())!
+    const footerBrand = (await footer.locator('span').boundingBox())!
+    expect(Math.abs(footerBrand.x + footerBrand.width / 2 - footerBox.x - footerBox.width / 2)).toBeLessThan(1)
     sameHorizontal(longMain, users); sameHorizontal(users, accounts)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     if (width === 1440) { expect(longSub.scroll).toBe(true); expect(shortSub.scroll).toBe(false); expect(users.scroll).toBe(false) }

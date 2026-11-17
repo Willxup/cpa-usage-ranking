@@ -22,6 +22,8 @@ it('keeps the document and console shell while sharing one session across tabs a
   render(<RootApp />)
   await user.click(await screen.findByRole('link', { name: '控制台' }))
   const navigation = await screen.findByRole('navigation', { name: '控制台导航' })
+  expect(screen.getByRole('contentinfo')).toHaveTextContent(/^CPA Usage Ranking$/)
+  expect(screen.getByRole('contentinfo').querySelector('img')).toHaveAttribute('src', '/assets/brand/project-icon.svg')
   await user.click(screen.getByRole('link', { name: '用户管理' }))
   expect(await screen.findByRole('heading', { name: '用户管理' })).toBeVisible()
   expect(screen.getByRole('navigation', { name: '控制台导航' })).toBe(navigation)

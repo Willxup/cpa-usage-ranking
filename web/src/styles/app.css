@@ -137,9 +137,9 @@
 .site-footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 24px 0; border-top: 1px solid var(--line); font-size: 13px; }
 .site-footer > span { font-weight: 600; }
 .site-footer p { color: var(--subtle); font-size: 12px; }
-.public-footer { justify-content: center; }
-.public-footer > span { display: inline-flex; align-items: center; }
-.public-footer .project-icon { width: 40px; height: 40px; }
+.brand-footer { justify-content: center; }
+.brand-footer > span { display: inline-flex; align-items: center; }
+.brand-footer .project-icon { width: 40px; height: 40px; }
 @media (min-width: 1800px) { .ranking-empty { min-height: 520px; } .overview { padding-top: 64px; padding-bottom: 50px; } }
 @media (max-width: 1100px) {
   .site-header { gap: 20px; }

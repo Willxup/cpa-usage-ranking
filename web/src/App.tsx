@@ -3,6 +3,7 @@ import { AdminEntry } from './admin/AdminEntry'
 import type { Board, Period } from './api/leaderboards'
 import { boards, periods } from './leaderboardLabels'
 import { LeaderboardView } from './components/LeaderboardPanel'
+import { SiteFooter } from './components/SiteFooter'
 import { useLeaderboard } from './hooks/useLeaderboard'
 import './styles/app.css'
 
@@ -38,7 +39,7 @@ export default function App({ active = true }: { active?: boolean }) {
           <LeaderboardView board={board} period={period} result={result} quietSwitch />
         </section>
       </main>
-      <footer className="site-footer public-footer page-width"><span><img className="project-icon" src="/assets/brand/project-icon.svg" width="40" height="40" alt="" />CPA Usage Ranking</span></footer>
+      <SiteFooter />
     </div>
   )
 }
