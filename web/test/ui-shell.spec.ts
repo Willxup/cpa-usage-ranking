@@ -44,7 +44,7 @@ test('keeps console tabs and public-to-console navigation horizontally aligned',
     await current.evaluate((node) => { (node as HTMLElement).style.minHeight = '2000px' })
     const longSub = await position(page)
     await page.getByRole('button', { name: '已下榜用户', exact: true }).click()
-    await expect(page.getByRole('heading', { name: '已下榜用户' })).toBeVisible()
+    await expect(page.getByRole('region', { name: '已下榜用户' })).toBeVisible()
     const shortSub = await position(page)
     sameHorizontal(longSub, shortSub)
     await page.getByRole('button', { name: '当前榜单', exact: true }).click()

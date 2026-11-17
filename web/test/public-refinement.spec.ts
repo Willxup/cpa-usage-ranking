@@ -110,7 +110,8 @@ test('keeps route, tab and result transitions light, interruptible and optional'
   }
   await navigation.getByRole('link', { name: '榜单管理' }).click()
   await page.getByRole('button', { name: '已下榜用户' }).click()
-  await expect(page.getByRole('heading', { name: '已下榜用户' })).toBeVisible()
+  await expect(page.getByRole('region', { name: '已下榜用户' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '已下榜用户' })).toHaveCount(0)
   expect(await page.locator('.tab-view:not([hidden]) .tab-view:not([hidden])').evaluate((node) => getComputedStyle(node).animationName)).toBe('view-enter')
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await navigation.getByRole('link', { name: '用户管理' }).click()

@@ -251,7 +251,8 @@ test('ordinary admin excludes and restores globally while ban remains independen
     report.revision = '2'; report.items[0].total_tokens = '7654321'
     expect((await request.put(`/v1/reports/${day}`, { headers: bearer, data: report })).status()).toBe(200)
     await staff.getByRole('button', { name: '已下榜用户', exact: true }).click()
-    await expect(staff.getByRole('heading', { name: '已下榜用户', exact: true })).toBeVisible()
+    await expect(staff.getByRole('region', { name: '已下榜用户', exact: true })).toBeVisible()
+    await expect(staff.getByRole('heading', { name: '已下榜用户' })).toHaveCount(0)
     row = staff.getByRole('row').filter({ hasText: name })
     await expect(row.getByRole('button', { name: '上榜' })).toBeEnabled()
     expect(await row.getByRole('button', { name: '上榜' }).evaluate((node) => [getComputedStyle(node).fontSize, getComputedStyle(node).fontWeight])).toEqual(['13px', '700'])
