@@ -162,7 +162,8 @@ test('bans and unbans a reporting identity and refreshes the five-minute cache',
   const dialog = page.getByRole('dialog')
   await expect(dialog).toContainText('停止上报并退出全部榜单，保留统计')
   const mobileDialog = (await dialog.boundingBox())!
-  expect(Math.abs(mobileDialog.x + mobileDialog.width / 2 - 375 / 2)).toBeLessThan(2)
+  const mobileShell = (await page.locator('.admin-shell').boundingBox())!
+  expect(Math.abs(mobileDialog.x + mobileDialog.width / 2 - mobileShell.x - mobileShell.width / 2)).toBeLessThan(2)
   expect(Math.abs(mobileDialog.y + mobileDialog.height / 2 - 812 / 2)).toBeLessThan(2)
   await expect(dialog.getByRole('button', { name: '取消' })).toBeFocused()
   await page.screenshot({ path: info.outputPath('confirm-ban-375.png'), fullPage: true })
@@ -240,7 +241,8 @@ test('ordinary admin excludes and restores globally while ban remains independen
     await staff.keyboard.press('Enter')
     await expect(staff.getByRole('dialog')).toContainText('退出全部榜单，保留数据且继续接收上报')
     const desktopDialog = (await staff.getByRole('dialog').boundingBox())!
-    expect(Math.abs(desktopDialog.x + desktopDialog.width / 2 - 1440 / 2)).toBeLessThan(2)
+    const desktopShell = (await staff.locator('.admin-shell').boundingBox())!
+    expect(Math.abs(desktopDialog.x + desktopDialog.width / 2 - desktopShell.x - desktopShell.width / 2)).toBeLessThan(2)
     expect(Math.abs(desktopDialog.y + desktopDialog.height / 2 - 1000 / 2)).toBeLessThan(2)
     expect(await staff.getByRole('dialog').getByRole('button', { name: '确认' }).evaluate((node) => getComputedStyle(node).fontSize)).toBe('14px')
     await staff.screenshot({ path: info.outputPath('confirm-exclusion-1440.png'), fullPage: true })
