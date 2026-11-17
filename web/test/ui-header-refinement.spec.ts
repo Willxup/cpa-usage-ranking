@@ -38,3 +38,24 @@ test('places hidden-user search immediately below its tab without a duplicate he
   await page.getByRole('link', { name: '用户管理', exact: true }).click()
   await expect(page.getByRole('heading', { name: '用户管理' })).toBeVisible()
 })
+
+test('uses the same existing title typography in both administrator cards', async ({ page }, info) => {
+  await login(page)
+  await page.getByRole('link', { name: '管理员管理', exact: true }).click()
+  const add = page.getByRole('region', { name: '添加管理员' })
+  const list = page.getByRole('region', { name: '管理员列表' })
+  const typography = (node: Element) => { const css = getComputedStyle(node); return [css.fontFamily, css.fontSize, css.fontWeight, css.lineHeight] }
+  for (const width of [1440, 375]) {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 812 })
+    const left = await add.getByRole('heading').evaluate(typography)
+    const right = await list.getByRole('heading').evaluate(typography)
+    expect(left).toEqual(right)
+    expect(left[1]).toBe('20px')
+    expect(left[2]).toBe('400')
+    const leftBox = (await add.boundingBox())!
+    const rightBox = (await list.boundingBox())!
+    if (width === 1440) expect(Math.abs(rightBox.width - 2 * leftBox.width)).toBeLessThan(2)
+    else expect(leftBox.y + leftBox.height).toBeLessThan(rightBox.y)
+    await page.screenshot({ path: info.outputPath(`account-titles-${width}.png`), fullPage: true })
+  }
+})

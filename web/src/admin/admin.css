@@ -65,7 +65,7 @@
 .admin-list-error .admin-button { margin-top: 12px; }
 .admin-accounts-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); align-items: start; gap: 28px; }
 .admin-account-form, .admin-account-list { min-width: 0; }
-.admin-account-form h2, .admin-account-list h2 { font-size: 20px; margin-bottom: 10px; }
+.admin-account-title { font-size: 20px; font-weight: 400; margin-bottom: 10px; }
 @media (max-width: 900px) { .admin-accounts-layout { grid-template-columns: 1fr; gap: 20px; } }
 @media (max-width: 760px) {
   .admin-main .admin-search input { min-height: 40px; font-size: 16px; }
