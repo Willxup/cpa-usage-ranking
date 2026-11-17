@@ -1,4 +1,5 @@
-.admin-main { padding-block: 32px 48px; min-height: calc(100vh - 160px); }
+.admin-shell { display: flex; flex-direction: column; }
+.admin-main { flex: 1 0 auto; min-height: 0; padding-block: 32px 48px; }
 .admin-main:focus { outline: none; }
 .admin-card { border: 1px solid var(--line); border-radius: 18px; padding: 28px; background: var(--surface-raised); }
 .admin-login { width: min(100%, 460px); margin: 24px auto; }

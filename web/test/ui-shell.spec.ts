@@ -63,7 +63,9 @@ test('keeps console tabs and public-to-console navigation horizontally aligned',
     expect(Math.abs(footerBrand.x + footerBrand.width / 2 - footerBox.x - footerBox.width / 2)).toBeLessThan(1)
     sameHorizontal(longMain, users); sameHorizontal(users, accounts)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-    if (width === 1440) { expect(longSub.scroll).toBe(true); expect(shortSub.scroll).toBe(false); expect(users.scroll).toBe(false) }
+    expect(longSub.scroll).toBe(true)
+    expect(shortSub.scroll).toBe(false)
+    expect(users.scroll).toBe(false)
     await page.screenshot({ path: info.outputPath(`tabs-${width}.png`), fullPage: true })
     await header.getByRole('link', { name: '排行榜' }).click()
     await expect(header.getByRole('link', { name: '排行榜' })).toHaveAttribute('aria-current', 'page')
