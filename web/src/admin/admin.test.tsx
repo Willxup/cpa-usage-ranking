@@ -78,6 +78,8 @@ it('allows password manager input, prevents duplicate login and reports failure'
   const user = userEvent.setup()
   render(<AdminApp />)
   const username = await screen.findByLabelText('用户名')
+  expect(screen.queryByText(/使用管理员账号登录|客户端密钥不能用于此处/)).not.toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: '管理员登录' }).nextElementSibling?.tagName).toBe('FORM')
   const password = screen.getByLabelText('密码')
   expect(username).toHaveAttribute('autocomplete', 'username')
   expect(password).toHaveAttribute('autocomplete', 'current-password')

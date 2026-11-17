@@ -31,7 +31,6 @@ function Login() {
   useEffect(() => { if (error) errorRef.current?.focus() }, [error])
   return <section className="admin-card admin-login" aria-labelledby="login-title">
     <p className="eyebrow">ADMIN CONSOLE</p><h1 id="login-title">管理员登录</h1>
-    <p className="admin-note">使用管理员账号登录。客户端密钥不能用于此处。</p>
     <form onSubmit={(event) => void submit(event)} aria-busy={busy}>
       <label htmlFor="username">用户名</label><input id="username" name="username" autoComplete="username" required maxLength={64} />
       <label htmlFor="password">密码</label><input id="password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" required maxLength={72} />

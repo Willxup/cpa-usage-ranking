@@ -39,6 +39,21 @@ test('places hidden-user search immediately below its tab without a duplicate he
   await expect(page.getByRole('heading', { name: '用户管理' })).toBeVisible()
 })
 
+test('keeps the login form compact without the removed explanation and reports real errors', async ({ page }, info) => {
+  await page.goto('/admin/login')
+  await expect(page.getByLabel('用户名', { exact: true })).toBeVisible()
+  await expect(page.getByText(/使用管理员账号登录|客户端密钥不能用于此处/)).toHaveCount(0)
+  expect(await page.getByRole('heading', { name: '管理员登录' }).evaluate((node) => node.nextElementSibling?.tagName)).toBe('FORM')
+  for (const width of [1440, 375]) {
+    await page.setViewportSize({ width, height: width === 1440 ? 1000 : 812 })
+    await page.screenshot({ path: info.outputPath(`login-${width}.png`), fullPage: true })
+  }
+  await page.getByLabel('用户名', { exact: true }).fill(credentials.username)
+  await page.getByLabel('密码', { exact: true }).fill('invalid-isolated-password')
+  await page.getByRole('button', { name: '登录', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('用户名或密码错误')
+})
+
 test('uses the same existing title typography in both administrator cards', async ({ page }, info) => {
   await login(page)
   await page.getByRole('link', { name: '管理员管理', exact: true }).click()
