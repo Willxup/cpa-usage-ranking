@@ -11,7 +11,8 @@ test('keeps public navigation consistent for anonymous and authenticated session
   await page.goto('/')
   const navigation = page.getByRole('navigation', { name: '页面导航' })
   const publicRoute = page.locator('.route-view').first()
-  await publicRoute.evaluate((node) => {
+  const publicMain = publicRoute.locator('main')
+  await publicMain.evaluate((node) => {
     const element = node as HTMLElement
     element.dataset.enters = '0'
     element.addEventListener('animationstart', (event) => { if (event.target === element) element.dataset.enters = String(Number(element.dataset.enters) + 1) })
@@ -36,7 +37,7 @@ test('keeps public navigation consistent for anonymous and authenticated session
   await page.getByRole('button', { name: '登录', exact: true }).click()
   await expect(page.getByRole('navigation', { name: '控制台导航' })).toBeVisible()
   await page.getByRole('navigation', { name: '页面导航' }).getByRole('link', { name: '排行榜' }).click()
-  await expect.poll(async () => Number(await publicRoute.getAttribute('data-enters'))).toBeGreaterThan(0)
+  await expect.poll(async () => Number(await publicMain.getAttribute('data-enters'))).toBeGreaterThan(0)
   for (const width of [1440, 375]) {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 812 })
     await check('控制台')
@@ -56,7 +57,9 @@ test('keeps route, tab and result transitions light, interruptible and optional'
   await expect(page.getByRole('heading', { name: '今日 · 综合总榜' })).toBeVisible()
   const publicRoute = page.locator('.route-view').first()
   await publicRoute.evaluate((node) => { (node as HTMLElement).dataset.preserved = 'yes' })
-  expect(await publicRoute.evaluate((node) => getComputedStyle(node).animationName)).toBe('view-enter')
+  expect(await publicRoute.evaluate((node) => getComputedStyle(node).animationName)).toBe('none')
+  expect(await publicRoute.locator('main').evaluate((node) => getComputedStyle(node).animationName)).toBe('view-enter')
+  expect(await publicRoute.locator('header').evaluate((node) => getComputedStyle(node).animationName)).toBe('none')
   const firstResult = page.locator('.leaderboard-result')
   await firstResult.evaluate((node) => { (node as HTMLElement).dataset.old = 'yes' })
   await page.getByRole('button', { name: '用量榜' }).click()
@@ -115,6 +118,7 @@ test('keeps route, tab and result transitions light, interruptible and optional'
   await page.getByRole('navigation', { name: '页面导航' }).getByRole('link', { name: '排行榜' }).click()
   await expect(publicRoute).toHaveAttribute('data-preserved', 'yes')
   expect(await publicRoute.evaluate((node) => getComputedStyle(node).animationName)).toBe('none')
+  expect(await publicRoute.locator('main').evaluate((node) => getComputedStyle(node).animationName)).toBe('none')
   await page.getByRole('button', { name: '本周' }).click()
   await expect(page.getByRole('heading', { name: '本周 · 成功率榜' })).toBeVisible()
   expect(await page.locator('.leaderboard-result').evaluate((node) => getComputedStyle(node).animationName)).toBe('none')
