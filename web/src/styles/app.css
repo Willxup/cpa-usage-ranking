@@ -3,7 +3,7 @@
   .route-view, .tab-view, .leaderboard-result { animation: view-enter 160ms ease-out; }
 }
 @keyframes view-enter { from { opacity: .98; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
-.page-width { width: calc(100% - clamp(40px, 7vw, 160px)); max-width: 1920px; margin-inline: auto; }
+.page-width { width: calc(100% - clamp(40px, 7%, 160px)); max-width: 1920px; margin-inline: auto; }
 .header-wrap { border-bottom: 1px solid var(--line); background: #ffffffc9; }
 .site-header { min-height: 88px; display: flex; align-items: center; gap: 42px; }
 .brand { display: inline-flex; align-items: center; gap: 0; font-size: 23px; font-weight: 700; letter-spacing: -.7px; text-decoration: none; white-space: nowrap; }
@@ -147,7 +147,7 @@
 /* Compact desktop density; use real layout sizes rather than page zoom.
    Keep small annotations readable and leave the mobile layout unchanged. */
 @media (min-width: 761px) {
-  .page-width { width: calc(100% - clamp(32px, 5.6vw, 128px)); }
+  .page-width { width: calc(100% - clamp(32px, 5.6%, 128px)); }
   .site-header { min-height: 70px; gap: 32px; }
   .brand { gap: 0; font-size: 19px; }
   .brand svg { width: 28px; height: 28px; }

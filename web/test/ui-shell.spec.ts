@@ -5,6 +5,7 @@ const config = process.env.RANKING_TEST_ADMIN_CONFIG
 const baselineURL = process.env.RANKING_BASELINE_URL
 const credentials: { username: string; password: string } = config ? JSON.parse(readFileSync(config, 'utf8')) : { username: '', password: '' }
 test.skip(!config, 'Requires an isolated enabled console')
+test.use({ launchOptions: { ignoreDefaultArgs: ['--hide-scrollbars'], ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH } : {}) } })
 
 type Position = { header: number[]; main: number[]; footer: number[]; icon: number[]; text: number[]; scroll: boolean; width: number; clientWidth: number }
 async function position(page: Page): Promise<Position> {
@@ -16,7 +17,7 @@ async function position(page: Page): Promise<Position> {
 }
 function sameHorizontal(left: Position, right: Position) {
   for (const key of ['header', 'main', 'footer', 'icon', 'text'] as const) {
-    for (let i = 0; i < 2; i++) expect(Math.abs(left[key][i] - right[key][i]), `${key}[${i}]`).toBeLessThan(1)
+    for (let i = 0; i < 2; i++) expect(Math.abs(left[key][i] - right[key][i]), `${key}[${i}]`).toBeLessThan(0.1)
   }
 }
 
@@ -81,6 +82,14 @@ test('keeps console tabs and public-to-console navigation horizontally aligned',
     writeFileSync(info.outputPath(`positions-${width}.json`), JSON.stringify({ longSub, shortSub, longMain, users, accounts, publicLong, adminAgain }, null, 2))
   }
   expect(documents).toBe(1)
+  const previousURL = page.url()
+  const popupPromise = page.context().waitForEvent('page')
+  await header.getByRole('link', { name: '排行榜' }).click({ modifiers: ['Control'] })
+  const popup = await popupPromise
+  await popup.waitForLoadState('domcontentloaded')
+  expect(new URL(popup.url()).pathname).toBe('/')
+  expect(page.url()).toBe(previousURL)
+  await popup.close()
 })
 
 test('records the earlier tab and shell geometry for comparison', async ({ browser }, info) => {
