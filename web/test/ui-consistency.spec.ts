@@ -22,7 +22,7 @@ test('uses the public text-navigation style for return and logout at both sizes'
   await page.getByRole('link', { name: '登录', exact: true }).click()
   for (const width of [1440, 375]) {
     await page.setViewportSize({ width, height: 900 })
-    expect(await page.getByRole('link', { name: '公开榜单' }).evaluate(style)).toEqual(fonts.get(width))
+    expect(await page.getByRole('navigation', { name: '页面导航' }).getByRole('link', { name: '排行榜' }).evaluate(style)).toEqual(fonts.get(width))
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   }
   expect(await page.getByRole('button', { name: '登录', exact: true }).evaluate((node) => getComputedStyle(node).fontSize)).toBe('14px')
@@ -31,7 +31,7 @@ test('uses the public text-navigation style for return and logout at both sizes'
   await page.getByRole('button', { name: '登录', exact: true }).click()
   for (const width of [1440, 375]) {
     await page.setViewportSize({ width, height: 900 })
-    expect(await page.getByRole('link', { name: '公开榜单' }).evaluate(style)).toEqual(fonts.get(width))
+    expect(await page.getByRole('navigation', { name: '页面导航' }).getByRole('link', { name: '排行榜' }).evaluate(style)).toEqual(fonts.get(width))
     expect(await page.getByRole('button', { name: '退出' }).evaluate(style)).toEqual(fonts.get(width))
     expect(await page.getByRole('link', { name: '用户管理' }).evaluate((node) => getComputedStyle(node).fontSize)).toBe('14px')
     const selected = page.locator('.admin-shell .board-control button[aria-pressed="true"]:visible')

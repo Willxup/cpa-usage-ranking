@@ -125,7 +125,7 @@ test('aligns a 13px date-style refresh button above the cache timestamp, never o
   await page.mouse.down()
   expect(await refresh.evaluate((node) => getComputedStyle(node).transform)).toBe('none')
   await page.mouse.up()
-  await page.getByRole('link', { name: '公开榜单', exact: true }).click()
+  await page.getByRole('navigation', { name: '页面导航' }).getByRole('link', { name: '排行榜', exact: true }).click()
   await expect(page.getByRole('button', { name: '刷新榜单', exact: true })).toHaveCount(0)
 })
 
@@ -194,7 +194,7 @@ test('keeps a shared-session document across tabs, public return and history; re
     await expect(page.getByText('正在加载…', { exact: true })).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: info.outputPath(`navigation-${width}.png`), fullPage: true })
-    await page.getByRole('link', { name: '公开榜单', exact: true }).click()
+    await page.getByRole('navigation', { name: '页面导航' }).getByRole('link', { name: '排行榜', exact: true }).click()
     await expect(page.getByRole('link', { name: '控制台', exact: true })).toBeVisible()
     await page.getByRole('link', { name: '控制台', exact: true }).click()
   }
@@ -209,6 +209,6 @@ test('keeps a shared-session document across tabs, public return and history; re
   await page.getByRole('link', { name: '管理员管理', exact: true }).click()
   await expect(page.getByRole('heading', { name: '管理员登录', exact: true })).toBeVisible()
   await expect(page).toHaveURL(/\/admin\/login$/)
-  await page.getByRole('link', { name: '公开榜单', exact: true }).click()
+  await page.getByRole('navigation', { name: '页面导航' }).getByRole('link', { name: '排行榜', exact: true }).click()
   await expect(page.getByRole('link', { name: '登录', exact: true })).toBeVisible()
 })

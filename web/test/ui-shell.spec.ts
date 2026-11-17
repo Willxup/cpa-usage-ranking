@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 
 const config = process.env.RANKING_TEST_ADMIN_CONFIG
+const baselineURL = process.env.RANKING_BASELINE_URL
 const credentials: { username: string; password: string } = config ? JSON.parse(readFileSync(config, 'utf8')) : { username: '', password: '' }
 test.skip(!config, 'Requires an isolated enabled console')
 
@@ -19,12 +20,19 @@ function sameHorizontal(left: Position, right: Position) {
   }
 }
 
-test('keeps both levels of console tabs aligned when content height changes', async ({ page }, info) => {
+test('keeps console tabs and public-to-console navigation horizontally aligned', async ({ page }, info) => {
+  let documents = 0
+  page.on('request', (request) => { if (request.isNavigationRequest() && request.resourceType() === 'document') documents++ })
   await page.goto('/admin/login')
+  const header = page.getByRole('navigation', { name: '页面导航' })
+  await expect(header.getByRole('link')).toHaveText(['排行榜', '登录'])
+  await expect(header.getByRole('link', { name: '登录' })).toHaveAttribute('aria-current', 'page')
   await page.getByLabel('用户名', { exact: true }).fill(credentials.username)
   await page.getByLabel('密码', { exact: true }).fill(credentials.password)
   await page.getByRole('button', { name: '登录', exact: true }).click()
   await expect(page.getByRole('navigation', { name: '控制台导航' })).toBeVisible()
+  await expect(header.getByRole('link')).toHaveText(['排行榜', '控制台'])
+  await expect(header.getByRole('link', { name: '控制台' })).toHaveAttribute('aria-current', 'page')
   const logout = page.getByRole('button', { name: '退出', exact: true })
   expect(await logout.evaluate((node) => [getComputedStyle(node).color, getComputedStyle(node).borderWidth])).toEqual(['rgb(190, 52, 52)', '0px'])
   for (const width of [1440, 375]) {
@@ -55,7 +63,53 @@ test('keeps both levels of console tabs aligned when content height changes', as
     sameHorizontal(longMain, users); sameHorizontal(users, accounts)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     if (width === 1440) { expect(longSub.scroll).toBe(true); expect(shortSub.scroll).toBe(false); expect(users.scroll).toBe(false) }
-    writeFileSync(info.outputPath(`positions-${width}.json`), JSON.stringify({ longSub, shortSub, longMain, users, accounts }, null, 2))
     await page.screenshot({ path: info.outputPath(`tabs-${width}.png`), fullPage: true })
+    await header.getByRole('link', { name: '排行榜' }).click()
+    await expect(header.getByRole('link', { name: '排行榜' })).toHaveAttribute('aria-current', 'page')
+    await page.locator('.route-view:not([hidden]) main').evaluate((node) => { (node as HTMLElement).style.minHeight = '2000px' })
+    const publicLong = await position(page)
+    sameHorizontal(accounts, publicLong)
+    await page.screenshot({ path: info.outputPath(`public-${width}.png`), fullPage: true })
+    await header.getByRole('link', { name: '控制台' }).click()
+    await expect(header.getByRole('link', { name: '控制台' })).toHaveAttribute('aria-current', 'page')
+    const adminAgain = await position(page)
+    sameHorizontal(publicLong, adminAgain)
+    await page.goBack()
+    await expect(header.getByRole('link', { name: '排行榜' })).toHaveAttribute('aria-current', 'page')
+    await page.goForward()
+    await expect(header.getByRole('link', { name: '控制台' })).toHaveAttribute('aria-current', 'page')
+    writeFileSync(info.outputPath(`positions-${width}.json`), JSON.stringify({ longSub, shortSub, longMain, users, accounts, publicLong, adminAgain }, null, 2))
   }
+  expect(documents).toBe(1)
+})
+
+test('records the earlier tab and shell geometry for comparison', async ({ browser }, info) => {
+  test.skip(!baselineURL, 'Requires an isolated baseline service')
+  const context = await browser.newContext({ baseURL: baselineURL, viewport: { width: 1440, height: 1000 } })
+  try {
+    const page = await context.newPage()
+    await page.goto('/admin/login')
+    await page.getByLabel('用户名', { exact: true }).fill(credentials.username)
+    await page.getByLabel('密码', { exact: true }).fill(credentials.password)
+    await page.getByRole('button', { name: '登录', exact: true }).click()
+    await expect(page.getByRole('navigation', { name: '控制台导航' })).toBeVisible()
+    for (const width of [1440, 375]) {
+      await page.setViewportSize({ width, height: 1000 })
+      await page.getByRole('link', { name: '榜单管理', exact: true }).click()
+      await page.getByRole('button', { name: '当前榜单', exact: true }).click()
+      await page.locator('.admin-shell section[aria-label="榜单管理"] > .tab-view').first().evaluate((node) => { (node as HTMLElement).style.minHeight = '2000px' })
+      const long = await position(page)
+      await page.getByRole('button', { name: '已下榜用户', exact: true }).click()
+      await expect(page.getByRole('heading', { name: '已下榜用户' })).toBeVisible()
+      const short = await position(page)
+      await page.getByRole('link', { name: '用户管理', exact: true }).click()
+      await expect(page.getByRole('heading', { name: '用户管理' })).toBeVisible()
+      const admin = await position(page)
+      await page.getByRole('link', { name: '公开榜单' }).click()
+      await expect(page.getByRole('heading', { name: 'AI 用量排行榜' })).toBeVisible()
+      const publicPage = await position(page)
+      writeFileSync(info.outputPath(`baseline-positions-${width}.json`), JSON.stringify({ long, short, admin, publicPage }, null, 2))
+      await page.getByRole('link', { name: '控制台', exact: true }).click()
+    }
+  } finally { await context.close() }
 })

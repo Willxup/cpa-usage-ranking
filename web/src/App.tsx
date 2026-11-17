@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { AdminEntry } from './admin/AdminEntry'
 import type { Board, Period } from './api/leaderboards'
 import { boards, periods } from './leaderboardLabels'
 import { LeaderboardView } from './components/LeaderboardPanel'
 import { SiteFooter } from './components/SiteFooter'
+import { SiteHeader } from './components/SiteHeader'
 import { useLeaderboard } from './hooks/useLeaderboard'
 import './styles/app.css'
 
@@ -21,12 +21,7 @@ export default function App({ active = true }: { active?: boolean }) {
   }
   return (
     <div className="app-shell">
-      <header className="header-wrap">
-        <div className="site-header page-width">
-          <a className="brand" href="#overview" aria-label="CPA Usage Ranking 首页"><img className="project-icon" src="/assets/brand/project-icon.svg" width="40" height="40" alt="" /><span>CPA Usage Ranking</span></a>
-          <nav aria-label="页面导航"><a className="nav-current" href="#ranking">排行榜</a><AdminEntry /></nav>
-        </div>
-      </header>
+      <SiteHeader />
       <main id="main" className="page-width">
         <section id="overview" className="overview" aria-labelledby="page-title">
           <div><p className="eyebrow">A CLEARER VIEW OF AI USAGE</p><h1 id="page-title">AI 用量排行榜</h1></div>

@@ -35,7 +35,7 @@ test('keeps public navigation consistent for anonymous and authenticated session
   await page.getByLabel('密码', { exact: true }).fill(credentials.password)
   await page.getByRole('button', { name: '登录', exact: true }).click()
   await expect(page.getByRole('navigation', { name: '控制台导航' })).toBeVisible()
-  await page.getByRole('link', { name: '公开榜单' }).click()
+  await page.getByRole('navigation', { name: '页面导航' }).getByRole('link', { name: '排行榜' }).click()
   await expect.poll(async () => Number(await publicRoute.getAttribute('data-enters'))).toBeGreaterThan(0)
   for (const width of [1440, 375]) {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 812 })
@@ -112,7 +112,7 @@ test('keeps route, tab and result transitions light, interruptible and optional'
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await navigation.getByRole('link', { name: '用户管理' }).click()
   expect(await page.locator('.admin-main > .tab-view:not([hidden])').evaluate((node) => getComputedStyle(node).animationName)).toBe('none')
-  await page.getByRole('link', { name: '公开榜单' }).click()
+  await page.getByRole('navigation', { name: '页面导航' }).getByRole('link', { name: '排行榜' }).click()
   await expect(publicRoute).toHaveAttribute('data-preserved', 'yes')
   expect(await publicRoute.evaluate((node) => getComputedStyle(node).animationName)).toBe('none')
   await page.getByRole('button', { name: '本周' }).click()

@@ -7,6 +7,7 @@ import { useSession } from './useSession'
 import { Accounts } from './Accounts'
 import { Users } from './Users'
 import { SiteFooter } from '../components/SiteFooter'
+import { SiteHeader } from '../components/SiteHeader'
 import '../styles/app.css'
 import './admin.css'
 
@@ -62,10 +63,7 @@ export default function AdminApp() {
     catch (error) { setActionError((error as Error).message); setBusy(false); void refresh() }
   }
   return <div className="app-shell admin-shell">
-    <header className="header-wrap"><div className="site-header page-width">
-      <Link className="brand" href="/" aria-label="CPA Usage Ranking 首页"><img className="project-icon" src="/assets/brand/project-icon.svg" width="40" height="40" alt="" /><span>CPA Usage Ranking</span></Link>
-      <Link className="admin-entry" href="/">公开榜单</Link>
-    </div></header>
+    <SiteHeader admin />
     <main id="main" className="page-width admin-main" tabIndex={-1} ref={main}>
       {!session && !error && <div className="admin-list-placeholder" aria-hidden="true" />}
       {error && <div role="alert"><p className="admin-error">{error}</p><button className="admin-button" onClick={() => void refresh()}>重试</button></div>}

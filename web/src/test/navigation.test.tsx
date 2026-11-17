@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
 import RootApp from '../RootApp'
@@ -22,6 +22,9 @@ it('keeps the document and console shell while sharing one session across tabs a
   render(<RootApp />)
   await user.click(await screen.findByRole('link', { name: '控制台' }))
   const navigation = await screen.findByRole('navigation', { name: '控制台导航' })
+  const header = screen.getByRole('navigation', { name: '页面导航' })
+  expect(within(header).getAllByRole('link').map((link) => link.textContent)).toEqual(['排行榜', '控制台'])
+  expect(within(header).getByRole('link', { name: '控制台' })).toHaveAttribute('aria-current', 'page')
   expect(screen.getByRole('contentinfo')).toHaveTextContent(/^CPA Usage Ranking$/)
   expect(screen.getByRole('contentinfo').querySelector('img')).toHaveAttribute('src', '/assets/brand/project-icon.svg')
   await user.click(screen.getByRole('link', { name: '用户管理' }))
@@ -39,7 +42,7 @@ it('keeps the document and console shell while sharing one session across tabs a
   window.history.forward()
   expect(await screen.findByRole('heading', { name: '管理员管理' })).toBeVisible()
   const reads = fetcher.mock.calls.filter(([path]) => String(path) === '/v1/leaderboards/overall/today').length
-  await user.click(screen.getByRole('link', { name: '公开榜单' }))
+  await user.click(screen.getByRole('link', { name: '排行榜', exact: true }))
   expect(screen.getByRole('heading', { name: 'AI 用量排行榜' })).toBeVisible()
   await waitFor(() => expect(fetcher.mock.calls.filter(([path]) => String(path) === '/v1/leaderboards/overall/today').length).toBeGreaterThan(reads))
   expect(fetcher.mock.calls.filter(([path]) => String(path) === '/v1/admin/session')).toHaveLength(1)
@@ -59,6 +62,8 @@ it('invalidates the shared identity on a protected 401 instead of trusting the p
   expect(await screen.findByRole('heading', { name: '管理员登录' })).toBeVisible()
   expect(window.location.pathname).toBe('/admin/login')
   expect(screen.queryByRole('navigation', { name: '控制台导航' })).not.toBeInTheDocument()
-  await user.click(screen.getByRole('link', { name: '公开榜单' }))
+  const header = screen.getByRole('navigation', { name: '页面导航' })
+  expect(within(header).getByRole('link', { name: '登录' })).toHaveAttribute('aria-current', 'page')
+  await user.click(within(header).getByRole('link', { name: '排行榜' }))
   expect(await screen.findByRole('link', { name: '登录' })).toBeVisible()
 })

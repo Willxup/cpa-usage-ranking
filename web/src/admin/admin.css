@@ -81,6 +81,5 @@
   .admin-login { margin-top: 0; }
   .admin-heading { align-items: start; }
   .admin-nav-wrap { gap: 12px; margin-bottom: 24px; }
-  .admin-shell .site-header { min-height: 88px; }
   .admin-main input:not([type="checkbox"]), .admin-main select { font-size: 16px; }
 }

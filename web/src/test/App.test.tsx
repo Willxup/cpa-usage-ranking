@@ -22,6 +22,7 @@ describe('application shell', () => {
     if (label) expect(await within(navigation).findByRole('link', { name: label })).toHaveAttribute('href', href)
     else await screen.findByRole('heading', { name: '今日 · 综合总榜' })
     expect(within(navigation).getAllByRole('link').map((link) => link.textContent)).toEqual(label ? ['排行榜', label] : ['排行榜'])
+    expect(within(navigation).getByRole('link', { name: '排行榜' })).toHaveAttribute('aria-current', 'page')
     expect(within(navigation).queryByRole('link', { name: '关于' })).not.toBeInTheDocument()
   })
 
