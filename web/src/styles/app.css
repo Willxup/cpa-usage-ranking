@@ -32,8 +32,9 @@
 .board-control { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; border: 0; }
 .board-control button { min-height: 42px; padding: 8px 14px; border: 1px solid transparent; border-radius: 9px; color: var(--muted); background: transparent; font-size: 14px; }
 .board-control button[aria-pressed="true"] { border-color: #fff0e9; color: var(--accent); background: #fff0e9; font-weight: 650; }
-.period-control button[aria-pressed="true"], .admin-shell .admin-refresh, .admin-shell .admin-refresh:hover:not(:disabled) { background: white; color: #633da0; box-shadow: 0 1px 4px #29203a14; }
-.period-control button[aria-pressed="true"] { font-weight: 650; }
+.period-control button[aria-pressed="true"], .admin-shell .admin-refresh, .admin-shell .admin-refresh:hover:not(:disabled) { background: white; box-shadow: 0 1px 4px #29203a14; }
+.period-control button[aria-pressed="true"] { color: #633da0; font-weight: 650; }
+.admin-shell .admin-refresh, .admin-shell .admin-refresh:hover:not(:disabled) { color: var(--ink); }
 .board-message { color: var(--muted); font-size: 13px; line-height: 1.6; }
 .board-message:not(:empty) { margin-bottom: 14px; }
 .retry-button { min-height: 42px; margin-bottom: 16px; padding: 8px 18px; border: 1px solid #e3d5eb; border-radius: 9px; color: #62379f; background: #faf5ff; }

@@ -105,7 +105,7 @@ test('aligns a 13px date-style refresh button above the cache timestamp, never o
     expect(box.height).toBeGreaterThanOrEqual(30)
     expect(box.height).toBeLessThanOrEqual(36)
     const style = await button.evaluate((node) => { const css = getComputedStyle(node); return [css.fontSize, css.color, css.backgroundColor, css.borderColor] })
-    expect(style).toEqual(['13px', 'rgb(99, 61, 160)', 'rgb(255, 255, 255)', 'rgb(240, 240, 244)'])
+    expect(style).toEqual(['13px', 'rgb(28, 28, 39)', 'rgb(255, 255, 255)', 'rgb(240, 240, 244)'])
     await page.screenshot({ path: info.outputPath(`refresh-${width}.png`), fullPage: true })
   }
   const refresh = page.getByRole('button', { name: '刷新榜单', exact: true })
