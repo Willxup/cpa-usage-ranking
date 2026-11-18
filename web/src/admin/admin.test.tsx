@@ -92,3 +92,35 @@ it('allows password manager input, prevents duplicate login and reports failure'
   expect(await screen.findByRole('alert')).toHaveTextContent('用户名或密码错误')
   expect(screen.getByRole('button', { name: '登录' })).toBeEnabled()
 })
+
+it('clears expired logout state instead of showing a stale alert after re-login', async () => {
+  window.history.replaceState({}, '', '/admin/leaderboards')
+  let attempts = 0
+  let expired = false
+  const emptyBoard = { board: 'overall', period: 'today', start: '2026-11-16', end: '2026-11-17', generated_at: '2026-11-16T00:00:00Z', entries: [] }
+  vi.stubGlobal('fetch', vi.fn((path: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(path)
+    if (url === '/v1/admin/session' && init?.method === 'DELETE') {
+      attempts++
+      if (attempts === 1) { expired = true; return Promise.resolve(json({}, 500)) }
+      return Promise.resolve(json({}, 401))
+    }
+    if (url === '/v1/admin/session' && init?.method === 'POST') {
+      expired = false
+      return Promise.resolve(json({ enabled: true, authenticated: true, user: { id: 'owner', username: 'owner', owner: true }, csrf_token: 'csrf-2' }))
+    }
+    if (url === '/v1/admin/session') {
+      return Promise.resolve(json(expired ? { enabled: true, authenticated: false } : { enabled: true, authenticated: true, user: { id: 'owner', username: 'owner', owner: true }, csrf_token: 'csrf-1' }))
+    }
+    return Promise.resolve(json(url.includes('avatars') ? { default_avatar_id: 1, avatars: [] } : emptyBoard))
+  }))
+  const user = userEvent.setup()
+  render(<AdminApp />)
+  await user.click(await screen.findByRole('button', { name: '退出' }))
+  expect(await screen.findByRole('heading', { name: '管理员登录' })).toBeVisible()
+  await user.type(screen.getByLabelText('用户名'), 'owner')
+  await user.type(screen.getByLabelText('密码'), 'correct-test-password')
+  await user.click(screen.getByRole('button', { name: '登录' }))
+  expect(await screen.findByRole('navigation', { name: '控制台导航' })).toBeVisible()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})

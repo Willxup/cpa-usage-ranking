@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Leaderboards } from './Leaderboards'
-import { adminRequest, jsonRequest, type AdminSession } from './api'
+import { AdminError, adminRequest, jsonRequest, type AdminSession } from './api'
 import { Link } from '../Link'
 import { navigate, usePathname } from '../navigation'
 import { useSession } from './useSession'
@@ -45,10 +45,11 @@ export default function AdminApp() {
   const { session, error, refresh, accept } = useSession()
   const path = usePathname()
   const [busy, setBusy] = useState(false)
-  const [actionError, setActionError] = useState('')
+  const [actionError, setActionError] = useState<{ csrf?: string; message: string } | null>(null)
   const login = path === '/admin/login'
   const accounts = path === '/admin/accounts'
   const users = path === '/admin/users'
+  const visibleActionError = actionError && actionError.csrf === session?.csrf_token ? actionError.message : ''
   const main = useRef<HTMLElement>(null)
   useEffect(() => { main.current?.focus({ preventScroll: true }) }, [path])
   useEffect(() => {
@@ -57,9 +58,11 @@ export default function AdminApp() {
   }, [session, login])
   async function logout() {
     if (busy) return
-    setBusy(true); setActionError('')
-    try { await adminRequest('session', jsonRequest('DELETE', {}, session?.csrf_token)); accept({ enabled: true, authenticated: false }); navigate('/') }
-    catch (error) { setActionError((error as Error).message); setBusy(false); void refresh() }
+    const csrf = session?.csrf_token
+    setBusy(true); setActionError(null)
+    try { await adminRequest('session', jsonRequest('DELETE', {}, csrf)); accept({ enabled: true, authenticated: false }); navigate('/') }
+    catch (error) { if (!(error instanceof AdminError && error.status === 401)) { setActionError({ csrf, message: (error as Error).message }); void refresh() } }
+    finally { setBusy(false) }
   }
   return <div className="app-shell admin-shell">
     <SiteHeader admin />
@@ -70,7 +73,7 @@ export default function AdminApp() {
       {session?.enabled && !session.authenticated && login && <Login />}
       {session?.authenticated && !login && <>
         <div className="admin-nav-wrap"><nav className="admin-nav" aria-label="控制台导航"><Link href="/admin/leaderboards" aria-current={!accounts && !users ? 'page' : undefined}>榜单管理</Link><Link href="/admin/users" aria-current={users ? 'page' : undefined}>用户管理</Link>{session.user?.owner && <Link href="/admin/accounts" aria-current={accounts ? 'page' : undefined}>管理员管理</Link>}</nav><div className="admin-identity"><span>{session.user?.username}</span><button className="logout-link" disabled={busy} onClick={() => void logout()}>{busy ? '正在退出…' : '退出'}</button></div></div>
-        {actionError && <p className="admin-error" role="alert">{actionError}</p>}
+        {visibleActionError && <p className="admin-error" role="alert">{visibleActionError}</p>}
         <div className="tab-view" hidden={accounts || users}><Leaderboards active={!accounts && !users} session={session} onExpired={refresh} /></div>
         <div className="tab-view" hidden={!users}><Users active={users} session={session} onExpired={refresh} /></div>
         {session.user?.owner ? <div className="tab-view" hidden={!accounts}><Accounts active={accounts} session={session} onExpired={refresh} /></div> : accounts && <section className="admin-card"><h1>无访问权限</h1><Link className="primary-link" href="/admin/leaderboards">返回榜单</Link></section>}
