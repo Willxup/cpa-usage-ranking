@@ -9,6 +9,10 @@ are available. Five real leaderboards are built in a unified cache for six fixed
 names and aliases to stable IDs; there is no model management API. Reference
 prices are not independently verified live quotes and may be outdated.
 
+## Client integration
+
+See the [generic client integration guide (中文)](docs/integration.md) for public endpoints, credential ownership, daily snapshots, retry handling and leaderboard reads. It applies to any client implementation.
+
 ## Docker deployment
 
 Build and run the image with Docker Compose; the example publishes HTTP to
