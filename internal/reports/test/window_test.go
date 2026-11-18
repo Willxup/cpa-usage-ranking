@@ -37,7 +37,7 @@ func TestUTCWindowAdvancesIndependentlyAndSurvivesRollbackRestart(t *testing.T) 
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if err := storage.MigrateSchema(ctx, db.Writer); err != nil {
+	if err := storage.InitSchema(ctx, db.Writer); err != nil {
 		t.Fatal(err)
 	}
 	before := instant("2026-11-01T07:59:59+08:00")
@@ -84,7 +84,7 @@ func TestUTCWindowAdvancesIndependentlyAndSurvivesRollbackRestart(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := storage.MigrateSchema(ctx, db.Writer); err != nil {
+	if err := storage.InitSchema(ctx, db.Writer); err != nil {
 		t.Fatal(err)
 	}
 	if err := reports.AdvanceWindow(ctx, db.Writer, before); err != nil {

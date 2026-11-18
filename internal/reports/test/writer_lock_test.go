@@ -20,7 +20,7 @@ func TestWriterDeadlineInterruptsSQLiteWriteLock(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	if err := storage.MigrateSchema(context.Background(), db.Writer); err != nil {
+	if err := storage.InitSchema(context.Background(), db.Writer); err != nil {
 		t.Fatal(err)
 	}
 	registry := reportRegistry(t, db, `{"model_name":"alpha","alias":[],"prices":{}}`)
@@ -74,7 +74,7 @@ func TestSQLiteLockReleaseAndWriterShutdown(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	if err := storage.MigrateSchema(context.Background(), db.Writer); err != nil {
+	if err := storage.InitSchema(context.Background(), db.Writer); err != nil {
 		t.Fatal(err)
 	}
 	registry := reportRegistry(t, db, `{"model_name":"alpha","alias":[],"prices":{}}`)

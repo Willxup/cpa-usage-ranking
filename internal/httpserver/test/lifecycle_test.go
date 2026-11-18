@@ -59,7 +59,7 @@ func startLifecycle(t *testing.T, dbPath, catalogPath string, clock *atomic.Int6
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := storage.MigrateSchema(ctx, f.db.Writer); err != nil {
+	if err := storage.InitSchema(ctx, f.db.Writer); err != nil {
 		t.Fatal(err)
 	}
 	if err := reports.AdvanceWindow(ctx, f.db.Writer, now()); err != nil {

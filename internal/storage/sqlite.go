@@ -1,4 +1,4 @@
-// Package storage 管理 SQLite 连接与表结构迁移，业务存取由对应模块负责。
+// Package storage 管理 SQLite 连接与表结构初始化，业务存取由对应模块负责。
 package storage
 
 import (

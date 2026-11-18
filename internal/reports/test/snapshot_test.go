@@ -20,7 +20,7 @@ func reportDB(t *testing.T) *storage.DB {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if err := storage.MigrateSchema(context.Background(), db.Writer); err != nil {
+	if err := storage.InitSchema(context.Background(), db.Writer); err != nil {
 		t.Fatal(err)
 	}
 	return db

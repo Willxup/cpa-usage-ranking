@@ -40,7 +40,7 @@ func newFixture(t *testing.T) *fixture {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { db.Close() })
-	if err = storage.MigrateSchema(ctx, db.Writer); err != nil {
+	if err = storage.InitSchema(ctx, db.Writer); err != nil {
 		t.Fatal(err)
 	}
 	catalogPath := filepath.Join(t.TempDir(), "models.json")

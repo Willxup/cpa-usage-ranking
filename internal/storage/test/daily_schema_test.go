@@ -11,7 +11,7 @@ import (
 func TestDailySnapshotSchemaKeysAndIsolation(t *testing.T) {
 	db := openDatabase(t, filepath.Join(t.TempDir(), "daily.db"))
 	for range 2 {
-		if err := storage.MigrateSchema(context.Background(), db.Writer); err != nil {
+		if err := storage.InitSchema(context.Background(), db.Writer); err != nil {
 			t.Fatal(err)
 		}
 	}

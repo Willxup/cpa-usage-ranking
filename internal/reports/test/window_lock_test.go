@@ -19,7 +19,7 @@ func TestWindowCheckpointHonorsCancellationUnderExternalLock(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	if err := storage.MigrateSchema(context.Background(), db.Writer); err != nil {
+	if err := storage.InitSchema(context.Background(), db.Writer); err != nil {
 		t.Fatal(err)
 	}
 	if err := reports.AdvanceWindow(context.Background(), db.Writer, instant("2026-11-01T12:00:00Z")); err != nil {

@@ -120,7 +120,7 @@ volumes:
 docker compose -p cpa-ranking -f compose.yaml -f compose.restore.yaml up -d --no-build
 ```
 
-检查就绪状态和预期数据。原卷和备份仍会保留；恢复会丢失备份之后的变更。升级时保留已验证备份和旧镜像，构建或拉取新镜像，用原卷重建容器，再检查就绪和数据。启动时只向前执行数据库迁移，不自动降级；回退到不兼容的旧镜像时应恢复升级前已验证的备份到独立卷，不要假定迁移后的数据库可向后兼容。
+检查就绪状态和预期数据。原卷和备份仍会保留；恢复会丢失备份之后的变更。启动支持新数据库或当前结构的数据库，不升级、降级或转换旧结构；不要假定不兼容的数据库可与其他镜像一起使用。
 
 ## 可重复的镜像检查
 
@@ -132,4 +132,4 @@ python3 deploy/test/docker_smoke.py --image cpa-usage-ranking:local \
   --arch amd64 --work-dir /path/to/test-work
 ```
 
-ARM64 镜像使用 `--arch arm64`。AMD64 主机未注册 ARM binfmt 时，可传入 `--qemu /静态/qemu-aarch64-static的绝对路径`；脚本显式调用该模拟器并在模拟运行中禁用 Docker 容器内健康检查，同时通过 HTTP 检查 `/readyz`。脚本不会安装或注册模拟器。检查覆盖初始化/迁移、页面和头像、真实注册/上报、重建后的持久化、权限、SIGTERM 正常退出及启动失败；不属于负载或容量测试。
+ARM64 镜像使用 `--arch arm64`。AMD64 主机未注册 ARM binfmt 时，可传入 `--qemu /静态/qemu-aarch64-static的绝对路径`；脚本显式调用该模拟器并在模拟运行中禁用 Docker 容器内健康检查，同时通过 HTTP 检查 `/readyz`。脚本不会安装或注册模拟器。检查覆盖结构初始化、页面和头像、真实注册/上报、重建后的持久化、权限、SIGTERM 正常退出及启动失败；不属于负载或容量测试。

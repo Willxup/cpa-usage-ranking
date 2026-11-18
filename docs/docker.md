@@ -203,12 +203,9 @@ docker compose -p cpa-ranking -f compose.yaml -f compose.restore.yaml up -d --no
 ```
 
 Check readiness and expected data. The old volume and backup remain available;
-restoring loses changes made after the backup. To upgrade, retain a verified
-backup and the old image, build or pull the new image, recreate the container
-with the same volume, and check readiness/data. Startup applies forward migrations;
-there is no automatic database downgrade. If rolling back an incompatible image,
-restore a verified pre-upgrade backup to a separate volume rather than assuming
-the migrated database is compatible.
+restoring loses changes made after the backup. Startup supports a new database or
+one with the current schema; it does not upgrade or downgrade older schemas.
+Do not assume an incompatible database can be used with another image.
 
 ## Repeatable image check
 
@@ -225,6 +222,6 @@ Use `--arch arm64` for an ARM64 image. On an AMD64 host without ARM binfmt,
 provide `--qemu /absolute/path/to/qemu-aarch64-static`; the script explicitly
 invokes it and disables Docker's in-container health check for that emulated run
 while checking `/readyz` over HTTP. It does not install or register an emulator.
-The checks cover initialization/migrations, UI and avatar assets, real
+The checks cover schema initialization, UI and avatar assets, real
 registration/reporting, recreation and persistence, permissions, clean SIGTERM,
 and startup failures; they are not a load or capacity test.

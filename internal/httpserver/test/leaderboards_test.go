@@ -26,7 +26,7 @@ func TestLeaderboardAPICacheOnlyAndPublicWhitelist(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	if err := storage.MigrateSchema(ctx, db.Writer); err != nil {
+	if err := storage.InitSchema(ctx, db.Writer); err != nil {
 		t.Fatal(err)
 	}
 	_, err = db.Writer.Exec(`INSERT INTO clients(token_hash,display_name,avatar_id,created_at_ms) VALUES(randomblob(32),'<script>plain</script>',1,0);

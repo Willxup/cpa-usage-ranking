@@ -16,7 +16,7 @@ client ID, IP-based claim or nickname lookup.
 - A single SQLite INSERT saves the identity and profile atomically. The unique
   digest constraint arbitrates concurrent retries; a duplicate reads back the
   original identity, including its disabled status. Failed writes/cancellation
-  do not produce partial profiles. No extra table or schema migration is needed.
+  do not produce partial profiles. No extra table is needed.
 - Equal names/avatars never merge identities; a different secret creates a
   different identity, not an ownership claim over an existing profile.
 

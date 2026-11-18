@@ -7,7 +7,7 @@ invalid or conflicting configuration stops startup. Edits take effect only
 after restart; there is no remote fetching, automatic fallback or hot reload.
 Deploy the file with the binary even when the frontend is not used.
 
-After database migrations, startup registers all current canonical names in one
+After schema initialization, startup registers all current canonical names in one
 SQLite transaction. IDs are stable across restarts and catalog reordering;
 removing a name preserves its dictionary row, and reintroducing it restores the
 same ID. Historical dictionary rows do not make removed models active. Aliases

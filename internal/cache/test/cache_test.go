@@ -28,7 +28,7 @@ func cacheFixture(t *testing.T) (*storage.DB, *statistics.Reader) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { db.Close() })
-	if err = storage.MigrateSchema(context.Background(), db.Writer); err != nil {
+	if err = storage.InitSchema(context.Background(), db.Writer); err != nil {
 		t.Fatal(err)
 	}
 	_, err = db.Writer.Exec(`INSERT INTO clients(token_hash,display_name,avatar_id,created_at_ms) VALUES(randomblob(32),'a',1,0);

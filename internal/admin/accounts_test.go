@@ -21,7 +21,7 @@ func serviceDB(t *testing.T) (*Service, *storage.DB) {
 			t.Error(err)
 		}
 	})
-	if err := storage.MigrateSchema(context.Background(), db.Writer); err != nil {
+	if err := storage.InitSchema(context.Background(), db.Writer); err != nil {
 		t.Fatal(err)
 	}
 	s, err := New(Owner{Username: "owner", Password: "isolated-test-password"}, db)

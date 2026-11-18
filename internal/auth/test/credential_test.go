@@ -68,7 +68,7 @@ func TestStorageContainsOnly32ByteDigest(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	if err := storage.MigrateSchema(ctx, db.Writer); err != nil {
+	if err := storage.InitSchema(ctx, db.Writer); err != nil {
 		t.Fatal(err)
 	}
 	text := base64.RawURLEncoding.EncodeToString(randomBytes(t))

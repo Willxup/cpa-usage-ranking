@@ -176,7 +176,7 @@ func seed(ctx context.Context, path, catalogPath string, clients, historyDays, b
 		return f, err
 	}
 	defer db.Close()
-	if err = storage.MigrateSchema(ctx, db.Writer); err != nil {
+	if err = storage.InitSchema(ctx, db.Writer); err != nil {
 		return f, err
 	}
 	registry, err := models.Register(ctx, db.Writer, catalog)

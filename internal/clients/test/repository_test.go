@@ -24,7 +24,7 @@ func openRepository(t *testing.T, path string) (*storage.DB, *clients.Repository
 			t.Error(err)
 		}
 	})
-	if err := storage.MigrateSchema(context.Background(), db.Writer); err != nil {
+	if err := storage.InitSchema(context.Background(), db.Writer); err != nil {
 		t.Fatal(err)
 	}
 	return db, clients.NewRepository(db)

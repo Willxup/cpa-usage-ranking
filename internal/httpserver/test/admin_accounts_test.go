@@ -22,7 +22,7 @@ func adminDatabaseRouter(t *testing.T, settings ...httpserver.AdminHTTPOptions) 
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { db.Close() })
-	if err := storage.MigrateSchema(context.Background(), db.Writer); err != nil {
+	if err := storage.InitSchema(context.Background(), db.Writer); err != nil {
 		t.Fatal(err)
 	}
 	service, err := admin.New(admin.Owner{Username: "owner", Password: "isolated-test-password"}, db)

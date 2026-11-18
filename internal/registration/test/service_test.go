@@ -30,7 +30,7 @@ func setupOptions(t *testing.T, options registration.Options) (*storage.DB, *cli
 			t.Error(err)
 		}
 	})
-	if err := storage.MigrateSchema(context.Background(), db.Writer); err != nil {
+	if err := storage.InitSchema(context.Background(), db.Writer); err != nil {
 		t.Fatal(err)
 	}
 	repo := clients.NewRepository(db)

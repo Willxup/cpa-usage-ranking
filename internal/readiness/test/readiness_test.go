@@ -31,7 +31,7 @@ func TestReadinessTracksRealDependenciesAndCompleteCache(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	if err = storage.MigrateSchema(ctx, db.Writer); err != nil {
+	if err = storage.InitSchema(ctx, db.Writer); err != nil {
 		t.Fatal(err)
 	}
 	path := filepath.Join(t.TempDir(), "models.json")
@@ -151,7 +151,7 @@ func TestReadinessNoBuildItemsNotReady(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	if err = storage.MigrateSchema(ctx, db.Writer); err != nil {
+	if err = storage.InitSchema(ctx, db.Writer); err != nil {
 		t.Fatal(err)
 	}
 	r, err := statistics.NewReader(db.Reader, 1, time.Second)

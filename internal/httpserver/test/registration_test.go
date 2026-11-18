@@ -54,7 +54,7 @@ func newRegistrationFixture(t *testing.T, settings registrationSettings) *regist
 			t.Error(err)
 		}
 	})
-	if err := storage.MigrateSchema(context.Background(), db.Writer); err != nil {
+	if err := storage.InitSchema(context.Background(), db.Writer); err != nil {
 		t.Fatal(err)
 	}
 	f.repo = clients.NewRepository(db)

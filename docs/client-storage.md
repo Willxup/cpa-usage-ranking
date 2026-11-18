@@ -1,8 +1,8 @@
 # Client identity and profile storage
 
 The `internal/clients` repository persists client identities and profiles in the
-`clients` table introduced by schema version 1. Startup applies the complete
-migration catalog; it does not create sample clients. Registration,
+`clients` table. Startup initializes the current schema; it does not create
+sample clients. Registration,
 authentication and readiness checks are separate from this storage layer.
 
 ## Stored fields
@@ -32,7 +32,7 @@ the [avatar catalog loader](avatar-catalog.md) provides ID membership lookup.
 ## Repository operations
 
 Create a repository with `clients.NewRepository(db)` after
-`storage.MigrateSchema` succeeds. The application owns the database lifetime;
+`storage.InitSchema` succeeds. The application owns the database lifetime;
 the repository uses its bounded write pool and read-only pool directly.
 
 | Operation | Behavior |
@@ -64,7 +64,7 @@ not assume that any returned client is authorized regardless of status.
 Tests live in `internal/clients/test/` and `internal/storage/test/`, using real
 SQLite files. They cover independent same-name identities, credential conflicts
 (including concurrent writes through separate pools), profile/status isolation,
-large avatar IDs, persistence across reopening and migration replay, missing
+large avatar IDs, persistence across reopening and initialization, missing
 records, cancellation and database constraints. The separate
 [protected registration API](registration-api.md) has real HTTP and SQLite
 tests; storage tests do not mock a registration service.
