@@ -2,6 +2,7 @@
 /plans/
 
 # Local working areas and agent instructions.
+/.agents/
 /.worktrees/
 /AGENTS.md
 
