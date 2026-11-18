@@ -157,7 +157,7 @@ func TestQueuedRealSQLiteRechecksWindowAndDisabledClient(t *testing.T) {
 	if _, err := tx.Exec(`UPDATE clients SET disabled=1 WHERE id=?`, disabledID); err != nil {
 		t.Fatal(err)
 	}
-	payload := prepared(t, 1, usage("alpha", 0, 1, 1, 1))
+	payload := prepared(t, 1, usage("alpha", 1, 1, 1))
 	first, err := writer.Enqueue(context.Background(), firstID, "2026-10-30", payload)
 	if err != nil {
 		t.Fatal(err)

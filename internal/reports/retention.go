@@ -39,9 +39,9 @@ func Prune(ctx context.Context, writer *sql.DB, now time.Time, retainDays int, k
 		}
 		defer tx.Rollback()
 		// 主键前缀限制 kind 和日期，再按完整主键取有限行；单次事务不锁住整段历史。
-		result, err := tx.ExecContext(ctx, `DELETE FROM period_stats WHERE (kind,start_day,model_id,tier,client_id) IN (
-			SELECT kind,start_day,model_id,tier,client_id FROM period_stats
-			WHERE kind=? AND start_day<? ORDER BY start_day,model_id,tier,client_id LIMIT ?
+		result, err := tx.ExecContext(ctx, `DELETE FROM period_stats WHERE (kind,start_day,model_id,client_id) IN (
+			SELECT kind,start_day,model_id,client_id FROM period_stats
+			WHERE kind=? AND start_day<? ORDER BY start_day,model_id,client_id LIMIT ?
 		)`, kind, cutoff, limit)
 		if err != nil {
 			return fmt.Errorf("delete retained periods: %w", err)

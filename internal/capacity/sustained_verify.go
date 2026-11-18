@@ -16,7 +16,6 @@ import (
 	"strconv"
 	"time"
 
-	"cpa-usage-ranking/internal/models"
 	"cpa-usage-ranking/internal/reports"
 )
 
@@ -128,9 +127,9 @@ func snapshotRows(body []byte, ids map[string]int64) (verifySnapshot, map[report
 		if id == 0 || v.RequestCount == 0 {
 			return out, nil, errors.New("unknown or empty synthetic model row")
 		}
-		k := reports.Key{ModelID: id, Tier: v.Tier}
+		k := reports.Key{ModelID: id}
 		if _, ok := rows[k]; ok {
-			return out, nil, errors.New("duplicate synthetic model/tier")
+			return out, nil, errors.New("duplicate synthetic model")
 		}
 		m := reports.Metrics{TotalTokens: v.TotalTokens, InputTokens: v.InputTokens, OutputTokens: v.OutputTokens, CacheReadTokens: v.CacheReadTokens, CacheWriteTokens: v.CacheWriteTokens, ReasoningTokens: v.ReasoningTokens, RequestCount: v.RequestCount, SuccessCount: v.SuccessCount, TTFTSamples: v.TTFTSamples, LatencySamples: v.LatencySamples}
 		if v.TTFTAvgMS != nil {
@@ -191,7 +190,7 @@ func newVerificationState(ctx context.Context, fixture Fixture, seed *sql.DB) (*
 	if len(s.days) != 2*fixture.Clients {
 		return nil, errors.New("stock seed does not have both open days")
 	}
-	rows, err = seed.QueryContext(ctx, "SELECT day,client_id,model_id,tier,"+metricColumns+" FROM daily_stats WHERE day IN (?,?) AND model_id>0", fixture.Day, yesterday)
+	rows, err = seed.QueryContext(ctx, "SELECT day,client_id,model_id,"+metricColumns+" FROM daily_stats WHERE day IN (?,?) AND model_id>0", fixture.Day, yesterday)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +198,7 @@ func newVerificationState(ctx context.Context, fixture Fixture, seed *sql.DB) (*
 		var k verificationKey
 		var key reports.Key
 		var v reports.Metrics
-		if err = rows.Scan(&k.day, &k.client, &key.ModelID, &key.Tier, &v.TotalTokens, &v.InputTokens, &v.OutputTokens, &v.CacheReadTokens, &v.CacheWriteTokens, &v.ReasoningTokens, &v.RequestCount, &v.SuccessCount, &v.TTFTSumMS, &v.TTFTSamples, &v.LatencySumMS, &v.LatencySamples); err != nil {
+		if err = rows.Scan(&k.day, &k.client, &key.ModelID, &v.TotalTokens, &v.InputTokens, &v.OutputTokens, &v.CacheReadTokens, &v.CacheWriteTokens, &v.ReasoningTokens, &v.RequestCount, &v.SuccessCount, &v.TTFTSumMS, &v.TTFTSamples, &v.LatencySumMS, &v.LatencySamples); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -281,11 +280,10 @@ func (s *verificationState) createdTask(r sustainedRecord) error {
 	seen := map[reports.Key]bool{}
 	for _, d := range t.Deltas {
 		id := s.modelIDs[d.Model]
-		tier, err := models.ReportedTier(true, &d.Tier)
-		if err != nil || id == 0 {
-			return errors.New("invalid delta model or tier")
+		if id == 0 {
+			return errors.New("invalid delta model")
 		}
-		k := reports.Key{ModelID: id, Tier: tier}
+		k := reports.Key{ModelID: id}
 		if seen[k] {
 			return errors.New("duplicate delta")
 		}

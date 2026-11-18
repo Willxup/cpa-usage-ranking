@@ -11,7 +11,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"cpa-usage-ranking/internal/models"
 	"cpa-usage-ranking/internal/statistics"
 )
 
@@ -33,7 +32,6 @@ var (
 type Item struct {
 	ID, Kind  string
 	ModelID   int64
-	Tier      models.Tier
 	DayOffset int // 固定今日或昨日；相对日期在整轮开始时确定。
 	Public    bool
 	Encode    func(context.Context, statistics.Snapshot, io.Writer) error
@@ -154,7 +152,7 @@ func (c *Cache) build(ctx context.Context, item Item, when time.Time, max int) (
 	ctx, cancel := context.WithTimeout(ctx, c.opts.ItemTimeout)
 	defer cancel()
 	day := when.AddDate(0, 0, item.DayOffset).Format("2006-01-02")
-	s, err := c.reader.Read(ctx, statistics.Selection{Kind: item.Kind, Day: day, ModelID: item.ModelID, Tier: item.Tier, Public: item.Public})
+	s, err := c.reader.Read(ctx, statistics.Selection{Kind: item.Kind, Day: day, ModelID: item.ModelID, Public: item.Public})
 	if err != nil {
 		return Entry{}, err
 	}

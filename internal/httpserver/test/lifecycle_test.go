@@ -404,7 +404,7 @@ func TestCompleteIngestionLifecycle(t *testing.T) {
 			t.Fatal("pending source changed during settlement")
 		}
 		for _, period := range []struct{ kind, start string }{{"day", "2026-11-02"}, {"week", "2026-11-02"}, {"month", "2026-11-01"}, {"all", "0001-01-01"}} {
-			if got := f.scalar(t, `SELECT total_tokens FROM period_stats WHERE kind=? AND start_day=? AND client_id=? AND model_id=0 AND tier=0`, period.kind, period.start, participant.id); got != participant.closed {
+			if got := f.scalar(t, `SELECT total_tokens FROM period_stats WHERE kind=? AND start_day=? AND client_id=? AND model_id=0`, period.kind, period.start, participant.id); got != participant.closed {
 				t.Fatalf("settled %s client %d: %d", period.kind, participant.id, got)
 			}
 		}

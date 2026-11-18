@@ -125,7 +125,7 @@ func (s *Store) applyOnce(ctx context.Context, conn *sql.Conn, clientID int64, d
 	}
 	for _, key := range sortedKeys(old) {
 		if _, ok := rows[key]; !ok {
-			if _, err := tx.ExecContext(ctx, `DELETE FROM daily_stats WHERE day=? AND client_id=? AND model_id=? AND tier=?`, day, clientID, key.ModelID, key.Tier); err != nil {
+			if _, err := tx.ExecContext(ctx, `DELETE FROM daily_stats WHERE day=? AND client_id=? AND model_id=?`, day, clientID, key.ModelID); err != nil {
 				return 0, fmt.Errorf("delete report row: %w", err)
 			}
 		}
@@ -153,17 +153,12 @@ func sortedKeys(rows map[Key]Metrics) []Key {
 	for key := range rows {
 		keys = append(keys, key)
 	}
-	sort.Slice(keys, func(i, j int) bool {
-		if keys[i].ModelID != keys[j].ModelID {
-			return keys[i].ModelID < keys[j].ModelID
-		}
-		return keys[i].Tier < keys[j].Tier
-	})
+	sort.Slice(keys, func(i, j int) bool { return keys[i].ModelID < keys[j].ModelID })
 	return keys
 }
 
 func loadStats(ctx context.Context, tx *sql.Tx, day string, clientID int64) (map[Key]Metrics, error) {
-	result, err := tx.QueryContext(ctx, `SELECT model_id,tier,total_tokens,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,reasoning_tokens,request_count,success_count,ttft_sum_ms,ttft_samples,latency_sum_ms,latency_samples FROM daily_stats WHERE day=? AND client_id=?`, day, clientID)
+	result, err := tx.QueryContext(ctx, `SELECT model_id,total_tokens,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,reasoning_tokens,request_count,success_count,ttft_sum_ms,ttft_samples,latency_sum_ms,latency_samples FROM daily_stats WHERE day=? AND client_id=?`, day, clientID)
 	if err != nil {
 		return nil, fmt.Errorf("read report rows: %w", err)
 	}
@@ -172,7 +167,7 @@ func loadStats(ctx context.Context, tx *sql.Tx, day string, clientID int64) (map
 	for result.Next() {
 		var k Key
 		var m Metrics
-		if err := result.Scan(&k.ModelID, &k.Tier, &m.TotalTokens, &m.InputTokens, &m.OutputTokens, &m.CacheReadTokens, &m.CacheWriteTokens, &m.ReasoningTokens, &m.RequestCount, &m.SuccessCount, &m.TTFTSumMS, &m.TTFTSamples, &m.LatencySumMS, &m.LatencySamples); err != nil {
+		if err := result.Scan(&k.ModelID, &m.TotalTokens, &m.InputTokens, &m.OutputTokens, &m.CacheReadTokens, &m.CacheWriteTokens, &m.ReasoningTokens, &m.RequestCount, &m.SuccessCount, &m.TTFTSumMS, &m.TTFTSamples, &m.LatencySumMS, &m.LatencySamples); err != nil {
 			return nil, fmt.Errorf("scan report row: %w", err)
 		}
 		rows[k] = m
@@ -184,13 +179,13 @@ func loadStats(ctx context.Context, tx *sql.Tx, day string, clientID int64) (map
 }
 
 func writeStats(ctx context.Context, tx *sql.Tx, day string, clientID int64, k Key, m Metrics) error {
-	_, err := tx.ExecContext(ctx, `INSERT INTO daily_stats(day,client_id,model_id,tier,total_tokens,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,reasoning_tokens,request_count,success_count,ttft_sum_ms,ttft_samples,latency_sum_ms,latency_samples)
-		VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(day,client_id,model_id,tier) DO UPDATE SET
+	_, err := tx.ExecContext(ctx, `INSERT INTO daily_stats(day,client_id,model_id,total_tokens,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,reasoning_tokens,request_count,success_count,ttft_sum_ms,ttft_samples,latency_sum_ms,latency_samples)
+		VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(day,client_id,model_id) DO UPDATE SET
 		total_tokens=excluded.total_tokens,input_tokens=excluded.input_tokens,output_tokens=excluded.output_tokens,
 		cache_read_tokens=excluded.cache_read_tokens,cache_write_tokens=excluded.cache_write_tokens,reasoning_tokens=excluded.reasoning_tokens,
 		request_count=excluded.request_count,success_count=excluded.success_count,ttft_sum_ms=excluded.ttft_sum_ms,ttft_samples=excluded.ttft_samples,
 		latency_sum_ms=excluded.latency_sum_ms,latency_samples=excluded.latency_samples`,
-		day, clientID, k.ModelID, k.Tier, m.TotalTokens, m.InputTokens, m.OutputTokens, m.CacheReadTokens, m.CacheWriteTokens,
+		day, clientID, k.ModelID, m.TotalTokens, m.InputTokens, m.OutputTokens, m.CacheReadTokens, m.CacheWriteTokens,
 		m.ReasoningTokens, m.RequestCount, m.SuccessCount, m.TTFTSumMS, m.TTFTSamples, m.LatencySumMS, m.LatencySamples)
 	if err != nil {
 		return fmt.Errorf("write report row: %w", err)

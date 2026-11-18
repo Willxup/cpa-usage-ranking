@@ -15,7 +15,7 @@ func TestSettlementHonorsDeadlineUnderExternalLock(t *testing.T) {
 	registry := reportRegistry(t, db, `{"model_name":"alpha","alias":[],"prices":{}}`)
 	id := createReportClient(t, db)
 	store := reports.NewStore(db.Writer, registry, func() time.Time { return instant("2026-11-01T12:00:00Z") })
-	if _, err := store.Apply(context.Background(), id, "2026-11-01", prepared(t, 1, usage("alpha", 0, 3, 1, 1))); err != nil {
+	if _, err := store.Apply(context.Background(), id, "2026-11-01", prepared(t, 1, usage("alpha", 3, 1, 1))); err != nil {
 		t.Fatal(err)
 	}
 	if err := reports.AdvanceWindow(context.Background(), db.Writer, instant("2026-11-03T00:00:00Z")); err != nil {

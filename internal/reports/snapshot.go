@@ -29,23 +29,14 @@ func Prepare(report Report) (Prepared, error) {
 	}
 	items := make([]Item, len(report.Items))
 	copy(items, report.Items)
-	seen := make(map[struct {
-		model string
-		tier  models.Tier
-	}]bool, len(items))
+	seen := make(map[string]bool, len(items))
 	for i := range items {
 		item := &items[i]
-		if _, err := models.NormalizeReportedName(item.Model); err != nil || item.Tier > models.Flex {
+		name, err := models.NormalizeReportedName(item.Model)
+		if err != nil || seen[name] {
 			return Prepared{}, ErrInvalid
 		}
-		key := struct {
-			model string
-			tier  models.Tier
-		}{item.Model, item.Tier}
-		if seen[key] {
-			return Prepared{}, ErrInvalid
-		}
-		seen[key] = true
+		seen[name] = true
 		// Copy pointers and normalize signed zero, so semantically equal JSON
 		// numeric spellings and later caller mutations cannot change the input.
 		if item.TTFTAvgMS != nil {
@@ -63,12 +54,7 @@ func Prepare(report Report) (Prepared, error) {
 			item.LatencyAvgMS = &v
 		}
 	}
-	sort.Slice(items, func(i, j int) bool {
-		if items[i].Model != items[j].Model {
-			return items[i].Model < items[j].Model
-		}
-		return items[i].Tier < items[j].Tier
-	})
+	sort.Slice(items, func(i, j int) bool { return items[i].Model < items[j].Model })
 	encoded, err := json.Marshal(struct {
 		SchemaVersion int
 		Revision      int64
@@ -80,36 +66,40 @@ func Prepare(report Report) (Prepared, error) {
 	return Prepared{revision: report.Revision, items: items, digest: sha256.Sum256(encoded), valid: true}, nil
 }
 
-// Key identifies a stored row. ModelID 0 and tier default are reserved for
-// the all-model total; real catalog model IDs are positive.
+// Key identifies a stored row. ModelID 0 is reserved for the all-model total;
+// real catalog model IDs are positive.
 type Key struct {
 	ModelID int64
-	Tier    models.Tier
 }
 
 // Aggregate uses the current registry only for a new replacement. Valid
 // unknown and zero-execution items remain in the digest but not the rows.
 func (p Prepared) Aggregate(registry *models.Registry) (map[Key]Metrics, error) {
 	rows := make(map[Key]Metrics)
+	seen := make(map[int64]bool)
 	var total Metrics
 	for _, item := range p.items {
 		resolved, err := registry.Resolve(item.Model)
 		if err != nil {
 			return nil, ErrInvalid
 		}
-		if !resolved.Matched || item.RequestCount == 0 {
+		if !resolved.Matched {
+			continue
+		}
+		if seen[resolved.ID] {
+			return nil, ErrInvalid
+		}
+		seen[resolved.ID] = true
+		if item.RequestCount == 0 {
 			continue
 		}
 		metric, err := itemMetrics(item)
 		if err != nil {
 			return nil, ErrInvalid
 		}
-		key := Key{ModelID: resolved.ID, Tier: item.Tier}
-		merged, ok := addMetrics(rows[key], metric)
-		if !ok {
-			return nil, ErrInvalid
-		}
-		rows[key] = merged
+		key := Key{ModelID: resolved.ID}
+		rows[key] = metric
+		var ok bool
 		total, ok = addMetrics(total, metric)
 		if !ok {
 			return nil, ErrInvalid

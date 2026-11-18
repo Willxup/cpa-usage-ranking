@@ -23,9 +23,9 @@ normalization or automatic version-suffix removal. A valid unknown name is an
 unmatched result, not a format error, and lookup does not insert it into SQLite.
 The [daily report API](report-snapshots.md) uses this resolver; there is no model management HTTP API.
 
-Tier codes are `default` = 0, `priority` = 1, and `flex` = 2. The internal tier
-boundary distinguishes an omitted value (default) from explicit null, empty or
-unsupported values (invalid).
+Price categories `default`, `priority`, and `flex` are catalog metadata only.
+They do not define a reporting or statistics dimension; daily reports must not
+contain a `service_tier` field.
 
 `currency` must be `USD` and `price_unit` must be `per_million_tokens`.
 `models` is an array of records with `model_name`, `alias` (an array, possibly

@@ -44,17 +44,6 @@ type independentDay struct {
 	rows     map[string]independentRow
 }
 
-func rowKey(model string, tier models.Tier) string { return fmt.Sprintf("%s/%d", model, tier) }
-
-func tierFor(t *testing.T, tier string) models.Tier {
-	t.Helper()
-	v, err := models.ReportedTier(true, &tier)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return v
-}
-
 func decodeIndependent(t *testing.T, body []byte) independentDay {
 	t.Helper()
 	r, err := reports.DecodeLimited(body, 128)
@@ -73,7 +62,7 @@ func decodeIndependent(t *testing.T, body []byte) independentDay {
 		if x.LatencyAvgMS != nil {
 			row.latencyAverage = int64(*x.LatencyAvgMS)
 		}
-		out.rows[rowKey(x.Model, x.Tier)] = row
+		out.rows[x.Model] = row
 	}
 	return out
 }
@@ -142,7 +131,7 @@ func TestSustainedDeterministicIncrementLedger(t *testing.T) {
 		prior.revision++
 		changed := make(map[string]bool)
 		for _, delta := range task.Deltas {
-			k := rowKey(delta.Model, tierFor(t, delta.Tier))
+			k := delta.Model
 			if changed[k] {
 				t.Fatalf("duplicate delta for %s", k)
 			}
@@ -219,7 +208,7 @@ func assertSustainedRows(t *testing.T, db *sql.DB, registry *models.Registry, id
 		if item.LatencyAvgMS != nil {
 			v.LatencySumMS = *item.LatencyAvgMS * float64(item.LatencySamples)
 		}
-		k := reports.Key{ModelID: resolved.ID, Tier: item.Tier}
+		k := reports.Key{ModelID: resolved.ID}
 		current := want[k]
 		add(&current, v)
 		want[k] = current
@@ -228,7 +217,7 @@ func assertSustainedRows(t *testing.T, db *sql.DB, registry *models.Registry, id
 	if len(want) > 0 {
 		want[reports.Key{}] = total
 	}
-	rows, err := db.Query(`SELECT model_id,tier,total_tokens,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,reasoning_tokens,request_count,success_count,ttft_sum_ms,ttft_samples,latency_sum_ms,latency_samples FROM daily_stats WHERE client_id=? AND day=?`, id, day)
+	rows, err := db.Query(`SELECT model_id,total_tokens,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,reasoning_tokens,request_count,success_count,ttft_sum_ms,ttft_samples,latency_sum_ms,latency_samples FROM daily_stats WHERE client_id=? AND day=?`, id, day)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -237,7 +226,7 @@ func assertSustainedRows(t *testing.T, db *sql.DB, registry *models.Registry, id
 	for rows.Next() {
 		var k reports.Key
 		var v reports.Metrics
-		if err = rows.Scan(&k.ModelID, &k.Tier, &v.TotalTokens, &v.InputTokens, &v.OutputTokens, &v.CacheReadTokens, &v.CacheWriteTokens, &v.ReasoningTokens, &v.RequestCount, &v.SuccessCount, &v.TTFTSumMS, &v.TTFTSamples, &v.LatencySumMS, &v.LatencySamples); err != nil {
+		if err = rows.Scan(&k.ModelID, &v.TotalTokens, &v.InputTokens, &v.OutputTokens, &v.CacheReadTokens, &v.CacheWriteTokens, &v.ReasoningTokens, &v.RequestCount, &v.SuccessCount, &v.TTFTSumMS, &v.TTFTSamples, &v.LatencySumMS, &v.LatencySamples); err != nil {
 			t.Fatal(err)
 		}
 		got[k] = v

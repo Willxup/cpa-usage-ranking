@@ -33,7 +33,7 @@ func cacheFixture(t *testing.T) (*storage.DB, *statistics.Reader) {
 	}
 	_, err = db.Writer.Exec(`INSERT INTO clients(token_hash,display_name,avatar_id,created_at_ms) VALUES(randomblob(32),'a',1,0);
  INSERT INTO daily_reports(day,client_id,revision,digest,received_at_ms) VALUES('2026-12-31',1,1,randomblob(32),0);
- INSERT INTO daily_stats VALUES('2026-12-31',1,0,0,12,12,0,0,0,0,1,1,0,0,0,0)`)
+ INSERT INTO daily_stats VALUES('2026-12-31',1,0,12,12,0,0,0,0,1,1,0,0,0,0)`)
 	if err != nil {
 		t.Fatal(err)
 	}

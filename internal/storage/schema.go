@@ -46,7 +46,6 @@ func InitSchema(ctx context.Context, writer *sql.DB) error {
 		day TEXT NOT NULL,
 		client_id INTEGER NOT NULL,
 		model_id INTEGER NOT NULL CHECK (model_id >= 0),
-		tier INTEGER NOT NULL CHECK (tier IN (0, 1, 2)),
 		total_tokens INTEGER NOT NULL CHECK (total_tokens >= 0),
 		input_tokens INTEGER NOT NULL CHECK (input_tokens >= 0),
 		output_tokens INTEGER NOT NULL CHECK (output_tokens >= 0),
@@ -59,16 +58,14 @@ func InitSchema(ctx context.Context, writer *sql.DB) error {
 		ttft_samples INTEGER NOT NULL CHECK (ttft_samples >= 0),
 		latency_sum_ms REAL NOT NULL CHECK (latency_sum_ms >= 0),
 		latency_samples INTEGER NOT NULL CHECK (latency_samples >= 0),
-		PRIMARY KEY (day, client_id, model_id, tier),
-		FOREIGN KEY (day, client_id) REFERENCES daily_reports(day, client_id) ON DELETE CASCADE,
-		CHECK (model_id > 0 OR tier = 0)
+		PRIMARY KEY (day, client_id, model_id),
+		FOREIGN KEY (day, client_id) REFERENCES daily_reports(day, client_id) ON DELETE CASCADE
 	) WITHOUT ROWID;
 	CREATE INDEX IF NOT EXISTS daily_stats_totals ON daily_stats(day, client_id) WHERE model_id=0;
 	CREATE TABLE IF NOT EXISTS period_stats (
 		kind TEXT NOT NULL CHECK (kind IN ('day', 'week', 'month', 'all')),
 		start_day TEXT NOT NULL,
 		model_id INTEGER NOT NULL CHECK (model_id >= 0),
-		tier INTEGER NOT NULL CHECK (tier IN (0, 1, 2)),
 		client_id INTEGER NOT NULL REFERENCES clients(id),
 		total_tokens INTEGER NOT NULL CHECK (typeof(total_tokens) = 'integer' AND total_tokens >= 0),
 		input_tokens INTEGER NOT NULL CHECK (typeof(input_tokens) = 'integer' AND input_tokens >= 0),
@@ -82,8 +79,7 @@ func InitSchema(ctx context.Context, writer *sql.DB) error {
 		ttft_samples INTEGER NOT NULL CHECK (typeof(ttft_samples) = 'integer' AND ttft_samples >= 0),
 		latency_sum_ms REAL NOT NULL CHECK (latency_sum_ms >= 0),
 		latency_samples INTEGER NOT NULL CHECK (typeof(latency_samples) = 'integer' AND latency_samples >= 0),
-		PRIMARY KEY (kind, start_day, model_id, tier, client_id),
-		CHECK (model_id > 0 OR tier = 0),
+		PRIMARY KEY (kind, start_day, model_id, client_id),
 		CHECK (kind <> 'day' OR model_id = 0),
 		CHECK (kind <> 'all' OR start_day = '0001-01-01')
 	) WITHOUT ROWID;

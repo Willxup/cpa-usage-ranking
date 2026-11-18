@@ -156,6 +156,26 @@ func TestReportHTTPIdentityRevisionsWindowsAndRegistrationSwitch(t *testing.T) {
 	}
 }
 
+func TestReportHTTPRejectsLegacyTierAndDuplicateModels(t *testing.T) {
+	f := reportSetup(t, defaultRegistrationSettings(), generousReportLimits(), nil)
+	secret := testSecret(1)
+	f.seed(t, secret)
+	for _, value := range []string{`"default"`, `null`} {
+		body := strings.Replace(reportJSON, `"model":"alpha"`, `"model":"alpha","service_tier":`+value, 1)
+		requireHTTPError(t, f.report(t, "2026-11-01", secret, body, nil), 422, "invalid_report")
+	}
+	item := strings.TrimSuffix(strings.SplitN(reportJSON, `"items":[`, 2)[1], `]}`)
+	for _, name := range []string{"alias", "route/alpha"} {
+		duplicate := strings.Replace(item, `"model":"alpha"`, `"model":"`+name+`"`, 1)
+		body := strings.TrimSuffix(reportJSON, `]}`) + `,` + duplicate + `]}`
+		requireHTTPError(t, f.report(t, "2026-11-01", secret, body, nil), 422, "invalid_report")
+	}
+	var count int
+	if err := f.db.Reader.QueryRow(`SELECT count(*) FROM daily_reports`).Scan(&count); err != nil || count != 0 {
+		t.Fatalf("invalid report persisted: %d %v", count, err)
+	}
+}
+
 func TestReportHTTPBadInputLimitsAndIndependentHealth(t *testing.T) {
 	limits := generousReportLimits()
 	limits.ClientBurst = 20

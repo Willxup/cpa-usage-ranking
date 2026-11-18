@@ -13,7 +13,7 @@ import (
 	"unicode/utf8"
 )
 
-// Tier is the stable internal code for a supported service tier.
+// Tier identifies a reference-price category in the model catalog.
 type Tier uint8
 
 const (
@@ -32,7 +32,7 @@ func ParseTier(value string) (Tier, error) {
 	case "flex":
 		return Flex, nil
 	default:
-		return 0, fmt.Errorf("invalid service tier %q", value)
+		return 0, fmt.Errorf("invalid price category %q", value)
 	}
 }
 

@@ -44,25 +44,24 @@ func reportRegistry(t *testing.T, db *storage.DB, entries string) *models.Regist
 	return registry
 }
 
-func usage(model string, tier models.Tier, tokens, requests int64, avg float64) reports.Item {
-	return reports.Item{Model: model, Tier: tier, TotalTokens: tokens, InputTokens: tokens, RequestCount: requests,
+func usage(model string, tokens, requests int64, avg float64) reports.Item {
+	return reports.Item{Model: model, TotalTokens: tokens, InputTokens: tokens, RequestCount: requests,
 		SuccessCount: requests, TTFTAvgMS: number(avg), TTFTSamples: requests}
 }
 
 func TestPreparedDigestAndCatalogAggregation(t *testing.T) {
 	db := reportDB(t)
-	registry := reportRegistry(t, db, `{"model_name":"alpha","alias":["alias"],"prices":{}}`)
-	a := usage("route/alpha", models.Default, 10, 2, 3)
-	b := usage("alias", models.Default, 20, 1, 6)
-	c := usage("alpha", models.Priority, 5, 1, 4)
-	unknown := usage("unknown", models.Default, 7, 1, 2)
+	registry := reportRegistry(t, db, `{"model_name":"alpha","alias":["alias"],"prices":{}},{"model_name":"beta","alias":[],"prices":{}}`)
+	a := usage("route/alpha", 10, 2, 3)
+	b := usage("beta", 20, 1, 6)
+	unknown := usage("unknown", 7, 1, 2)
 	zero := reports.Item{Model: "zero"}
-	first := reports.Report{Revision: 8, Items: []reports.Item{a, b, c, unknown, zero}}
+	first := reports.Report{Revision: 8, Items: []reports.Item{a, b, unknown, zero}}
 	p, err := reports.Prepare(first)
 	if err != nil {
 		t.Fatal(err)
 	}
-	reordered, err := reports.Prepare(reports.Report{Revision: 8, Items: []reports.Item{zero, unknown, c, b, a}})
+	reordered, err := reports.Prepare(reports.Report{Revision: 8, Items: []reports.Item{zero, unknown, b, a}})
 	if err != nil || p.Digest() != reordered.Digest() {
 		t.Fatalf("order changed digest: %v", err)
 	}
@@ -71,8 +70,8 @@ func TestPreparedDigestAndCatalogAggregation(t *testing.T) {
 		t.Fatal(err)
 	}
 	id, _ := registry.CanonicalID("alpha")
-	defaultRow := rows[reports.Key{ModelID: id}]
-	if len(rows) != 3 || defaultRow.TotalTokens != 30 || defaultRow.RequestCount != 3 || defaultRow.TTFTSumMS != 12 || defaultRow.TTFTSamples != 3 || rows[reports.Key{}].TotalTokens != 35 || rows[reports.Key{}].TTFTSumMS != 16 {
+	alphaRow := rows[reports.Key{ModelID: id}]
+	if len(rows) != 3 || alphaRow.TotalTokens != 10 || alphaRow.RequestCount != 2 || alphaRow.TTFTSumMS != 6 || alphaRow.TTFTSamples != 2 || rows[reports.Key{}].TotalTokens != 30 || rows[reports.Key{}].TTFTSumMS != 12 || rows[reports.Key{}].TTFTSamples != 3 {
 		t.Fatalf("bad aggregation: %+v", rows)
 	}
 	// Caller mutation and current catalog/price changes cannot change the prepared digest.
@@ -82,18 +81,18 @@ func TestPreparedDigestAndCatalogAggregation(t *testing.T) {
 		t.Fatal("mutable source changed digest")
 	}
 	newRows, err := p.Aggregate(changed)
-	if err != nil || newRows[reports.Key{}].TotalTokens != 22 {
+	if err != nil || newRows[reports.Key{}].TotalTokens != 17 {
 		t.Fatalf("new catalog not used on new aggregation: %+v %v", newRows, err)
 	}
 	a.TTFTAvgMS = number(3)
 	changedUnknown := unknown
 	changedUnknown.TotalTokens++
 	changedUnknown.InputTokens++
-	other, err := reports.Prepare(reports.Report{Revision: 8, Items: []reports.Item{a, b, c, changedUnknown, zero}})
+	other, err := reports.Prepare(reports.Report{Revision: 8, Items: []reports.Item{a, b, changedUnknown, zero}})
 	if err != nil || other.Digest() == p.Digest() {
 		t.Fatal("unknown item did not affect digest")
 	}
-	withoutZero, err := reports.Prepare(reports.Report{Revision: 8, Items: []reports.Item{a, b, c, unknown}})
+	withoutZero, err := reports.Prepare(reports.Report{Revision: 8, Items: []reports.Item{a, b, unknown}})
 	if err != nil || withoutZero.Digest() == p.Digest() {
 		t.Fatal("zero item did not affect digest")
 	}
@@ -102,22 +101,24 @@ func TestPreparedDigestAndCatalogAggregation(t *testing.T) {
 func TestPreparedValidationAndOverflow(t *testing.T) {
 	db := reportDB(t)
 	registry := reportRegistry(t, db, `{"model_name":"alpha","alias":["alias"],"prices":{}},{"model_name":"beta","alias":[],"prices":{}}`)
-	a := usage("alpha", models.Default, 1, 1, 1)
+	a := usage("alpha", 1, 1, 1)
 	for _, items := range [][]reports.Item{
 		{a, a},
 		{a, {Model: "vendor/"}},
 		{a, {Model: "bad\nname"}},
 		{a, {Model: "unknown", TotalTokens: 1}},
-		{a, {Model: "unknown", Tier: 99}},
+		{a, {Model: "route/alpha"}},
 	} {
 		if _, err := reports.Prepare(reports.Report{Items: items}); !errors.Is(err, reports.ErrInvalid) {
 			t.Fatalf("accepted invalid input: %+v %v", items, err)
 		}
 	}
 	for _, pair := range [][]reports.Item{
-		{usage("alpha", 0, math.MaxInt64, 1, 1), usage("alias", 0, 1, 1, 1)},
-		{usage("alpha", 0, math.MaxInt64, 1, 1), usage("beta", 0, 1, 1, 1)},
-		{usage("alpha", 0, 1, 1, math.MaxFloat64), usage("alias", 0, 1, 1, math.MaxFloat64)},
+		{usage("alpha", 1, 1, 1), usage("alias", 1, 1, 1)},
+		{usage("alpha", 1, 1, 1), {Model: "alias"}},
+		{{Model: "alpha"}, usage("alias", 1, 1, 1)},
+		{usage("alpha", math.MaxInt64, 1, 1), usage("beta", 1, 1, 1)},
+		{usage("alpha", 1, 1, math.MaxFloat64), usage("beta", 1, 1, math.MaxFloat64)},
 	} {
 		prepared, err := reports.Prepare(reports.Report{Items: pair})
 		if err != nil {
@@ -127,7 +128,7 @@ func TestPreparedValidationAndOverflow(t *testing.T) {
 			t.Fatalf("aggregation overflow accepted: %v", err)
 		}
 	}
-	p, err := reports.Prepare(reports.Report{Items: []reports.Item{usage("unknown", 0, 1, 1, 1), {Model: "alpha"}}})
+	p, err := reports.Prepare(reports.Report{Items: []reports.Item{usage("unknown", 1, 1, 1), {Model: "alpha"}}})
 	if err != nil {
 		t.Fatal(err)
 	}

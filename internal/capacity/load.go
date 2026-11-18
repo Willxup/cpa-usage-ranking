@@ -462,20 +462,20 @@ func Verify(ctx context.Context, f Fixture, path string, ledgers []string) (map[
 		if !bytes.Equal(digest, want.digest[:]) {
 			return nil, errors.New("committed digest mismatch")
 		}
-		rows, e := db.QueryContext(ctx, `SELECT model_id,tier,`+metricColumns+` FROM daily_stats WHERE day=? AND client_id=?`, k.day, k.id)
+		rows, e := db.QueryContext(ctx, `SELECT model_id,`+metricColumns+` FROM daily_stats WHERE day=? AND client_id=?`, k.day, k.id)
 		if e != nil {
 			return nil, e
 		}
 		count := 0
 		for rows.Next() {
-			var id, tier int64
+			var id int64
 			var m reports.Metrics
-			if e = rows.Scan(&id, &tier, &m.TotalTokens, &m.InputTokens, &m.OutputTokens, &m.CacheReadTokens, &m.CacheWriteTokens, &m.ReasoningTokens, &m.RequestCount, &m.SuccessCount, &m.TTFTSumMS, &m.TTFTSamples, &m.LatencySumMS, &m.LatencySamples); e != nil {
+			if e = rows.Scan(&id, &m.TotalTokens, &m.InputTokens, &m.OutputTokens, &m.CacheReadTokens, &m.CacheWriteTokens, &m.ReasoningTokens, &m.RequestCount, &m.SuccessCount, &m.TTFTSumMS, &m.TTFTSamples, &m.LatencySumMS, &m.LatencySamples); e != nil {
 				rows.Close()
 				return nil, e
 			}
 			expectedRow, found := want.rows[id]
-			if !found || tier != 0 || m != expectedRow {
+			if !found || m != expectedRow {
 				rows.Close()
 				return nil, fmt.Errorf("snapshot metrics mismatch for synthetic client %d", k.id)
 			}

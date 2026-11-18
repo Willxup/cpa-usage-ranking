@@ -72,8 +72,8 @@ func (f *fixture) client(t *testing.T) int64 {
 	}
 	return id
 }
-func item(name string, tier models.Tier, n int64) reports.Item {
-	return reports.Item{Model: name, Tier: tier, TotalTokens: n, InputTokens: n, RequestCount: 1, SuccessCount: 1}
+func item(name string, n int64) reports.Item {
+	return reports.Item{Model: name, TotalTokens: n, InputTokens: n, RequestCount: 1, SuccessCount: 1}
 }
 func (f *fixture) put(t *testing.T, id int64, day string, rev int64, items ...reports.Item) {
 	t.Helper()
@@ -105,9 +105,9 @@ func (f *fixture) reader(t *testing.T, max int) *statistics.Reader {
 	}
 	return r
 }
-func read(t *testing.T, r *statistics.Reader, kind, day string, model int64, tier models.Tier) statistics.Snapshot {
+func read(t *testing.T, r *statistics.Reader, kind, day string, model int64) statistics.Snapshot {
 	t.Helper()
-	s, err := r.Read(context.Background(), statistics.Selection{Kind: kind, Day: day, ModelID: model, Tier: tier})
+	s, err := r.Read(context.Background(), statistics.Selection{Kind: kind, Day: day, ModelID: model})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,12 +124,12 @@ func TestReadSettledPendingBoundariesAndIsolation(t *testing.T) {
 	f := newFixture(t)
 	ctx := context.Background()
 	// 隔周、跨月、跨年，10 月旧日故意留在日结积压中。
-	f.put(t, f.a, "2026-10-30", 1, item("alpha", 0, 2))
-	f.put(t, f.a, "2026-12-27", 1, item("alpha", 0, 3))
-	f.put(t, f.a, "2026-12-31", 1, item("alpha", 0, 5), item("alpha", models.Priority, 7), item("beta", models.Flex, 11))
-	f.put(t, f.b, "2026-12-31", 1, item("alpha", 0, 13))
-	f.put(t, f.a, "2027-01-01", 1, item("alpha", 0, 17))
-	f.put(t, f.a, "2027-01-04", 1, item("alpha", 0, 19))
+	f.put(t, f.a, "2026-10-30", 1, item("alpha", 2))
+	f.put(t, f.a, "2026-12-27", 1, item("alpha", 3))
+	f.put(t, f.a, "2026-12-31", 1, item("alpha", 12), item("beta", 11))
+	f.put(t, f.b, "2026-12-31", 1, item("alpha", 13))
+	f.put(t, f.a, "2027-01-01", 1, item("alpha", 17))
+	f.put(t, f.a, "2027-01-04", 1, item("alpha", 19))
 	if err := reports.AdvanceWindow(ctx, f.db.Writer, time.Date(2027, 1, 6, 0, 0, 0, 0, time.UTC)); err != nil {
 		t.Fatal(err)
 	}
@@ -137,21 +137,20 @@ func TestReadSettledPendingBoundariesAndIsolation(t *testing.T) {
 	alpha, _ := f.registry.CanonicalID("alpha")
 	beta, _ := f.registry.CanonicalID("beta")
 	assertions := func() {
-		s := read(t, r, periods.All, "2027-01-04", 0, 0)
+		s := read(t, r, periods.All, "2027-01-04", 0)
 		check(t, s, f.a, 64)
 		check(t, s, f.b, 13)
-		s = read(t, r, periods.Week, "2027-01-01", 0, 0)
+		s = read(t, r, periods.Week, "2027-01-01", 0)
 		if s.Start != "2026-12-28" || s.End != "2027-01-04" {
 			t.Fatal(s.Start, s.End)
 		}
 		check(t, s, f.a, 40)
 		check(t, s, f.b, 13)
-		check(t, read(t, r, periods.Month, "2026-12-31", 0, 0), f.a, 26)
-		check(t, read(t, r, periods.Month, "2027-01-01", 0, 0), f.a, 36)
-		check(t, read(t, r, periods.Day, "2026-12-31", 0, 0), f.a, 23)
-		check(t, read(t, r, periods.All, "2027-01-01", alpha, 0), f.a, 46)
-		check(t, read(t, r, periods.All, "2027-01-01", alpha, models.Priority), f.a, 7)
-		check(t, read(t, r, periods.All, "2027-01-01", beta, models.Flex), f.a, 11)
+		check(t, read(t, r, periods.Month, "2026-12-31", 0), f.a, 26)
+		check(t, read(t, r, periods.Month, "2027-01-01", 0), f.a, 36)
+		check(t, read(t, r, periods.Day, "2026-12-31", 0), f.a, 23)
+		check(t, read(t, r, periods.All, "2027-01-01", alpha), f.a, 53)
+		check(t, read(t, r, periods.All, "2027-01-01", beta), f.a, 11)
 	}
 	assertions()
 	f.closeDay(t, "2026-12-31", f.a)
@@ -160,7 +159,7 @@ func TestReadSettledPendingBoundariesAndIsolation(t *testing.T) {
 	if _, err := r.Read(ctx, statistics.Selection{Kind: periods.Day, Day: "2026-12-31", ModelID: alpha}); !errors.Is(err, statistics.ErrInvalidSelection) {
 		t.Fatalf("model day allowed: %v", err)
 	}
-	for _, s := range []statistics.Selection{{Kind: "bad", Day: "2027-01-01"}, {Kind: periods.All, Day: "no"}, {Kind: periods.All, Day: "2027-01-01", Tier: 1}, {Kind: periods.All, Day: "2027-01-01", ModelID: 1, Tier: 3}} {
+	for _, s := range []statistics.Selection{{Kind: "bad", Day: "2027-01-01"}, {Kind: periods.All, Day: "no"}, {Kind: periods.All, Day: "2027-01-01", ModelID: -1}} {
 		if _, err := r.Read(ctx, s); !errors.Is(err, statistics.ErrInvalidSelection) {
 			t.Fatal(s, err)
 		}
@@ -169,9 +168,9 @@ func TestReadSettledPendingBoundariesAndIsolation(t *testing.T) {
 
 func TestReadOverflowCapacityAndCancellation(t *testing.T) {
 	f := newFixture(t)
-	f.put(t, f.a, "2026-12-30", 1, item("alpha", 0, 1))
-	f.put(t, f.b, "2026-12-30", 1, item("alpha", 0, 1))
-	f.put(t, f.a, "2026-12-31", 1, item("alpha", 0, 1))
+	f.put(t, f.a, "2026-12-30", 1, item("alpha", 1))
+	f.put(t, f.b, "2026-12-30", 1, item("alpha", 1))
+	f.put(t, f.a, "2026-12-31", 1, item("alpha", 1))
 	if _, err := f.reader(t, 1).Read(context.Background(), statistics.Selection{Kind: periods.All, Day: "2026-12-31"}); !errors.Is(err, statistics.ErrCapacity) {
 		t.Fatal(err)
 	}
@@ -208,7 +207,7 @@ func TestReadOverflowCapacityAndCancellation(t *testing.T) {
 		t.Fatal(err)
 	}
 	conn.Close()
-	read(t, r, periods.All, "2026-12-31", 0, 0)
+	read(t, r, periods.All, "2026-12-31", 0)
 	if f.db.Reader.Stats().InUse != 0 {
 		t.Fatal("reader leaked")
 	}
@@ -265,9 +264,9 @@ func pausedReader(t *testing.T, f *fixture, timeout time.Duration) (*statistics.
 }
 func TestReadSQLiteSnapshotInterleavesSettlementAndReport(t *testing.T) {
 	f := newFixture(t)
-	f.put(t, f.a, "2026-12-30", 1, item("alpha", 0, 7))
-	f.put(t, f.a, "2026-12-31", 1, item("alpha", 0, 11))
-	f.put(t, f.b, "2026-12-31", 1, item("alpha", 0, 3))
+	f.put(t, f.a, "2026-12-30", 1, item("alpha", 7))
+	f.put(t, f.a, "2026-12-31", 1, item("alpha", 11))
+	f.put(t, f.b, "2026-12-31", 1, item("alpha", 3))
 	if err := reports.AdvanceWindow(context.Background(), f.db.Writer, time.Date(2027, 1, 1, 12, 0, 0, 0, time.UTC)); err != nil {
 		t.Fatal(err)
 	}
@@ -283,7 +282,7 @@ func TestReadSQLiteSnapshotInterleavesSettlementAndReport(t *testing.T) {
 	}()
 	<-d.ready
 	f.closeDay(t, "2026-12-30", f.a)
-	f.put(t, f.b, "2026-12-31", 2, item("alpha", 0, 9))
+	f.put(t, f.b, "2026-12-31", 2, item("alpha", 9))
 	close(d.release)
 	got := <-done
 	if got.err != nil {
@@ -291,7 +290,7 @@ func TestReadSQLiteSnapshotInterleavesSettlementAndReport(t *testing.T) {
 	}
 	check(t, got.s, f.a, 18)
 	check(t, got.s, f.b, 3)
-	s := read(t, f.reader(t, 100), periods.All, "2026-12-31", 0, 0)
+	s := read(t, f.reader(t, 100), periods.All, "2026-12-31", 0)
 	check(t, s, f.a, 18)
 	check(t, s, f.b, 9)
 	if db.Stats().InUse != 0 {
@@ -308,18 +307,18 @@ func TestReadSQLiteSnapshotInterleavesSettlementAndReport(t *testing.T) {
 }
 func TestYearUsesSettledMonthsAndAllPendingDays(t *testing.T) {
 	f := newFixture(t)
-	f.put(t, f.a, "2025-12-31", 1, item("alpha", 0, 101))
-	f.put(t, f.a, "2026-01-01", 1, item("alpha", 0, 2))
-	f.put(t, f.a, "2026-05-03", 1, item("alpha", 0, 3))
-	f.put(t, f.a, "2026-12-31", 1, item("alpha", 0, 5))
-	f.put(t, f.a, "2027-01-01", 1, item("alpha", 0, 103))
+	f.put(t, f.a, "2025-12-31", 1, item("alpha", 101))
+	f.put(t, f.a, "2026-01-01", 1, item("alpha", 2))
+	f.put(t, f.a, "2026-05-03", 1, item("alpha", 3))
+	f.put(t, f.a, "2026-12-31", 1, item("alpha", 5))
+	f.put(t, f.a, "2027-01-01", 1, item("alpha", 103))
 	if err := reports.AdvanceWindow(context.Background(), f.db.Writer, time.Date(2027, 1, 3, 0, 0, 0, 0, time.UTC)); err != nil {
 		t.Fatal(err)
 	}
 	f.closeDay(t, "2026-01-01", f.a)
 	r := f.reader(t, 10)
 	checkYear := func() {
-		s := read(t, r, periods.Year, "2026-12-31", 0, 0)
+		s := read(t, r, periods.Year, "2026-12-31", 0)
 		if s.Start != "2026-01-01" || s.End != "2027-01-01" {
 			t.Fatal(s.Start, s.End)
 		}
@@ -333,9 +332,9 @@ func TestYearUsesSettledMonthsAndAllPendingDays(t *testing.T) {
 
 func TestPublicYearSnapshotInterleavesSettlementProfilesAndDisable(t *testing.T) {
 	f := newFixture(t)
-	f.put(t, f.a, "2026-01-01", 1, item("alpha", 0, 2))
-	f.put(t, f.a, "2026-12-30", 1, item("alpha", 0, 5))
-	f.put(t, f.b, "2026-12-31", 1, item("alpha", 0, 11))
+	f.put(t, f.a, "2026-01-01", 1, item("alpha", 2))
+	f.put(t, f.a, "2026-12-30", 1, item("alpha", 5))
+	f.put(t, f.b, "2026-12-31", 1, item("alpha", 11))
 	if err := reports.AdvanceWindow(context.Background(), f.db.Writer, time.Date(2027, 1, 2, 0, 0, 0, 0, time.UTC)); err != nil {
 		t.Fatal(err)
 	}
@@ -383,7 +382,7 @@ func TestPublicYearSnapshotInterleavesSettlementProfilesAndDisable(t *testing.T)
 
 func TestReadTimeoutInsideSnapshotReleasesTransaction(t *testing.T) {
 	f := newFixture(t)
-	f.put(t, f.a, "2026-12-31", 1, item("alpha", 0, 1))
+	f.put(t, f.a, "2026-12-31", 1, item("alpha", 1))
 	r, db, d := pausedReader(t, f, 30*time.Millisecond)
 	_, err := r.Read(context.Background(), statistics.Selection{Kind: periods.All, Day: "2026-12-31"})
 	<-d.ready

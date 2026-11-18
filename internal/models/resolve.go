@@ -52,15 +52,3 @@ func NormalizeReportedName(raw string) (string, error) {
 	}
 	return name, nil
 }
-
-// ReportedTier distinguishes an omitted field from an explicitly null value.
-// This is an internal value boundary, not an implementation of an HTTP protocol.
-func ReportedTier(present bool, value *string) (Tier, error) {
-	if !present {
-		return Default, nil
-	}
-	if value == nil {
-		return 0, fmt.Errorf("service tier must not be null")
-	}
-	return ParseTier(*value)
-}

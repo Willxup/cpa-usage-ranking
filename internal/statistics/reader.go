@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"cpa-usage-ranking/internal/models"
 	"cpa-usage-ranking/internal/periods"
 	"cpa-usage-ranking/internal/reports"
 )
@@ -25,12 +24,11 @@ var (
 )
 
 // Selection 指定一种视角；日期仅用于选择包含它的 UTC 周期。
-// 全模型合计是 ModelID=0、Tier=0 的独立视角，不能与明细相加。
+// 全模型合计是 ModelID=0 的独立视角，不能与明细相加。
 type Selection struct {
 	Kind    string
 	Day     string
 	ModelID int64
-	Tier    models.Tier
 	Public  bool // 同一快照内读取资料，在评分前排除禁用和已下榜身份。
 }
 
@@ -62,7 +60,7 @@ func NewReader(db *sql.DB, maxCandidates int, timeout time.Duration) (*Reader, e
 // 已结日摘要只有全模型合计，因此日视角不支持模型明细，即使该日尚未日结。
 func (r *Reader) Read(ctx context.Context, s Selection) (Snapshot, error) {
 	bounds, err := periods.ForDay(s.Day)
-	if err != nil || s.ModelID < 0 || s.Tier > models.Flex || (s.ModelID == 0 && s.Tier != models.Default) {
+	if err != nil || s.ModelID < 0 {
 		return Snapshot{}, ErrInvalidSelection
 	}
 	result := Snapshot{Kind: s.Kind}
@@ -109,12 +107,12 @@ func (r *Reader) Read(ctx context.Context, s Selection) (Snapshot, error) {
 		columns += `,c.display_name,c.avatar_id`
 		join = ` JOIN clients c ON c.id=s.client_id AND c.disabled=0 AND c.ranking_hidden=0`
 	}
-	query := `SELECT ` + columns + ` FROM period_stats s` + join + ` WHERE s.kind=? AND s.model_id=? AND s.tier=?`
+	query := `SELECT ` + columns + ` FROM period_stats s` + join + ` WHERE s.kind=? AND s.model_id=?`
 	kind := s.Kind
 	if kind == periods.Year {
 		kind = periods.Month
 	}
-	args := []any{kind, s.ModelID, s.Tier}
+	args := []any{kind, s.ModelID}
 	if s.Kind == periods.Year {
 		query += ` AND s.start_day>=? AND s.start_day<?`
 		args = append(args, result.Start, result.End)
@@ -125,8 +123,8 @@ func (r *Reader) Read(ctx context.Context, s Selection) (Snapshot, error) {
 	if err := r.merge(ctx, tx, &result, query, args...); err != nil {
 		return Snapshot{}, err
 	}
-	query = `SELECT ` + columns + ` FROM daily_stats s` + join + ` WHERE s.model_id=? AND s.tier=?`
-	args = []any{s.ModelID, s.Tier}
+	query = `SELECT ` + columns + ` FROM daily_stats s` + join + ` WHERE s.model_id=?`
+	args = []any{s.ModelID}
 	if s.Kind != periods.All {
 		query += ` AND s.day>=? AND s.day<?`
 		args = append(args, result.Start, result.End)

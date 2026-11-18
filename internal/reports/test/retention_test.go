@@ -14,9 +14,9 @@ import (
 	"cpa-usage-ranking/internal/storage"
 )
 
-func periodFixture(t *testing.T, db *storage.DB, kind, day string, id, model, tier int64) {
+func periodFixture(t *testing.T, db *storage.DB, kind, day string, id, model int64) {
 	t.Helper()
-	if _, err := db.Writer.Exec(`INSERT INTO period_stats VALUES(?,?,?,?,?,4,4,0,0,0,0,1,1,1,1,0,0)`, kind, day, model, tier, id); err != nil {
+	if _, err := db.Writer.Exec(`INSERT INTO period_stats VALUES(?,?,?,?,4,4,0,0,0,0,1,1,1,1,0,0)`, kind, day, model, id); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -26,14 +26,14 @@ func TestRetentionUTCInclusiveBoundariesAndSourceProtection(t *testing.T) {
 	id := seedClosedReports(t, db, 1)[0]
 	ctx := context.Background()
 	for _, day := range []string{"2026-10-14", "2026-10-15", "2026-10-16", "2026-11-15"} {
-		periodFixture(t, db, periods.Day, day, id, 0, 0)
+		periodFixture(t, db, periods.Day, day, id, 0)
 	}
 	for _, day := range []string{"2026-10-19", "2026-10-26", "2026-11-02", "2026-11-09"} {
-		periodFixture(t, db, periods.Week, day, id, 0, 0)
-		periodFixture(t, db, periods.Week, day, id, 1, 1)
+		periodFixture(t, db, periods.Week, day, id, 0)
+		periodFixture(t, db, periods.Week, day, id, 1)
 	}
-	periodFixture(t, db, periods.Month, "2026-01-01", id, 0, 0)
-	periodFixture(t, db, periods.All, periods.AllStart, id, 0, 0)
+	periodFixture(t, db, periods.Month, "2026-01-01", id, 0)
+	periodFixture(t, db, periods.All, periods.AllStart, id, 0)
 	now := instant("2026-11-15T23:59:59Z")
 	for _, kind := range []string{periods.Day, periods.Week} {
 		n, err := reports.Prune(ctx, db.Writer, now, 31, kind, 1)
@@ -90,10 +90,10 @@ func TestRetentionYearBoundaryAndConfigurableDays(t *testing.T) {
 	db := reportDB(t)
 	id := createReportClient(t, db)
 	for _, day := range []string{"2026-12-30", "2026-12-31", "2027-01-01"} {
-		periodFixture(t, db, periods.Day, day, id, 0, 0)
+		periodFixture(t, db, periods.Day, day, id, 0)
 	}
 	for _, day := range []string{"2026-12-21", "2026-12-28", "2027-01-04"} {
-		periodFixture(t, db, periods.Week, day, id, 0, 0)
+		periodFixture(t, db, periods.Week, day, id, 0)
 	}
 	ctx := context.Background()
 	now := instant("2027-01-04T00:00:00Z")
@@ -114,7 +114,7 @@ func TestRetentionYearBoundaryAndConfigurableDays(t *testing.T) {
 func TestRetentionRollbackAndExternalLockCancellation(t *testing.T) {
 	db := reportDB(t)
 	id := createReportClient(t, db)
-	periodFixture(t, db, periods.Day, "2026-01-01", id, 0, 0)
+	periodFixture(t, db, periods.Day, "2026-01-01", id, 0)
 	ctx := context.Background()
 	if _, err := db.Writer.Exec(`CREATE TRIGGER fail BEFORE DELETE ON period_stats BEGIN SELECT RAISE(ABORT,'delete failure'); END`); err != nil {
 		t.Fatal(err)
@@ -183,9 +183,9 @@ func TestMaintenanceSchedulesRetention(t *testing.T) {
 	id := createReportClient(t, db)
 	old := time.Now().UTC().AddDate(0, 0, -90).Format("2006-01-02")
 	for _, kind := range []string{periods.Day, periods.Week} {
-		periodFixture(t, db, kind, old, id, 0, 0)
+		periodFixture(t, db, kind, old, id, 0)
 	}
-	periodFixture(t, db, periods.Month, "2020-01-01", id, 0, 0)
+	periodFixture(t, db, periods.Month, "2020-01-01", id, 0)
 	opts := reports.DefaultMaintenanceOptions()
 	opts.Interval = 20 * time.Millisecond
 	opts.ObservationInterval = 100 * time.Millisecond

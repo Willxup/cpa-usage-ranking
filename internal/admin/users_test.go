@@ -19,7 +19,7 @@ func seedRankedUsers(t *testing.T, s *Service) {
 	t.Helper()
 	_, err := s.writer.Exec(`INSERT INTO clients(id,token_hash,display_name,avatar_id,created_at_ms) VALUES(1,randomblob(32),'one',1,123),(2,randomblob(32),'two',2,456);
 	INSERT INTO daily_reports VALUES('2026-11-17',1,7,zeroblob(32),789),('2026-11-18',1,8,zeroblob(32),789),('2026-11-17',2,7,zeroblob(32),789),('2026-11-18',2,8,zeroblob(32),789);
-	INSERT INTO daily_stats SELECT day,client_id,0,0,1500,1000,500,200,0,0,100,90,10000,100,20000,100 FROM daily_reports`)
+	INSERT INTO daily_stats SELECT day,client_id,0,1500,1000,500,200,0,0,100,90,10000,100,20000,100 FROM daily_reports`)
 	if err != nil {
 		t.Fatal(err)
 	}

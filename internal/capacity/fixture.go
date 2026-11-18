@@ -234,12 +234,12 @@ func seed(ctx context.Context, path, catalogPath string, clients, historyDays, b
 				return e
 			}
 			defer rs.Close()
-			ds, e := tx.PrepareContext(ctx, `INSERT INTO daily_stats(day,client_id,model_id,tier,`+metricColumns+`) VALUES(?,?,?,?,`+metricPlaceholders+`)`)
+			ds, e := tx.PrepareContext(ctx, `INSERT INTO daily_stats(day,client_id,model_id,`+metricColumns+`) VALUES(?,?,?,`+metricPlaceholders+`)`)
 			if e != nil {
 				return e
 			}
 			defer ds.Close()
-			ps, e := tx.PrepareContext(ctx, `INSERT INTO period_stats(kind,start_day,client_id,model_id,tier,`+metricColumns+`) VALUES(?,?,?,?,?,`+metricPlaceholders+`)`)
+			ps, e := tx.PrepareContext(ctx, `INSERT INTO period_stats(kind,start_day,client_id,model_id,`+metricColumns+`) VALUES(?,?,?,?,`+metricPlaceholders+`)`)
 			if e != nil {
 				return e
 			}
@@ -279,18 +279,13 @@ func seed(ctx context.Context, path, catalogPath string, clients, historyDays, b
 						for k := range dayRows {
 							dayKeys = append(dayKeys, k)
 						}
-						sort.Slice(dayKeys, func(i, j int) bool {
-							if dayKeys[i].ModelID != dayKeys[j].ModelID {
-								return dayKeys[i].ModelID < dayKeys[j].ModelID
-							}
-							return dayKeys[i].Tier < dayKeys[j].Tier
-						})
+						sort.Slice(dayKeys, func(i, j int) bool { return dayKeys[i].ModelID < dayKeys[j].ModelID })
 					}
 					if _, e = rs.ExecContext(ctx, date, id, dayDigest[:], now.UnixMilli()); e != nil {
 						return e
 					}
 					for _, k := range dayKeys {
-						args := append([]any{date, id, k.ModelID, k.Tier}, metricValues(dayRows[k], 1)...)
+						args := append([]any{date, id, k.ModelID}, metricValues(dayRows[k], 1)...)
 						if _, e = ds.ExecContext(ctx, args...); e != nil {
 							return e
 						}
@@ -308,7 +303,7 @@ func seed(ctx context.Context, path, catalogPath string, clients, historyDays, b
 						if p.kind == "day" && k.ModelID != 0 {
 							continue
 						}
-						args := append([]any{p.kind, p.start, id, k.ModelID, k.Tier}, metricValues(rows[k], factors[p])...)
+						args := append([]any{p.kind, p.start, id, k.ModelID}, metricValues(rows[k], factors[p])...)
 						if _, e = ps.ExecContext(ctx, args...); e != nil {
 							return e
 						}

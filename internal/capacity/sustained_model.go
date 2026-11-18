@@ -16,7 +16,7 @@ import (
 
 // SustainedModelVersion identifies the fixed synthetic distribution. Changing
 // any draw or its order requires a new version, not an in-place retuning.
-const SustainedModelVersion = "synthetic-sustained-v1"
+const SustainedModelVersion = "synthetic-sustained-v2"
 
 // splitMix is specified here rather than depending on a runtime RNG's future
 // implementation. It is for reproducible synthetic data, not credentials.
@@ -33,7 +33,6 @@ func (r *splitMix) intn(n int) int { return int(r.next() % uint64(n)) }
 
 type syntheticKey struct {
 	model int
-	tier  string
 }
 
 type syntheticMetric struct {
@@ -61,11 +60,10 @@ type syntheticClient struct {
 }
 
 // SustainedDelta is an incremental, independently reconstructible event. The
-// two averages are fixed for a client/day/model/tier and apply to the sample
+// two averages are fixed for a client/day/model and apply to the sample
 // counts in this delta. All counts are nonnegative.
 type SustainedDelta struct {
 	Model            string `json:"model"`
-	Tier             string `json:"tier"`
 	TotalTokens      int64  `json:"total_tokens"`
 	InputTokens      int64  `json:"input_tokens"`
 	OutputTokens     int64  `json:"output_tokens"`
@@ -226,7 +224,7 @@ func addSynthetic(a *syntheticMetric, b syntheticMetric) {
 
 func (m *SustainedModel) appendRow(day *syntheticDay) {
 	// A catalog of at least 48 models and a maximum of 48 rows leave ample
-	// unused pairs. The deterministic fallback also makes this loop bounded.
+	// unused models. The deterministic fallback also makes this loop bounded.
 	var key syntheticKey
 	found := false
 	for tries := 0; tries < 256 && !found; tries++ {
@@ -235,25 +233,14 @@ func (m *SustainedModel) appendRow(day *syntheticDay) {
 		if m.rng.intn(100) >= 80 {
 			model = hotCount + m.rng.intn(len(m.models)-hotCount)
 		}
-		tier := "default"
-		if x := m.rng.intn(100); x >= 95 {
-			tier = "flex"
-		} else if x >= 90 {
-			tier = "priority"
-		}
-		key = syntheticKey{model, tier}
+		key = syntheticKey{model}
 		found = !hasSyntheticKey(day.rows, key)
 	}
 	if !found {
 		for i := range m.models {
-			for _, tier := range []string{"default", "priority", "flex"} {
-				key = syntheticKey{i, tier}
-				if !hasSyntheticKey(day.rows, key) {
-					found = true
-					break
-				}
-			}
-			if found {
+			key = syntheticKey{i}
+			if !hasSyntheticKey(day.rows, key) {
+				found = true
 				break
 			}
 		}
@@ -365,7 +352,7 @@ func (m *SustainedModel) Next() (SustainedTask, error) {
 		row := &d.rows[idx]
 		v := deltas[i]
 		addSynthetic(&row.syntheticMetric, v)
-		changes = append(changes, SustainedDelta{Model: m.models[row.key.model], Tier: row.key.tier, TotalTokens: v.TotalTokens, InputTokens: v.InputTokens, OutputTokens: v.OutputTokens, CacheReadTokens: v.CacheReadTokens, CacheWriteTokens: v.CacheWriteTokens, ReasoningTokens: v.ReasoningTokens, RequestCount: v.RequestCount, SuccessCount: v.SuccessCount, TTFTAvgMS: row.TTFTAvgMS, TTFTSamples: v.TTFTSamples, LatencyAvgMS: row.LatencyAvgMS, LatencySamples: v.LatencySamples})
+		changes = append(changes, SustainedDelta{Model: m.models[row.key.model], TotalTokens: v.TotalTokens, InputTokens: v.InputTokens, OutputTokens: v.OutputTokens, CacheReadTokens: v.CacheReadTokens, CacheWriteTokens: v.CacheWriteTokens, ReasoningTokens: v.ReasoningTokens, RequestCount: v.RequestCount, SuccessCount: v.SuccessCount, TTFTAvgMS: row.TTFTAvgMS, TTFTSamples: v.TTFTSamples, LatencyAvgMS: row.LatencyAvgMS, LatencySamples: v.LatencySamples})
 	}
 	d.revision++
 	body, err := m.body(d)
@@ -394,7 +381,6 @@ func (m *SustainedModel) weightedRow(day *syntheticDay, choices []int) int {
 
 type syntheticItem struct {
 	Model            string   `json:"model"`
-	Tier             string   `json:"service_tier"`
 	TotalTokens      string   `json:"total_tokens"`
 	InputTokens      string   `json:"input_tokens"`
 	OutputTokens     string   `json:"output_tokens"`
@@ -413,7 +399,7 @@ func (m *SustainedModel) body(day *syntheticDay) (json.RawMessage, error) {
 	items := make([]syntheticItem, 0, len(day.rows))
 	str := func(n int64) string { return strconv.FormatInt(n, 10) }
 	for _, r := range day.rows {
-		item := syntheticItem{Model: m.models[r.key.model], Tier: r.key.tier, TotalTokens: str(r.TotalTokens), InputTokens: str(r.InputTokens), OutputTokens: str(r.OutputTokens), CacheReadTokens: str(r.CacheReadTokens), CacheWriteTokens: str(r.CacheWriteTokens), ReasoningTokens: str(r.ReasoningTokens), RequestCount: str(r.RequestCount), SuccessCount: str(r.SuccessCount), TTFTSamples: str(r.TTFTSamples), LatencySamples: str(r.LatencySamples)}
+		item := syntheticItem{Model: m.models[r.key.model], TotalTokens: str(r.TotalTokens), InputTokens: str(r.InputTokens), OutputTokens: str(r.OutputTokens), CacheReadTokens: str(r.CacheReadTokens), CacheWriteTokens: str(r.CacheWriteTokens), ReasoningTokens: str(r.ReasoningTokens), RequestCount: str(r.RequestCount), SuccessCount: str(r.SuccessCount), TTFTSamples: str(r.TTFTSamples), LatencySamples: str(r.LatencySamples)}
 		if r.TTFTSamples > 0 {
 			v := float64(r.TTFTAvgMS)
 			item.TTFTAvgMS = &v

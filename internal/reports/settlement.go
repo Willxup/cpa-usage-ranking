@@ -77,7 +77,7 @@ func finalizeOnce(ctx context.Context, conn *sql.Conn, bounds periods.Boundaries
 func mergePeriod(ctx context.Context, tx *sql.Tx, kind, start string, clientID int64, key Key, source Metrics) error {
 	var existing Metrics
 	err := tx.QueryRowContext(ctx, `SELECT total_tokens,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,reasoning_tokens,request_count,success_count,ttft_sum_ms,ttft_samples,latency_sum_ms,latency_samples
-		FROM period_stats WHERE kind=? AND start_day=? AND model_id=? AND tier=? AND client_id=?`, kind, start, key.ModelID, key.Tier, clientID).
+		FROM period_stats WHERE kind=? AND start_day=? AND model_id=? AND client_id=?`, kind, start, key.ModelID, clientID).
 		Scan(&existing.TotalTokens, &existing.InputTokens, &existing.OutputTokens, &existing.CacheReadTokens, &existing.CacheWriteTokens, &existing.ReasoningTokens, &existing.RequestCount, &existing.SuccessCount, &existing.TTFTSumMS, &existing.TTFTSamples, &existing.LatencySumMS, &existing.LatencySamples)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("read period: %w", err)
@@ -90,9 +90,9 @@ func mergePeriod(ctx context.Context, tx *sql.Tx, kind, start string, clientID i
 		return insertPeriod(ctx, tx, kind, start, clientID, key, merged)
 	}
 	_, err = tx.ExecContext(ctx, `UPDATE period_stats SET total_tokens=?,input_tokens=?,output_tokens=?,cache_read_tokens=?,cache_write_tokens=?,reasoning_tokens=?,request_count=?,success_count=?,ttft_sum_ms=?,ttft_samples=?,latency_sum_ms=?,latency_samples=?
-		WHERE kind=? AND start_day=? AND model_id=? AND tier=? AND client_id=?`,
+		WHERE kind=? AND start_day=? AND model_id=? AND client_id=?`,
 		merged.TotalTokens, merged.InputTokens, merged.OutputTokens, merged.CacheReadTokens, merged.CacheWriteTokens, merged.ReasoningTokens, merged.RequestCount, merged.SuccessCount, merged.TTFTSumMS, merged.TTFTSamples, merged.LatencySumMS, merged.LatencySamples,
-		kind, start, key.ModelID, key.Tier, clientID)
+		kind, start, key.ModelID, clientID)
 	if err != nil {
 		return fmt.Errorf("update period: %w", err)
 	}
@@ -100,8 +100,8 @@ func mergePeriod(ctx context.Context, tx *sql.Tx, kind, start string, clientID i
 }
 
 func insertPeriod(ctx context.Context, tx *sql.Tx, kind, start string, clientID int64, key Key, m Metrics) error {
-	_, err := tx.ExecContext(ctx, `INSERT INTO period_stats(kind,start_day,model_id,tier,client_id,total_tokens,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,reasoning_tokens,request_count,success_count,ttft_sum_ms,ttft_samples,latency_sum_ms,latency_samples)
-		VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, kind, start, key.ModelID, key.Tier, clientID, m.TotalTokens, m.InputTokens, m.OutputTokens, m.CacheReadTokens, m.CacheWriteTokens, m.ReasoningTokens, m.RequestCount, m.SuccessCount, m.TTFTSumMS, m.TTFTSamples, m.LatencySumMS, m.LatencySamples)
+	_, err := tx.ExecContext(ctx, `INSERT INTO period_stats(kind,start_day,model_id,client_id,total_tokens,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens,reasoning_tokens,request_count,success_count,ttft_sum_ms,ttft_samples,latency_sum_ms,latency_samples)
+		VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, kind, start, key.ModelID, clientID, m.TotalTokens, m.InputTokens, m.OutputTokens, m.CacheReadTokens, m.CacheWriteTokens, m.ReasoningTokens, m.RequestCount, m.SuccessCount, m.TTFTSumMS, m.TTFTSamples, m.LatencySumMS, m.LatencySamples)
 	if err != nil {
 		return fmt.Errorf("insert period: %w", err)
 	}

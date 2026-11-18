@@ -73,11 +73,11 @@ old databases. Use a new database when the schema changes.
 
 `models` stores only IDs and unique canonical names, not aliases or prices.
 `daily_reports` and `daily_stats` use composite primary keys and `WITHOUT ROWID`;
-a partial index supports total-row reads. The total uses model ID 0 and tier 0
-without inserting a model dictionary row; real details use positive model IDs.
-`period_stats` uses `(kind, start_day, model_id, tier, client_id)` and
-`WITHOUT ROWID`. Its daily rows are total-only; other periods keep totals and
-model/tier details separately. Weeks start Monday UTC and months start on day 1
+a partial index supports total-row reads. The total uses model ID 0 without
+a model dictionary row; real details use positive model IDs. `daily_stats`
+uses `(day, client_id, model_id)` and `period_stats` uses
+`(kind, start_day, model_id, client_id)`, both without a tier dimension.
+Its daily rows are total-only; other periods keep totals and model details separately. Weeks start Monday UTC and months start on day 1
 UTC, both with inclusive starts and exclusive ends. Cumulative rows use the
 fixed internal start `0001-01-01`. Each row stores the same 12 sums and counts,
 not averages. Totals and details are alternative views and must not be summed together.
@@ -86,7 +86,7 @@ Internal candidate reads combine one period's finalized rows with all unsettled
 rows in that UTC period, in a single read-only SQLite transaction. Cumulative
 reads include the full backlog. The transaction ends before derived processing;
 reads time out independently and reject overflow or more than 100,000 clients
-per candidate view. All-model totals and individual model/tier views are
+per candidate view. All-model totals and individual model views are
 separate. Daily views support totals only, because finalized model-level daily
 rows are not retained. Annual views combine finalized monthly rows with the year's unsettled daily rows in the same transaction. Public builds also read profiles and filter disabled clients in that snapshot. The limit is not a verified client-capacity claim.
 

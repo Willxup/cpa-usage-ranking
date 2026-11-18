@@ -31,7 +31,7 @@ current reporting window. The fixture prepopulates identities, today/yesterday
 snapshots and synthetic historical period aggregates; historical prefill is
 not evidence of actual settlement. `--backlog` retains the newest closed day
 as pending source data for that many identities so the real service can
-finalize it. Eight catalog models and default tiers are used.
+finalize it. Eight catalog models are used.
 
 Start a separate test service against a **copy** of the closed seed database,
 with its own data directory, origin and resource controls. After readiness and
@@ -209,11 +209,10 @@ Each task is a frozen full snapshot and independently reconstructible per-row
 delta. Approximately 1% of tasks introduce a new identity through real
 registration; that task is counted as pending while registration is outstanding.
 About 10% of identities are hot and receive half of existing-identity selections.
-Client classes are 60/30/10 percent light/medium/heavy. Their per-client model-tier
+Client classes are 60/30/10 percent light/medium/heavy. Their per-client model
 row limits are drawn from 1–4/5–16/17–48 respectively; actual daily snapshots
 can contain fewer rows and grow with updates. Task days are approximately 90/10 today/yesterday;
-calls per update are 80% 1–3, 18% 4–20 and 2% 21–100. Model selection and
-service tiers are skewed toward hot models and default tier respectively; see
+calls per update are 80% 1–3, 18% 4–20 and 2% 21–100. Model selection is skewed toward hot models; see
 `internal/capacity/sustained_model.go` for the fixed, versioned draw sequence.
 These are synthetic assumptions, not a measured production distribution.
 
@@ -260,7 +259,7 @@ not establish capacity or replace independent inspection of the raw evidence.
 After full verification, `summarize-sustained --journal ... --models ...` reads
 the same plain or gzip journal sequentially and reports per-created-stage body
 size, model-row count, changed-row count, confirmation delay, identities touched,
-today/yesterday split, model/tier calls and attempt counts. A task confirmed in
+today/yesterday split, model calls and attempt counts. A task confirmed in
 a later stage remains attributed to its creation stage; use cumulative live
 samples and stage assessments for actual time-window arrival and confirmation
 rates. Nearest-rank body percentiles are upper bounds in 16-byte buckets;

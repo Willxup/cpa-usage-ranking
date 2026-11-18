@@ -27,7 +27,7 @@ func TestWriterDeadlineInterruptsSQLiteWriteLock(t *testing.T) {
 	client := createReportClient(t, db)
 	store := reports.NewStore(db.Writer, registry, func() time.Time { return instant("2026-11-01T12:00:00Z") })
 	day := "2026-11-01"
-	if _, err := store.Apply(context.Background(), client, day, prepared(t, 1, usage("alpha", 0, 1, 1, 1))); err != nil {
+	if _, err := store.Apply(context.Background(), client, day, prepared(t, 1, usage("alpha", 1, 1, 1))); err != nil {
 		t.Fatal(err)
 	}
 	writer, err := reports.NewWriter(store, reports.WriterOptions{QueueCapacity: 1, TransactionTimeout: 200 * time.Millisecond})
@@ -44,7 +44,7 @@ func TestWriterDeadlineInterruptsSQLiteWriteLock(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer lock.Exec("ROLLBACK")
-	result, err := writer.Enqueue(context.Background(), client, day, prepared(t, 2, usage("alpha", 0, 2, 1, 1)))
+	result, err := writer.Enqueue(context.Background(), client, day, prepared(t, 2, usage("alpha", 2, 1, 1)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +95,7 @@ func TestSQLiteLockReleaseAndWriterShutdown(t *testing.T) {
 	}
 	defer lock.Exec("ROLLBACK")
 	day := "2026-11-01"
-	first, err := writer.Enqueue(context.Background(), client, day, prepared(t, 1, usage("alpha", 0, 1, 1, 1)))
+	first, err := writer.Enqueue(context.Background(), client, day, prepared(t, 1, usage("alpha", 1, 1, 1)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +113,7 @@ func TestSQLiteLockReleaseAndWriterShutdown(t *testing.T) {
 	if _, err := lock.Exec("BEGIN IMMEDIATE"); err != nil {
 		t.Fatal(err)
 	}
-	second, err := writer.Enqueue(context.Background(), client, day, prepared(t, 2, usage("alpha", 0, 2, 1, 1)))
+	second, err := writer.Enqueue(context.Background(), client, day, prepared(t, 2, usage("alpha", 2, 1, 1)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +148,7 @@ func TestSQLiteInFlightTransactionCancellationRollsBack(t *testing.T) {
 	client := createReportClient(t, db)
 	store := reports.NewStore(db.Writer, registry, func() time.Time { return instant("2026-11-01T12:00:00Z") })
 	day := "2026-11-01"
-	if _, err := store.Apply(context.Background(), client, day, prepared(t, 1, usage("alpha", 0, 1, 1, 1))); err != nil {
+	if _, err := store.Apply(context.Background(), client, day, prepared(t, 1, usage("alpha", 1, 1, 1))); err != nil {
 		t.Fatal(err)
 	}
 	// 测试回调确认事务已更新元数据及合计，再让真实 SQLite 语句运行至关停中断。
@@ -179,7 +179,7 @@ func TestSQLiteInFlightTransactionCancellationRollsBack(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer writer.Close(context.Background())
-	result, err := writer.Enqueue(context.Background(), client, day, prepared(t, 2, usage("alpha", 0, 2, 1, 1)))
+	result, err := writer.Enqueue(context.Background(), client, day, prepared(t, 2, usage("alpha", 2, 1, 1)))
 	if err != nil {
 		t.Fatal(err)
 	}

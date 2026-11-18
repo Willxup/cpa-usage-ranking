@@ -150,7 +150,7 @@ func TestExcludedSamplesAreFilteredBeforeCandidateLimitAndScoring(t *testing.T) 
 	_, err := db.Writer.Exec(`WITH RECURSIVE ids(n) AS (SELECT 1 UNION ALL SELECT n+1 FROM ids WHERE n<120)
 	INSERT INTO clients(id,token_hash,display_name,avatar_id,ranking_hidden,created_at_ms) SELECT n,randomblob(32),'candidate-'||n,1,n>2,0 FROM ids;
 	INSERT INTO daily_reports SELECT '2026-11-18',id,1,zeroblob(32),0 FROM clients;
-	INSERT INTO daily_stats SELECT '2026-11-18',id,0,0,id*1000,id*1000,0,100,0,0,100,90,id*100,100,10000,100 FROM clients`)
+	INSERT INTO daily_stats SELECT '2026-11-18',id,0,id*1000,id*1000,0,100,0,0,100,90,id*100,100,10000,100 FROM clients`)
 	if err != nil {
 		t.Fatal(err)
 	}

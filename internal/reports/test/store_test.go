@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"cpa-usage-ranking/internal/models"
 	"cpa-usage-ranking/internal/reports"
 	"cpa-usage-ranking/internal/storage"
 )
@@ -52,7 +51,7 @@ func TestAtomicReplacementDiffsAndEmptySnapshots(t *testing.T) {
 	now := instant("2026-11-01T12:00:00Z")
 	store := reports.NewStore(db.Writer, registry, func() time.Time { return now })
 	ctx, day := context.Background(), "2026-11-01"
-	alpha, beta := usage("alpha", 0, 10, 2, 3), usage("beta", 0, 20, 1, 4)
+	alpha, beta := usage("alpha", 10, 2, 3), usage("beta", 20, 1, 4)
 	first := prepared(t, 1, alpha, beta)
 	if revision, err := store.Apply(ctx, client, day, first); err != nil || revision != 1 {
 		t.Fatalf("first apply: %d %v", revision, err)
@@ -100,7 +99,7 @@ func TestAtomicReplacementDiffsAndEmptySnapshots(t *testing.T) {
 	if scalar(t, db.Reader, `SELECT total_tokens FROM daily_stats WHERE day=? AND client_id=? AND model_id=0`, day, client) != 3 || scalar(t, db.Reader, `SELECT total_tokens FROM daily_stats WHERE day=? AND client_id=? AND model_id=0`, day, second) != 10 {
 		t.Fatal("decrease or client isolation failed")
 	}
-	if _, err := store.Apply(ctx, client, day, prepared(t, 10, usage("unknown", 0, 4, 1, 1))); err != nil {
+	if _, err := store.Apply(ctx, client, day, prepared(t, 10, usage("unknown", 4, 1, 1))); err != nil {
 		t.Fatal(err)
 	}
 	if scalar(t, db.Reader, `SELECT COUNT(*) FROM daily_stats WHERE day=? AND client_id=?`, day, client) != 0 || scalar(t, db.Reader, `SELECT revision FROM daily_reports WHERE day=? AND client_id=?`, day, client) != 10 {
@@ -119,7 +118,7 @@ func TestIdempotentRetryDoesNotAggregateNewCatalog(t *testing.T) {
 	old := reportRegistry(t, db, `{"model_name":"alpha","alias":[],"prices":{}}`)
 	client := createReportClient(t, db)
 	clock := func() time.Time { return instant("2026-11-01T12:00:00Z") }
-	input := []reports.Item{usage("new1", 0, math.MaxInt64, 1, 1), usage("new2", 0, math.MaxInt64, 1, 1)}
+	input := []reports.Item{usage("new1", math.MaxInt64, 1, 1), usage("new2", math.MaxInt64, 1, 1)}
 	p := prepared(t, 3, input...)
 	if _, err := reports.NewStore(db.Writer, old, clock).Apply(context.Background(), client, "2026-11-01", p); err != nil {
 		t.Fatal(err)
@@ -143,13 +142,13 @@ func TestSQLiteFailureRollsBackVersionAndEveryRow(t *testing.T) {
 	client := createReportClient(t, db)
 	store := reports.NewStore(db.Writer, registry, func() time.Time { return instant("2026-11-01T12:00:00Z") })
 	ctx, day := context.Background(), "2026-11-01"
-	if _, err := store.Apply(ctx, client, day, prepared(t, 1, usage("alpha", 0, 10, 1, 1))); err != nil {
+	if _, err := store.Apply(ctx, client, day, prepared(t, 1, usage("alpha", 10, 1, 1))); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := db.Writer.Exec(`CREATE TRIGGER fail_detail BEFORE UPDATE ON daily_stats WHEN NEW.model_id > 0 BEGIN SELECT RAISE(ABORT,'injected'); END`); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.Apply(ctx, client, day, prepared(t, 2, usage("alpha", 0, 20, 1, 1))); err == nil {
+	if _, err := store.Apply(ctx, client, day, prepared(t, 2, usage("alpha", 20, 1, 1))); err == nil {
 		t.Fatal("injected SQLite failure reported success")
 	}
 	if scalar(t, db.Reader, `SELECT revision FROM daily_reports WHERE client_id=?`, client) != 1 || scalar(t, db.Reader, `SELECT SUM(total_tokens) FROM daily_stats WHERE client_id=?`, client) != 20 {
@@ -167,7 +166,7 @@ func TestConcurrentRevisionsDisabledAndCancellation(t *testing.T) {
 	var wg sync.WaitGroup
 	errs := make([]error, n)
 	for i := range n {
-		p := prepared(t, int64(i), usage("alpha", models.Default, int64(i+1), 1, 1))
+		p := prepared(t, int64(i), usage("alpha", int64(i+1), 1, 1))
 		wg.Add(1)
 		go func() { defer wg.Done(); _, errs[i] = store.Apply(ctx, client, day, p) }()
 	}
@@ -210,7 +209,7 @@ func TestTransactionCrossingMidnightDoesNotCommit(t *testing.T) {
 		}
 		return after
 	})
-	_, err := store.Apply(context.Background(), client, "2026-10-30", prepared(t, 1, usage("alpha", 0, 5, 1, 1)))
+	_, err := store.Apply(context.Background(), client, "2026-10-30", prepared(t, 1, usage("alpha", 5, 1, 1)))
 	if !errors.Is(err, reports.ErrExpiredDay) {
 		t.Fatalf("cross-midnight write: %v", err)
 	}

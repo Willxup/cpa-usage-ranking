@@ -9,8 +9,6 @@ import (
 	"io"
 	"strconv"
 	"unicode/utf8"
-
-	"cpa-usage-ranking/internal/models"
 )
 
 var ErrInvalid = errors.New("invalid report")
@@ -24,7 +22,6 @@ type Report struct {
 
 type Item struct {
 	Model            string
-	Tier             models.Tier
 	TotalTokens      int64
 	InputTokens      int64
 	OutputTokens     int64
@@ -46,7 +43,7 @@ func Decode(data []byte) (Report, error) {
 }
 
 // DecodeLimited bounds items before individual item decoding. The limit applies
-// to raw entries, not post-catalog model/tier combinations.
+// to raw entries, not post-catalog models.
 func DecodeLimited(data []byte, maxItems int) (Report, error) {
 	if maxItems <= 0 {
 		return Report{}, ErrInvalid
@@ -93,7 +90,7 @@ func decode(data []byte, maxItems int) (Report, error) {
 }
 
 func decodeItem(data []byte) (Item, error) {
-	obj, err := object(data, "model", "service_tier", "total_tokens", "input_tokens", "output_tokens",
+	obj, err := object(data, "model", "total_tokens", "input_tokens", "output_tokens",
 		"cache_read_tokens", "cache_write_tokens", "reasoning_tokens", "request_count", "success_count",
 		"ttft_avg_ms", "ttft_samples", "latency_avg_ms", "latency_samples")
 	if err != nil {
@@ -101,19 +98,6 @@ func decodeItem(data []byte) (Item, error) {
 	}
 	var item Item
 	if raw, ok := obj["model"]; !ok || isNull(raw) || json.Unmarshal(raw, &item.Model) != nil || !validUnicodeEscapes(raw) {
-		return Item{}, ErrInvalid
-	}
-	var tier *string
-	rawTier, present := obj["service_tier"]
-	if present && !isNull(rawTier) {
-		var text string
-		if json.Unmarshal(rawTier, &text) != nil {
-			return Item{}, ErrInvalid
-		}
-		tier = &text
-	}
-	item.Tier, err = models.ReportedTier(present, tier)
-	if err != nil {
 		return Item{}, ErrInvalid
 	}
 	for _, field := range []struct {

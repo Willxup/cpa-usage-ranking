@@ -41,7 +41,6 @@ type SustainedStageStatistics struct {
 	ChangedRows      SustainedQuantiles `json:"changed_rows"`
 	ConfirmDelayMS   SustainedQuantiles `json:"confirm_delay_ms"`
 	DelayOverHour    int64              `json:"delay_over_one_hour"`
-	TierCalls        map[string]int64   `json:"tier_calls"`
 	ModelCalls       map[string]int64   `json:"model_calls"`
 }
 
@@ -205,7 +204,7 @@ func SummarizeSustained(path string, models []string, maxPending int, migrationP
 				}
 				current = len(stages)
 				stageByName[r.Command.Stage] = current
-				stages = append(stages, sustainedStageStats{result: SustainedStageStatistics{Stage: r.Command.Stage, Rate: r.Command.Rate, TierCalls: map[string]int64{}, ModelCalls: map[string]int64{}}, body: sustainedDistribution{}, rows: sustainedDistribution{}, changed: sustainedDistribution{}, latency: sustainedDistribution{}})
+				stages = append(stages, sustainedStageStats{result: SustainedStageStatistics{Stage: r.Command.Stage, Rate: r.Command.Rate, ModelCalls: map[string]int64{}}, body: sustainedDistribution{}, rows: sustainedDistribution{}, changed: sustainedDistribution{}, latency: sustainedDistribution{}})
 			}
 		case "created":
 			if current < 0 || r.Task == nil || r.Task.Client <= 0 || r.PlannedUnixNS <= 0 || (r.Source != "arrival" && r.Source != "debt") || len(pending) >= maxPending {
@@ -258,10 +257,9 @@ func SummarizeSustained(path string, models []string, maxPending int, migrationP
 				return out, errors.New("invalid summary delta count")
 			}
 			for _, delta := range r.Task.Deltas {
-				if !modelSet[delta.Model] || (delta.Tier != "default" && delta.Tier != "priority" && delta.Tier != "flex") || delta.RequestCount < 1 || s.result.TierCalls[delta.Tier] > math.MaxInt64-delta.RequestCount || s.result.ModelCalls[delta.Model] > math.MaxInt64-delta.RequestCount {
-					return out, errors.New("invalid or overflowing summary model/tier calls")
+				if !modelSet[delta.Model] || delta.RequestCount < 1 || s.result.ModelCalls[delta.Model] > math.MaxInt64-delta.RequestCount {
+					return out, errors.New("invalid or overflowing summary model calls")
 				}
-				s.result.TierCalls[delta.Tier] += delta.RequestCount
 				s.result.ModelCalls[delta.Model] += delta.RequestCount
 			}
 		case "start":

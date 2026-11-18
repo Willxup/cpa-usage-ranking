@@ -96,35 +96,3 @@ func TestResolveUsesCurrentCatalogNotHistoricalRows(t *testing.T) {
 		t.Fatalf("reintroduced alias lost historical canonical ID: %+v, %v", resolved, err)
 	}
 }
-
-func TestReportedTierDistinguishesOmissionNullAndValues(t *testing.T) {
-	str := func(s string) *string { return &s }
-	cases := []struct {
-		name    string
-		present bool
-		value   *string
-		tier    models.Tier
-		valid   bool
-	}{
-		{"omitted", false, nil, models.Default, true},
-		{"default", true, str("default"), models.Default, true},
-		{"priority", true, str("priority"), models.Priority, true},
-		{"flex", true, str("flex"), models.Flex, true},
-		{"null", true, nil, 0, false},
-		{"empty", true, str(""), 0, false},
-		{"typo", true, str("prority"), 0, false},
-		{"uppercase", true, str("DEFAULT"), 0, false},
-		{"space", true, str(" default"), 0, false},
-	}
-	if models.Default != 0 || models.Priority != 1 || models.Flex != 2 {
-		t.Fatal("tier numeric codes changed")
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			tier, err := models.ReportedTier(tc.present, tc.value)
-			if (err == nil) != tc.valid || (tc.valid && tier != tc.tier) {
-				t.Fatalf("ReportedTier = %v, %v", tier, err)
-			}
-		})
-	}
-}

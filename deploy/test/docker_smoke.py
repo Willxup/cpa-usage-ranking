@@ -253,7 +253,7 @@ class Smoke:
         day = dt.datetime.now(dt.timezone.utc).date().isoformat()
         report_path = "/v1/reports/" + day
         report = {"schema_version": 1, "revision": "7", "items": [{
-            "model": "claude-fable-5", "service_tier": "default", "total_tokens": "120",
+            "model": "claude-fable-5", "total_tokens": "120",
             "input_tokens": "80", "output_tokens": "40", "cache_read_tokens": "60",
             "cache_write_tokens": "5", "reasoning_tokens": "10", "request_count": "2",
             "success_count": "2", "ttft_avg_ms": None, "ttft_samples": "0",
