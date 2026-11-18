@@ -36,6 +36,11 @@ test('keeps public navigation consistent for anonymous and authenticated session
   await page.getByLabel('密码', { exact: true }).fill(credentials.password)
   await page.getByRole('button', { name: '登录', exact: true }).click()
   await expect(page.getByRole('navigation', { name: '控制台导航' })).toBeVisible()
+  const adminBoard = page.getByRole('region', { name: '榜单管理' })
+  for (const period of ['周榜', '月榜']) {
+    await adminBoard.getByRole('button', { name: period, exact: true }).click()
+    await expect(adminBoard.getByRole('heading', { name: `${period} · 综合总榜` })).toBeVisible()
+  }
   await page.getByRole('navigation', { name: '页面导航' }).getByRole('link', { name: '排行榜' }).click()
   await expect.poll(async () => Number(await publicMain.getAttribute('data-enters'))).toBeGreaterThan(0)
   for (const width of [1440, 375]) {
