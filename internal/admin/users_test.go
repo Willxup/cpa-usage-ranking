@@ -25,6 +25,18 @@ func seedRankedUsers(t *testing.T, s *Service) {
 	}
 }
 
+// Synthetic settled rows let the management refresh tests cover complete
+// previous periods as well as the two open daily snapshots.
+func seedPreviousRankedPeriods(t *testing.T, s *Service) {
+	t.Helper()
+	_, err := s.writer.Exec(`INSERT INTO period_stats
+		SELECT 'week','2026-11-09',0,id,1500,1000,500,200,0,0,100,90,10000,100,20000,100 FROM clients
+		UNION ALL SELECT 'month','2026-10-01',0,id,1500,1000,500,200,0,0,100,90,10000,100,20000,100 FROM clients`)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestBanOnlyUpdatesTargetStateAndRechecksDeletedActor(t *testing.T) {
 	ctx := context.Background()
 	s, _ := serviceDB(t)
@@ -128,6 +140,7 @@ func TestBanRefreshesAllPublicBoardsWithoutWaitingForTimer(t *testing.T) {
 	defer cancel()
 	s, db := serviceDB(t)
 	seedRankedUsers(t, s)
+	seedPreviousRankedPeriods(t, s)
 	reader, err := statistics.NewReader(db.Reader, 100, time.Second)
 	if err != nil {
 		t.Fatal(err)

@@ -109,6 +109,7 @@ func TestExclusionRefreshesFiveBoardsSixPeriods(t *testing.T) {
 	defer cancel()
 	s, db := serviceDB(t)
 	seedRankedUsers(t, s)
+	seedPreviousRankedPeriods(t, s)
 	reader, err := statistics.NewReader(db.Reader, 100, time.Second)
 	if err != nil {
 		t.Fatal(err)
