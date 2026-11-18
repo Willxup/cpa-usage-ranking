@@ -45,7 +45,7 @@ go test ./internal/httpserver/test -run '^TestCompleteIngestionLifecycle$'
 
 ## 前端开发
 
-需要 Node.js 24.15+（24.x）和 npm。运行时仅依赖 React 与 React DOM。Tailwind 仅参与构建，统一色彩、字体和焦点样式在 `web/src/styles/tokens.css`；不请求外部字体或图标服务。当前选用的 React Bits 控件仅使用 CSS，不新增动效运行时；固定来源、改动和 MIT + Commons Clause 授权见[第三方源码说明](THIRD_PARTY_NOTICES.md)。
+需要 Node.js 24.15+（24.x）和 npm。运行时仅依赖 React 与 React DOM。Tailwind 仅参与构建，统一色彩、字体和焦点样式在 `web/src/styles/tokens.css`；不请求外部字体或图标服务。仓库包含的 React Bits 源码仅使用 CSS，不新增动效运行时；固定来源、改动和 MIT + Commons Clause 授权见[第三方源码说明](THIRD_PARTY_NOTICES.md)。
 
 ```sh
 npm --prefix web ci
@@ -58,11 +58,11 @@ npm --prefix web run build
 
 页面采用浅色宽屏布局、橙紫点缀和紧凑桌面尺寸，不使用页面 zoom，手机端独立适配。页面提供五榜和今日、昨日、周榜（上一完整 UTC 自然周）、月榜（上一完整 UTC 自然月）四个周期，默认今日，不伪造汇总数字；年度和累计仍由后端维护，但不在页面提供入口。项目图标资源及重新生成方法见[图标说明](docs/brand-icons.md)。
 
-响应式页面提供榜单加载、空态、错误和重试，切换或重试时旧结果始终保留其原榜单、周期和缓存生成时间标签；还有独立的连接状态面板。不伪造名次或用量统计。昵称按文本显示，头像来自服务端目录；缺项使用目录默认头像，加载失败使用中性回退。检测按钮按需调用真实的 `GET /healthz`、校验 JSON 协议，8 秒超时，支持重试，组件卸载时取消请求；不自动轮询。检测成功不代表排名业务就绪。
+响应式页面提供空态、错误和重试，切换或重试时旧结果始终保留其原榜单、周期和缓存生成时间标签；不伪造名次或用量统计。昵称按文本显示，头像来自服务端目录；缺项使用目录默认头像，加载失败使用中性回退。
 
-装饰动效遵循 `prefers-reduced-motion`，控件离屏、禁用或页面隐藏时停止。缺少观察器 API 时降级为静态控件；卸载时移除观察器与监听器。页面不使用 Canvas、WebGL、外部字体或后台 JavaScript 动画循环。
+视图切换过渡遵循 `prefers-reduced-motion`；页面不使用 Canvas、WebGL、外部字体或后台 JavaScript 动画循环。
 
-本地开发时，分别在两个终端执行 `go run ./cmd/ranking` 与 `npm --prefix web run dev`。Vite 绑定回环地址，将健康检查、榜单和头像请求代理到 `http://127.0.0.1:8080`，可通过 `RANKING_DEV_PROXY_TARGET` 修改开发代理目标；无需放宽 CORS 或部署生产 Node 服务。
+本地开发时，分别在两个终端执行 `go run ./cmd/ranking` 与 `npm --prefix web run dev`。Vite 绑定回环地址，将健康检查、就绪检查、榜单、管理后台和头像请求代理到 `http://127.0.0.1:8080`，可通过 `RANKING_DEV_PROXY_TARGET` 修改开发代理目标；无需放宽 CORS 或部署生产 Node 服务。
 
 前端测试及初始化放在 `web/src/**/test/`。由于 lint 解析器支持的 TypeScript 上限低于 6.1，暂使用 6.0。其传递依赖 `minimatch` 单独锁定到 11.0.1，修复 GHSA-g3hv-75wg-m249；上游允许安全版本后应移除该 override。
 
@@ -81,7 +81,7 @@ make run        # 构建后由 Go 在 8080 端口提供页面
 
 `BIN_DIR` 默认 `bin`，`GO_TEST_FLAGS` 默认 `-p 2`，均可覆盖。构建不依赖本地秘密或内部规划文件。前端产物在 `web/dist/assets/third-party-notices.txt` 中包含 React Bits 来源及完整许可，部署时保留该文件。
 
-浏览器测试及配置位于 `web/test/`。`make test-browser` 构建并启动独立 Go 进程，使用回环端口 4187，验证桌面/手机布局、真实健康请求、键盘/触控、减少动效、失败重试、404 边界、66 张头像解码及真实注册/安全重试，然后停止进程；不会接管已有服务。端口占用时可覆盖 `RANKING_TEST_PORT`。产物默认在 `web/test/results/`，可用 `PLAYWRIGHT_OUTPUT_DIR`、`PLAYWRIGHT_BROWSERS_PATH` 调整产物及浏览器下载位置。浏览器检查使用结果目录旁 `databases/<port>/` 中的独立测试库，不访问应用默认数据库。精简 Linux 环境可能需要管理员先补齐 Playwright 的 Chromium 系统依赖。这些冒烟测试不代表已经验证十万客户端容量。
+浏览器测试及配置位于 `web/test/`。`make test-browser` 构建并启动独立 Go 进程，使用回环端口 4187，验证桌面/手机布局、健康与就绪端点、键盘/触控、减少动效、失败重试、404 边界、66 张头像解码及真实注册/安全重试，然后停止进程；不会接管已有服务。端口占用时可覆盖 `RANKING_TEST_PORT`。产物默认在 `web/test/results/`，可用 `PLAYWRIGHT_OUTPUT_DIR`、`PLAYWRIGHT_BROWSERS_PATH` 调整产物及浏览器下载位置。浏览器检查使用结果目录旁 `databases/<port>/` 中的独立测试库，不访问应用默认数据库。精简 Linux 环境可能需要管理员先补齐 Playwright 的 Chromium 系统依赖。这些冒烟测试不代表已经验证十万客户端容量。
 
 Playwright 不再要求精确版本（`@playwright/test: "*"`）。npm 锁文件保留干净安装时的已解析依赖记录，不是运行时版本检查；已有兼容依赖可以直接复用，不必再次执行 `make deps`。浏览器测试不会自动安装浏览器，也不要求项目专属的浏览器 revision。复用已有 Chromium 可执行文件：
 

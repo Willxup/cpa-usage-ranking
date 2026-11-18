@@ -96,26 +96,21 @@ Requires Node.js 24.15+ (24.x) and npm. Runtime dependencies are only React and
 React DOM. Tailwind runs
 at build time. Shared colors, typography and focus styling live in
 `web/src/styles/tokens.css`; no external font or icon services are required.
-The selected React Bits control uses CSS only and adds no animation runtime.
-See [third-party source notices](THIRD_PARTY_NOTICES.md) for its pinned source,
+Bundled CSS-only React Bits source carries no animation runtime;
+see [third-party source notices](THIRD_PARTY_NOTICES.md) for its pinned source,
 local adaptations and MIT + Commons Clause license.
 
 The interface uses a light, wide layout with coral/violet accents and compact
 desktop sizing without page zoom; mobile sizing remains independent. The page reads the real cached views and does not fabricate summaries. Project icons and regeneration details
 are documented in [Brand icons](docs/brand-icons.md).
 
-The responsive page offers five boards and today/yesterday/previous complete UTC week/previous complete UTC month, defaulting to today; yearly and all-time data remain maintained by the backend but have no page controls. It has loading, empty, error and retry states and a separate service-status panel. During a switch or retry, any previous result retains its own board, period and cache-generation label. It does not simulate standings or usage totals. Names are rendered as text; avatars use the server catalog and its default, with a neutral fallback if loading fails. The check button calls the real
-`GET /healthz` endpoint on demand, validates the JSON contract, times out after
-8 seconds, supports retry and cancels requests on unmount. There is no polling.
-A successful check does not mark the ranking business as ready.
+The responsive page offers five boards and today/yesterday/previous complete UTC week/previous complete UTC month, defaulting to today; yearly and all-time data remain maintained by the backend but have no page controls. It has empty, error and retry states; during a switch or retry, any previous result retains its own board, period and cache-generation label. It does not simulate standings or usage totals. Names are rendered as text; avatars use the server catalog and its default, with a neutral fallback if loading fails.
 
-Decorative motion respects `prefers-reduced-motion` and stops when the control
-is offscreen, disabled or the document is hidden. Missing observer APIs fall
-back to a static control. Observers/listeners are removed on unmount; the page
+View transitions respect `prefers-reduced-motion`; the page
 has no canvas, WebGL, external fonts or background JavaScript animation loop.
 
 For local development, run `go run ./cmd/ranking` and `npm --prefix web run dev`
-in separate terminals. Vite binds to loopback and proxies health, leaderboard and avatar endpoints to
+in separate terminals. Vite binds to loopback and proxies health, readiness, leaderboard, admin and avatar endpoints to
 `http://127.0.0.1:8080`; override `RANKING_DEV_PROXY_TARGET` if needed. No CORS
 relaxation or production Node server is required.
 
@@ -153,7 +148,7 @@ React Bits attribution and its complete license at
 
 Browser tests/configuration live in `web/test/`. `make test-browser` builds and
 starts an isolated Go process on loopback port 4187, checks desktop/mobile
-layouts, real health requests, keyboard/touch access, reduced motion, retry
+layouts, health and readiness endpoints, keyboard/touch access, reduced motion, retry
 and 404 boundaries, all 66 avatar decodes and real registration/safe retries,
 then stops the process. It refuses to reuse an existing
 service. Override `RANKING_TEST_PORT` if occupied. Results default to
