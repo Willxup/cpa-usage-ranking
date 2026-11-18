@@ -102,26 +102,18 @@ func (l *RequestLimiter) Admit(source string) error {
 		}
 		return &LimitError{Code: "registration_rate_limited", RetryAfter: until.Sub(now)}
 	}
-	// 全站预算也计算来源超限/容量拒绝，不因下游拒绝退回请求名额。
-	l.global.count++
-	limited := func(code string, until time.Time) error {
-		// 拒绝本次接入也可能刚好耗尽全站预算，重试时间须覆盖两个门槛。
-		if l.global.count >= l.limits.GlobalRequests && l.global.until.After(until) {
-			until = l.global.until
-		}
-		return &LimitError{Code: code, RetryAfter: until.Sub(now)}
-	}
 	if window == nil {
 		if len(l.sources) >= l.limits.MaxSources {
-			return limited("registration_capacity", l.expiry.Front().Value.(*requestWindow).until)
+			return &LimitError{Code: "registration_capacity", RetryAfter: l.expiry.Front().Value.(*requestWindow).until.Sub(now)}
 		}
 		window = &requestWindow{source: source, until: now.Add(l.limits.Window)}
 		l.sources[source] = window
 		l.expiry.PushBack(window)
 	}
 	if window.count >= l.limits.SourceRequests {
-		return limited("registration_rate_limited", window.until)
+		return &LimitError{Code: "registration_rate_limited", RetryAfter: window.until.Sub(now)}
 	}
+	l.global.count++
 	window.count++
 	return nil
 }

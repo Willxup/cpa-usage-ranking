@@ -20,7 +20,7 @@ func requireLimit(t *testing.T, err error, code string, after time.Duration) {
 
 func TestRequestLimitsSourcesGlobalAndExpiry(t *testing.T) {
 	now := time.Date(2026, 11, 9, 23, 59, 30, 0, time.UTC)
-	limits := registration.RequestLimits{SourceRequests: 2, GlobalRequests: 4, Window: time.Minute, MaxSources: 2}
+	limits := registration.RequestLimits{SourceRequests: 2, GlobalRequests: 3, Window: time.Minute, MaxSources: 2}
 	limiter, err := registration.NewRequestLimiter(limits, func() time.Time { return now })
 	if err != nil {
 		t.Fatal(err)
@@ -31,8 +31,10 @@ func TestRequestLimitsSourcesGlobalAndExpiry(t *testing.T) {
 		}
 	}
 	now = now.Add(time.Second / 2)
-	requireLimit(t, limiter.Admit("a"), "registration_rate_limited", time.Minute-time.Second/2)
-	// 失败的第三次请求也消耗全站请求预算，只剩一次。
+	for i := 0; i < 5; i++ {
+		requireLimit(t, limiter.Admit("a"), "registration_rate_limited", time.Minute-time.Second/2)
+	}
+	// 已超单源上限的重复请求不能耗尽其他来源的全站剩余预算。
 	if err := limiter.Admit("b"); err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +99,7 @@ func TestConcurrentRequestAdmission(t *testing.T) {
 
 func TestRequestRetryAfterCoversOverlappingWindows(t *testing.T) {
 	now := time.Date(2026, 11, 9, 0, 0, 0, 0, time.UTC)
-	limiter, err := registration.NewRequestLimiter(registration.RequestLimits{SourceRequests: 1, GlobalRequests: 2, Window: time.Minute, MaxSources: 2}, func() time.Time { return now })
+	limiter, err := registration.NewRequestLimiter(registration.RequestLimits{SourceRequests: 1, GlobalRequests: 2, Window: time.Minute, MaxSources: 3}, func() time.Time { return now })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,10 +110,17 @@ func TestRequestRetryAfterCoversOverlappingWindows(t *testing.T) {
 	if err := limiter.Admit("b"); err != nil {
 		t.Fatal(err)
 	}
+	// 全站窗口仅剩 10s，但 b 的来源窗口还剩 60s，Retry-After 须覆盖两者较晚时间。
+	requireLimit(t, limiter.Admit("b"), "registration_rate_limited", time.Minute)
 	now = now.Add(10 * time.Second)
-	// 全站新窗口为 [60,120)，b 仍在 [50,110) 的有效来源窗口。
+	// 全站新窗口为 [60,120)，b 仍在 [50,110) 的有效来源窗口，且不消耗全站新配额。
 	requireLimit(t, limiter.Admit("b"), "registration_rate_limited", 50*time.Second)
-	// 来源拒绝也耗尽全站第二个名额，Retry-After 不能只等到 110。
+	if err := limiter.Admit("a"); err != nil {
+		t.Fatal(err)
+	}
+	if err := limiter.Admit("c"); err != nil {
+		t.Fatal(err)
+	}
 	requireLimit(t, limiter.Admit("b"), "registration_rate_limited", time.Minute)
 }
 
