@@ -55,9 +55,17 @@ func Derive(m reports.Metrics) (Derived, error) {
 			d.OutputRateExcludingTTFTPerSecond = ratio(float64(m.OutputTokens)*1000, m.LatencySumMS-m.TTFTSumMS)
 		}
 	}
-	if (d.OutputRatePerSecond.Valid && !finiteNonnegative(d.OutputRatePerSecond.Value)) ||
-		(d.OutputRateExcludingTTFTPerSecond.Valid && !finiteNonnegative(d.OutputRateExcludingTTFTPerSecond.Value)) {
-		return Derived{}, ErrOverflow
+	var overflow bool
+	if d.OutputRatePerSecond.Valid && !finiteNonnegative(d.OutputRatePerSecond.Value) {
+		d.OutputRatePerSecond = Optional{}
+		overflow = true
+	}
+	if d.OutputRateExcludingTTFTPerSecond.Valid && !finiteNonnegative(d.OutputRateExcludingTTFTPerSecond.Value) {
+		d.OutputRateExcludingTTFTPerSecond = Optional{}
+		overflow = true
+	}
+	if overflow {
+		return d, ErrOverflow
 	}
 	return d, nil
 }
