@@ -255,6 +255,10 @@ make test-race    # Go 全包并发竞态检查（-race）
 make test-browser # 启动独立回环实例运行 Playwright 端到端浏览器检查
 ```
 
-复用本机已有 Chromium 可指定 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium make test-browser`。前端第三方源码声明与许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)，品牌图标说明见 [docs/brand-icons.md](docs/brand-icons.md)。
+复用本机已有 Chromium 可指定 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium make test-browser`。品牌图标说明见 [docs/brand-icons.md](docs/brand-icons.md)。
 
 </details>
+
+## License
+
+本项目基于 [MIT License](./LICENSE) 开源。第三方源码声明与许可详见 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)。

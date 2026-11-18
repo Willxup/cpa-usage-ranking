@@ -255,6 +255,10 @@ make test-race    # Go race-detector suite (-race)
 make test-browser # Isolated loopback server + Playwright browser end-to-end checks
 ```
 
-To reuse an existing local Chromium binary, pass `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium make test-browser`. Third-party source notices and licenses live in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md); icon asset details are in [docs/brand-icons.md](docs/brand-icons.md).
+To reuse an existing local Chromium binary, pass `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium make test-browser`. Icon asset details are in [docs/brand-icons.md](docs/brand-icons.md).
 
 </details>
+
+## License
+
+This project is open source under the [MIT License](./LICENSE). Third-party source notices and licenses are listed in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
