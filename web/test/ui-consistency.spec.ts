@@ -5,7 +5,7 @@ const config = process.env.RANKING_TEST_ADMIN_CONFIG
 const credentials: { username: string; password: string } = config ? JSON.parse(readFileSync(config, 'utf8')) : { username: '', password: '' }
 test.skip(!config, 'Requires an isolated enabled console')
 
-test('uses the public text-navigation style for return and logout at both sizes', async ({ page }, info) => {
+test('keeps public navigation unchanged and shares the refresh surface with logout at both sizes', async ({ page }, info) => {
   await page.goto('/')
   const fonts = new Map<number, string[]>()
   const style = (node: Element) => {
@@ -32,7 +32,12 @@ test('uses the public text-navigation style for return and logout at both sizes'
   for (const width of [1440, 375]) {
     await page.setViewportSize({ width, height: 900 })
     expect(await page.getByRole('navigation', { name: '页面导航' }).getByRole('link', { name: '排行榜' }).evaluate(style)).toEqual(fonts.get(width))
-    expect(await page.getByRole('button', { name: '退出' }).evaluate(style)).toEqual(fonts.get(width))
+    const logout = page.getByRole('button', { name: '退出' })
+    expect(await logout.evaluate(style)).toEqual([fonts.get(width)![0], '13px', '550', '3px'])
+    expect(await logout.evaluate((node) => getComputedStyle(node).color)).toBe('rgb(190, 52, 52)')
+    const surface = (node: Element) => { const css = getComputedStyle(node); return [css.backgroundColor, css.borderColor, css.borderRadius, css.padding, css.boxShadow] }
+    await page.mouse.move(0, 0)
+    expect(await logout.evaluate(surface)).toEqual(await page.getByRole('button', { name: '刷新榜单', exact: true }).evaluate(surface))
     expect(await page.getByRole('link', { name: '用户管理' }).evaluate((node) => getComputedStyle(node).fontSize)).toBe('14px')
     const selected = page.locator('.admin-shell .board-control button[aria-pressed="true"]:visible')
     for (const node of await selected.all()) expect(await node.evaluate((item) => { const css = getComputedStyle(item); return css.borderTopColor === css.backgroundColor })).toBe(true)

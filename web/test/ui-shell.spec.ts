@@ -35,7 +35,7 @@ test('keeps console tabs and public-to-console navigation horizontally aligned',
   await expect(header.getByRole('link')).toHaveText(['排行榜', '控制台'])
   await expect(header.getByRole('link', { name: '控制台' })).toHaveAttribute('aria-current', 'page')
   const logout = page.getByRole('button', { name: '退出', exact: true })
-  expect(await logout.evaluate((node) => [getComputedStyle(node).color, getComputedStyle(node).borderWidth])).toEqual(['rgb(190, 52, 52)', '0px'])
+  expect(await logout.evaluate((node) => [getComputedStyle(node).color, getComputedStyle(node).borderWidth])).toEqual(['rgb(190, 52, 52)', '3px'])
   for (const width of [1440, 375]) {
     await page.setViewportSize({ width, height: 1000 })
     await page.getByRole('link', { name: '榜单管理', exact: true }).click()

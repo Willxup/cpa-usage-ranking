@@ -36,12 +36,13 @@
 .admin-button--moderation { font-size: 13px; font-weight: 700; }
 .admin-view-control { margin-bottom: 24px; }
 .admin-board-generation { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-.admin-refresh { min-height: 32px; padding: 5px 10px; border: 3px solid #f0f0f4; border-radius: 10px; font-size: 13px; line-height: 1.5; }
-.admin-shell .admin-refresh:hover:not(:disabled) { box-shadow: 0 2px 8px #633da033; }
-.admin-shell .admin-refresh:active:not(:disabled) { background: #f8f5fc; box-shadow: 0 1px 3px #633da033; }
+/* One surface and interaction style; each action retains its own text color/weight. */
+.admin-shell button:is(.admin-refresh, .admin-button--moderation, .logout-link) { display: inline-flex; align-items: center; justify-content: center; min-height: 32px; padding: 5px 10px; border: 3px solid #f0f0f4; border-radius: 10px; background: white; box-shadow: 0 1px 4px #29203a14; font-size: 13px; line-height: 1.5; }
+.admin-shell button:is(.admin-refresh, .admin-button--moderation, .logout-link):hover:not(:disabled) { background: white; box-shadow: 0 2px 8px #633da033; }
+.admin-shell button:is(.admin-refresh, .admin-button--moderation, .logout-link):active:not(:disabled) { background: #f8f5fc; box-shadow: 0 1px 3px #633da033; }
 @media (prefers-reduced-motion: no-preference) {
-  .admin-refresh { transition: background-color 160ms ease, box-shadow 160ms ease, transform 120ms ease; }
-  .admin-shell .admin-refresh:active:not(:disabled) { transform: translateY(1px); }
+  .admin-shell button:is(.admin-refresh, .admin-button--moderation, .logout-link) { transition: background-color 160ms ease, box-shadow 160ms ease, transform 120ms ease; }
+  .admin-shell button:is(.admin-refresh, .admin-button--moderation, .logout-link):active:not(:disabled) { transform: translateY(1px); }
 }
 .admin-heading h2 { font-size: 22px; font-weight: 650; }
 .admin-action-column { width: 110px; }
