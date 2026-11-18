@@ -59,15 +59,17 @@ it('shows one administrator identity without role/config explanations and retain
 
 it('does not retry a failed account creation automatically', async () => {
   const fetcher = vi.fn((_path: RequestInfo | URL, init?: RequestInit) => Promise.resolve(init?.method === 'POST' ? json({}, 409) : json({ owner: { username: 'owner' }, accounts: [] })))
+  const onExpired = vi.fn()
   vi.stubGlobal('fetch', fetcher)
   const user = userEvent.setup()
-  render(<Accounts session={{ enabled: true, authenticated: true, csrf_token: 'test-csrf' }} onExpired={vi.fn()} />)
+  render(<Accounts session={{ enabled: true, authenticated: true, csrf_token: 'test-csrf' }} onExpired={onExpired} />)
   expect(await screen.findByText('暂无管理员。')).toBeVisible()
   await user.type(screen.getByLabelText('用户名'), 'staff')
   await user.type(screen.getByLabelText('初始密码'), 'isolated-test-password')
   await user.click(screen.getByRole('button', { name: '添加管理员' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('用户名已存在')
   expect(fetcher.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(1)
+  expect(onExpired).not.toHaveBeenCalled()
 })
 
 it('allows password manager input, prevents duplicate login and reports failure', async () => {

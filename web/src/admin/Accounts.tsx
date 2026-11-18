@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { adminRequest, jsonRequest, type AdminSession } from './api'
+import { AdminError, adminRequest, jsonRequest, type AdminSession } from './api'
 import { ConfirmDialog } from './ConfirmDialog'
 
 type Account = { id: string; username: string; created_at: string }
@@ -23,7 +23,7 @@ export function Accounts({ session, onExpired, active = true }: { session: Admin
     let current = true
     adminRequest<AccountsData>('accounts').then((value) => {
       if (current) { setData(value); setError(''); setLoaded(version) }
-    }).catch((error: Error) => { if (current) { setError(error.message); setLoaded(version); onExpired() } })
+    }).catch((error: Error) => { if (current) { setError(error.message); setLoaded(version); if (error instanceof AdminError && error.status === 401) onExpired() } })
     return () => { current = false }
   }, [version, onExpired, active])
   async function create(event: FormEvent<HTMLFormElement>) {
@@ -35,7 +35,7 @@ export function Accounts({ session, onExpired, active = true }: { session: Admin
     try {
       await adminRequest('accounts', jsonRequest('POST', { username: form.get('username'), password: form.get('password') }, session.csrf_token))
       element.reset(); setVersion((old) => old + 1)
-    } catch (error) { setCreateError((error as Error).message); onExpired() }
+    } catch (error) { setCreateError((error as Error).message); if (error instanceof AdminError && error.status === 401) onExpired() }
     finally { setBusy('') }
   }
   async function remove(account: Account) {
@@ -44,7 +44,7 @@ export function Accounts({ session, onExpired, active = true }: { session: Admin
     try {
       await adminRequest(`accounts/${account.id}`, jsonRequest('DELETE', {}, session.csrf_token))
       setVersion((old) => old + 1)
-    } catch (error) { onExpired(); throw error }
+    } catch (error) { if (error instanceof AdminError && error.status === 401) onExpired(); throw error }
     finally { setBusy('') }
   }
   return <section aria-labelledby="accounts-title">
