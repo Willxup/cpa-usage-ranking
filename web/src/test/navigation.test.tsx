@@ -69,3 +69,20 @@ it('invalidates the shared identity on a protected 401 instead of trusting the p
   await user.click(within(header).getByRole('link', { name: '排行榜' }))
   expect(await screen.findByRole('link', { name: '登录' })).toBeVisible()
 })
+
+it('does not fetch public leaderboards or avatars while the public view is hidden', async () => {
+  const fetcher = vi.fn((path: RequestInfo | URL) => Promise.resolve(json(String(path).includes('/admin/session') ? { enabled: true, authenticated: false } : String(path).includes('avatars') ? catalog : empty)))
+  vi.stubGlobal('fetch', fetcher)
+  window.history.replaceState({}, '', '/admin/login')
+  const user = userEvent.setup()
+  render(<RootApp />)
+  expect(await screen.findByRole('heading', { name: '管理员登录' })).toBeVisible()
+  expect(fetcher.mock.calls.map(([path]) => String(path))).toEqual(['/v1/admin/session'])
+  await user.click(within(screen.getByRole('navigation', { name: '页面导航' })).getByRole('link', { name: '排行榜' }))
+  expect(await screen.findByRole('heading', { name: '今日 · 综合总榜' })).toBeVisible()
+  const publicReads = fetcher.mock.calls.filter(([path]) => String(path) === '/v1/leaderboards/overall/today').length
+  expect(publicReads).toBe(1)
+  await user.click(within(screen.getByRole('navigation', { name: '页面导航' })).getByRole('link', { name: '登录' }))
+  expect(await screen.findByRole('heading', { name: '管理员登录' })).toBeVisible()
+  expect(fetcher.mock.calls.filter(([path]) => String(path) === '/v1/leaderboards/overall/today')).toHaveLength(publicReads)
+})
