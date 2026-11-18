@@ -40,7 +40,7 @@ export function Users({ session, onExpired, hiddenOnly = false, active = true }:
     const controller = new AbortController()
     fetchAvatarCatalog(controller.signal).then(setAvatars).catch(() => { /* Reuse the neutral fallback. */ })
     return () => controller.abort()
-  }, [active, avatars])
+  }, [active, avatars, key])
   function search(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
