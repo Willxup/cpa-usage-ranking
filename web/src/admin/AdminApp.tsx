@@ -66,7 +66,7 @@ export default function AdminApp() {
   }
   return <div className="app-shell admin-shell">
     <SiteHeader admin />
-    <main id="main" className="page-width admin-main" tabIndex={-1} ref={main}>
+    <main id="admin-main" className="page-width admin-main" tabIndex={-1} ref={main}>
       {!session && !error && <div className="admin-list-placeholder" aria-hidden="true" />}
       {error && <div role="alert"><p className="admin-error">{error}</p><button className="admin-button" onClick={() => void refresh()}>重试</button></div>}
       {session && !session.enabled && <section className="admin-card"><h1>管理后台未启用</h1><Link className="primary-link" href="/">返回公开榜单</Link></section>}

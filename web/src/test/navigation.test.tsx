@@ -5,7 +5,7 @@ import RootApp from '../RootApp'
 
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } })
 const session = { enabled: true, authenticated: true, user: { id: 'owner', username: 'owner', owner: true }, csrf_token: 'csrf', expires_at: new Date(Date.now() + 3600000).toISOString() }
-const empty = { board: 'overall', period: 'today', start: '2026-11-16', end: '2026-11-17', generated_at: '2026-11-16T00:00:00Z', entries: [] }
+const empty = { board: 'overall', period: 'today', start: '2026-11-16', end: '2026-11-17', generated_at: '2026-11-16T00:00:00Z', entries: [{ rank: 1, client_id: '7', display_name: '测试用户', avatar_id: '1', metric: '50.00' }] }
 const catalog = { default_avatar_id: 1, avatars: [{ avatar_id: 1, path: 'images/001.webp' }] }
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); window.history.replaceState({}, '', '/') })
 
@@ -23,6 +23,9 @@ it('keeps the document and console shell while sharing one session across tabs a
   render(<RootApp />)
   await user.click(await screen.findByRole('link', { name: '控制台' }))
   const navigation = await screen.findByRole('navigation', { name: '控制台导航' })
+  await screen.findByRole('button', { name: '下榜' })
+  const ids = Array.from(document.querySelectorAll('[id]')).map((node) => node.id)
+  expect(new Set(ids).size).toBe(ids.length)
   expect(focus).toHaveBeenCalledWith({ preventScroll: true })
   const header = screen.getByRole('navigation', { name: '页面导航' })
   expect(within(header).getAllByRole('link').map((link) => link.textContent)).toEqual(['排行榜', '控制台'])
