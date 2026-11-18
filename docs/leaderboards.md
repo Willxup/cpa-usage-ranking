@@ -47,8 +47,14 @@ cache reuse, conservative success score, and measured mean time to first token
 `ranking_hidden` exclusion and at least one accepted execution in the selected
 UTC period. There is no minimum sample count or success rate. Only all-model totals are used; totals and model details are not added.
 
-The six fixed periods are today, yesterday, current Monday-start week, current
-month, current calendar year, and all time. Period ends are exclusive. Yearly
+The six fixed periods are UTC today, yesterday, the previous complete
+Monday-start UTC week, the previous complete UTC calendar month, the current
+calendar year, and all time. Starts are inclusive and ends exclusive. `week`
+and `month` are breaking semantic changes: they no longer mean the current
+partial week or month. On Monday or the first of a month, yesterday can still
+be corrected through the ordinary reporting window, so a complete period does
+not mean immutable data. A successful cache round publishes any corrections;
+a failed round retains the previous complete publication. Yearly
 raw totals combine finalized monthly sums and all unsettled daily sums of that
 calendar year in one SQLite read snapshot; there is no year table. Cumulative
 statistics remain persisted and maintained. Profiles, disabled/excluded state and

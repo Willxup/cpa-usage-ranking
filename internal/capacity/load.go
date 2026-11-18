@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"cpa-usage-ranking/internal/periods"
 	"cpa-usage-ranking/internal/reports"
 	"cpa-usage-ranking/internal/statistics"
 )
@@ -506,10 +507,14 @@ func Probe(ctx context.Context, path, day string) ([]map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
+	date, err := time.Parse(time.DateOnly, day)
+	if err != nil || date.Format(time.DateOnly) != day {
+		return nil, errors.New("invalid probe day")
+	}
 	result := []map[string]any{}
 	for _, kind := range []string{"day", "week", "month", "year", "all"} {
 		start := time.Now()
-		s, e := reader.Read(ctx, statistics.Selection{Kind: kind, Day: day, Public: true})
+		s, e := reader.Read(ctx, statistics.Selection{Kind: kind, Day: periods.LeaderboardDay(kind, date), Public: true})
 		if e != nil {
 			return nil, e
 		}

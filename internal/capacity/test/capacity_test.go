@@ -104,6 +104,12 @@ func TestSyntheticFixtureIsExclusiveAndSettlementConservesTotals(t *testing.T) {
 		if p["kind"] == "day" && metrics.TotalTokens != 3*8000 {
 			t.Fatalf("incorrect day total: %v", p)
 		}
+		if p["kind"] == "week" && metrics.TotalTokens != 168000 {
+			t.Fatalf("incorrect previous week total: %v", p)
+		}
+		if p["kind"] == "month" && metrics.TotalTokens != 744000 {
+			t.Fatalf("incorrect previous month total: %v", p)
+		}
 	}
 }
 

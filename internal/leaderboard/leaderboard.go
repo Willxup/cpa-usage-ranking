@@ -53,8 +53,8 @@ func Items() []cache.Item {
 	return []cache.Item{
 		{ID: "today", Kind: periods.Day, Public: true, Encode: encode},
 		{ID: "yesterday", Kind: periods.Day, DayOffset: -1, Public: true, Encode: encode},
-		{ID: "week", Kind: periods.Week, Public: true, Encode: encode},
-		{ID: "month", Kind: periods.Month, Public: true, Encode: encode},
+		{ID: "week", Kind: periods.Week, CompletePeriod: true, Public: true, Encode: encode},
+		{ID: "month", Kind: periods.Month, CompletePeriod: true, Public: true, Encode: encode},
 		{ID: "year", Kind: periods.Year, Public: true, Encode: encode},
 		{ID: "all", Kind: periods.All, Public: true, Encode: encode},
 	}

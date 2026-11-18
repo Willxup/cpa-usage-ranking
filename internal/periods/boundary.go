@@ -18,6 +18,22 @@ const (
 
 var ErrInvalidDay = errors.New("invalid UTC period day")
 
+// LeaderboardDay selects a day in the previous complete week or month.
+// Other kinds keep the current UTC day. ForDay itself always finds the period
+// containing its input, as required by settlement and retention.
+func LeaderboardDay(kind string, now time.Time) string {
+	u := now.UTC()
+	today := time.Date(u.Year(), u.Month(), u.Day(), 0, 0, 0, 0, time.UTC)
+	switch kind {
+	case Week:
+		return today.AddDate(0, 0, -(int(today.Weekday())+6)%7-1).Format(dayLayout)
+	case Month:
+		return time.Date(today.Year(), today.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, -1).Format(dayLayout)
+	default:
+		return today.Format(dayLayout)
+	}
+}
+
 // Boundaries 返回包含给定 UTC 日的左闭右开周、月边界。
 type Boundaries struct {
 	Day                  string

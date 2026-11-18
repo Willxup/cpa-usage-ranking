@@ -20,7 +20,7 @@ docker compose -p cpa-ranking up -d --build
 
 Use HTTPS through a trusted reverse proxy before accepting remote credentials.
 See [Docker deployment](docs/docker.md) for both supported architectures,
-permissions, health checks, backup, restore and upgrades. The project does not
+permissions, health checks, backup, restore and schema compatibility. The project does not
 provide standalone binary releases.
 
 ## Development
@@ -51,14 +51,11 @@ For isolated synthetic fixtures and bounded HTTP load, see the optional
 ## Storage foundation
 
 Startup opens `data/ranking.db` (override `RANKING_SQLITE_PATH`) before accepting
-HTTP requests. It creates missing parent directories, prepares the migration
-ledger and enables WAL, FULL synchronization and foreign keys. Each declared
-migration and its version record commit atomically; already-applied versions
-are skipped. Schema version 1 creates `clients` for identity/profile persistence;
-version 2 creates the stable canonical-model ID dictionary and startup registers
-current catalog names transactionally. Versions 3–4 add a persistent reporting
-window and daily snapshot tables; version 5 adds finalized period statistics.
-Startup does not seed participants.
+HTTP requests. It creates missing parent directories, initializes the current
+schema in one transaction, and enables WAL, FULL synchronization and foreign
+keys. Startup registers canonical model names and does not seed participants.
+Reopening a database with the same schema preserves data; older schemas are not
+upgraded or converted.
 Database failures stop startup; they do not
 trigger automatic repair or fallback. Shutdown drains HTTP before closing the
 bounded write/read connection pools. See [SQLite storage](docs/storage.md) and
@@ -107,7 +104,7 @@ The interface uses a light, wide layout with coral/violet accents and compact
 desktop sizing without page zoom; mobile sizing remains independent. The page reads the real cached views and does not fabricate summaries. Project icons and regeneration details
 are documented in [Brand icons](docs/brand-icons.md).
 
-The responsive page offers five boards and today/yesterday/current week/current month, defaulting to today; yearly and all-time data remain maintained by the backend but have no page controls. It has loading, empty, error and retry states and a separate service-status panel. During a switch or retry, any previous result retains its own board, period and cache-generation label. It does not simulate standings or usage totals. Names are rendered as text; avatars use the server catalog and its default, with a neutral fallback if loading fails. The check button calls the real
+The responsive page offers five boards and today/yesterday/previous complete UTC week/previous complete UTC month, defaulting to today; yearly and all-time data remain maintained by the backend but have no page controls. It has loading, empty, error and retry states and a separate service-status panel. During a switch or retry, any previous result retains its own board, period and cache-generation label. It does not simulate standings or usage totals. Names are rendered as text; avatars use the server catalog and its default, with a neutral fallback if loading fails. The check button calls the real
 `GET /healthz` endpoint on demand, validates the JSON contract, times out after
 8 seconds, supports retry and cancels requests on unmount. There is no polling.
 A successful check does not mark the ranking business as ready.

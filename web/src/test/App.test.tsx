@@ -53,7 +53,7 @@ describe('application shell', () => {
     expect(await screen.findByRole('heading', { name: '今日 · 综合总榜' })).toBeVisible()
     expect(screen.getByRole('button', { name: '今日' })).toHaveAttribute('aria-pressed', 'true')
     for (const name of ['综合总榜', '用量榜', '缓存复用榜', '成功率榜', '首字响应榜']) expect(screen.getByRole('button', { name })).toBeEnabled()
-    for (const name of ['今日', '昨日', '本周', '本月']) expect(screen.getByRole('button', { name })).toBeEnabled()
+    for (const name of ['今日', '昨日', '周榜', '月榜']) expect(screen.getByRole('button', { name })).toBeEnabled()
     expect(screen.queryByRole('button', { name: /年度|累计/ })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '成功率榜' }))
     await user.click(screen.getByRole('button', { name: '昨日' }))

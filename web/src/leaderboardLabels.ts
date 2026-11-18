@@ -7,4 +7,4 @@ export const boards: Record<Board, { label: string; metric: string; unit: string
   success: { label: '成功率榜', metric: '成功率得分', unit: '分' },
   ttft: { label: '首字响应榜', metric: '平均首字', unit: 'ms' },
 }
-export const periods: Record<Period, string> = { today: '今日', yesterday: '昨日', week: '本周', month: '本月' }
+export const periods: Record<Period, string> = { today: '今日', yesterday: '昨日', week: '周榜', month: '月榜' }

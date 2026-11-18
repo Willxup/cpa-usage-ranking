@@ -307,8 +307,13 @@ func TestRealBoardsPublishFixedPeriodsAcrossMidnight(t *testing.T) {
 		t.Fatal(first.Len())
 	}
 	yesterday, _ := first.Get("yesterday")
+	week, _ := first.Get("week")
+	month, _ := first.Get("month")
 	year, _ := first.Get("year")
 	all, _ := first.Get("all")
+	if week.Start != "2026-12-21" || week.End != "2026-12-28" || month.Start != "2026-12-01" || month.End != "2027-01-01" {
+		t.Fatal(week, month)
+	}
 	if yesterday.Start != "2026-12-31" || yesterday.End != "2027-01-01" || yesterday.GeneratedAt != "2027-01-01T00:00:01Z" || year.Start != "2027-01-01" {
 		t.Fatal(yesterday, year)
 	}
@@ -345,6 +350,20 @@ func TestRealBoardsPublishFixedPeriodsAcrossMidnight(t *testing.T) {
 	old, _ := first.Get("yesterday")
 	if old != yesterday {
 		t.Fatal("old snapshot changed")
+	}
+	day.Store(4)
+	waitFor(t, func() bool {
+		s, err := c.Current()
+		if err != nil {
+			return false
+		}
+		x, _ := s.Get("week")
+		return x.Start == "2026-12-28" && x.End == "2027-01-04"
+	})
+	third, _ := c.Current()
+	rotatedMonth, _ := third.Get("month")
+	if rotatedMonth.Start != month.Start || rotatedMonth.End != month.End {
+		t.Fatal("week rotation changed month", rotatedMonth)
 	}
 }
 

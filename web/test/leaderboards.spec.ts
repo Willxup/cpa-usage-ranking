@@ -41,11 +41,15 @@ test('shows real submitted data across approved boards and periods', async ({ pa
   await page.getByRole('button', { name: '昨日' }).click()
   await expect(page.getByRole('heading', { name: '昨日 · 首字响应榜' })).toBeVisible()
   await expect(page.getByRole('heading', { name: '等待第一份真实数据' })).toBeVisible()
-  for (const period of ['本周', '本月', '今日']) {
+  for (const period of ['周榜', '月榜']) {
     await page.getByRole('button', { name: period }).click()
     await expect(page.getByRole('heading', { name: `${period} · 首字响应榜` })).toBeVisible()
-    await expect(page.getByText('真实测试参与者')).toBeVisible()
+    // This test submitted only today; complete previous periods must exclude it.
+    await expect(page.getByText('真实测试参与者')).toHaveCount(0)
   }
+  await page.getByRole('button', { name: '今日' }).click()
+  await expect(page.getByRole('heading', { name: '今日 · 首字响应榜' })).toBeVisible()
+  await expect(page.getByText('真实测试参与者')).toBeVisible()
   await expect(page.getByRole('button', { name: /年度|累计/ })).toHaveCount(0)
   await expect(page.getByRole('textbox')).toHaveCount(0)
   await expect(page.getByRole('combobox')).toHaveCount(0)

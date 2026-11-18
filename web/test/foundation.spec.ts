@@ -79,7 +79,7 @@ test('supports keyboard navigation of boards and periods', async ({ page }) => {
     await page.keyboard.press('Tab')
     await expect(page.getByRole('link', { name, exact: true })).toBeFocused()
   }
-  for (const name of ['综合总榜', '用量榜', '缓存复用榜', '成功率榜', '首字响应榜', '今日', '昨日', '本周', '本月']) {
+  for (const name of ['综合总榜', '用量榜', '缓存复用榜', '成功率榜', '首字响应榜', '今日', '昨日', '周榜', '月榜']) {
     await page.keyboard.press('Tab')
     await expect(page.getByRole('button', { name, exact: true })).toBeFocused()
     if (name === '成功率榜' || name === '昨日') await page.keyboard.press('Space')

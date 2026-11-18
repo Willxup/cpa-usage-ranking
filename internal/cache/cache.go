@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"cpa-usage-ranking/internal/periods"
 	"cpa-usage-ranking/internal/statistics"
 )
 
@@ -30,11 +31,12 @@ var (
 
 // Item 是编译时确定的构建项。读取统一由缓存负责，Encode 只接收已结束事务的候选数据。
 type Item struct {
-	ID, Kind  string
-	ModelID   int64
-	DayOffset int // 固定今日或昨日；相对日期在整轮开始时确定。
-	Public    bool
-	Encode    func(context.Context, statistics.Snapshot, io.Writer) error
+	ID, Kind       string
+	ModelID        int64
+	DayOffset      int  // 今日或昨日；相对日期在整轮开始时确定。
+	CompletePeriod bool // 周/月榜读取上一完整周期。
+	Public         bool
+	Encode         func(context.Context, statistics.Snapshot, io.Writer) error
 }
 
 type Options struct {
@@ -73,7 +75,7 @@ func New(reader *statistics.Reader, items []Item, opts Options, logger *slog.Log
 	}
 	seen := make(map[string]bool, len(items))
 	for _, item := range items {
-		if item.ID == "" || len(item.ID) > 128 || seen[item.ID] || item.Encode == nil || (item.DayOffset != 0 && item.DayOffset != -1) {
+		if item.ID == "" || len(item.ID) > 128 || seen[item.ID] || item.Encode == nil || (item.DayOffset != 0 && item.DayOffset != -1) || (item.CompletePeriod && (item.DayOffset != 0 || (item.Kind != periods.Week && item.Kind != periods.Month))) {
 			return nil, errors.New("invalid cache item")
 		}
 		seen[item.ID] = true
@@ -152,6 +154,9 @@ func (c *Cache) build(ctx context.Context, item Item, when time.Time, max int) (
 	ctx, cancel := context.WithTimeout(ctx, c.opts.ItemTimeout)
 	defer cancel()
 	day := when.AddDate(0, 0, item.DayOffset).Format("2006-01-02")
+	if item.CompletePeriod {
+		day = periods.LeaderboardDay(item.Kind, when)
+	}
 	s, err := c.reader.Read(ctx, statistics.Selection{Kind: item.Kind, Day: day, ModelID: item.ModelID, Public: item.Public})
 	if err != nil {
 		return Entry{}, err

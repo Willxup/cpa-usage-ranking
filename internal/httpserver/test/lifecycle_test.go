@@ -292,11 +292,12 @@ func (f *lifecycleRuntime) assertCombined(t *testing.T, when time.Time, alice, b
 	// 两日来源分别为 Alice 60+40、Bob 25+10；总计行和模型明细不相加。
 	usage := []leaderboard.Entry{lifecycleEntry(1, alice, "100"), lifecycleEntry(2, bob, "35")}
 	for _, period := range []struct{ id, start, end string }{
-		{"week", "2026-11-02", "2026-11-09"}, {"month", "2026-11-01", "2026-12-01"},
 		{"year", "2026-01-01", "2027-01-01"}, {"all", "0001-01-01", ""},
 	} {
 		f.assertBoard(t, "usage", period.id, period.start, period.end, when, usage)
 	}
+	f.assertBoard(t, "usage", "week", "2026-10-26", "2026-11-02", when, []leaderboard.Entry{})
+	f.assertBoard(t, "usage", "month", "2026-10-01", "2026-11-01", when, []leaderboard.Entry{})
 	f.assertBoard(t, "usage", "today", "2026-11-04", "2026-11-05", when, []leaderboard.Entry{})
 	f.assertBoard(t, "usage", "yesterday", "2026-11-03", "2026-11-04", when, []leaderboard.Entry{lifecycleEntry(1, alice, "40"), lifecycleEntry(2, bob, "10")})
 	// Alice 的缓存命中为 25/70，TTFT 为 (2*100+2*50)/4；Bob 无 TTFT 样本。
@@ -426,4 +427,75 @@ func TestCompleteIngestionLifecycle(t *testing.T) {
 	}
 	f.waitRound(t, finalRound)
 	f.assertCombined(t, finalRound, alice, bob)
+}
+
+func TestCompleteWeekAndMonthReadSettledAndPendingReports(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	catalogPath := filepath.Join(dir, "models.json")
+	if err := os.WriteFile(catalogPath, []byte(`{"currency":"USD","price_unit":"per_million_tokens","models":[{"model_name":"alpha","alias":[],"prices":{}},{"model_name":"beta","alias":[],"prices":{}}]}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	var clock atomic.Int64
+	setTime := func(text string) time.Time {
+		t.Helper()
+		when, err := time.Parse(time.RFC3339, text)
+		if err != nil {
+			t.Fatal(err)
+		}
+		clock.Store(when.UnixNano())
+		return when
+	}
+	setTime("2026-12-30T12:00:00Z")
+	f := startLifecycle(t, filepath.Join(dir, "periods.db"), catalogPath, &clock, true)
+	aSecret, bSecret := testSecret(11), testSecret(12)
+	alice := identity(t, f.send(t, `{"display_name":"Alice"}`, aSecret, nil))
+	bob := identity(t, f.send(t, `{"display_name":"Bob"}`, bSecret, nil))
+	expectRevision(t, f.report(t, "2026-12-30", aSecret, lifecycleNext, nil), 200, "1")
+	setTime("2026-12-31T12:00:00Z")
+	expectRevision(t, f.report(t, "2026-12-31", bSecret, lifecycleOtherFirst, nil), 200, "1")
+	setTime("2027-01-01T00:00:00Z")
+	monthRevision := strings.Replace(lifecycleOtherFirst, `"revision":"1"`, `"revision":"2"`, 1)
+	monthRevision = strings.Replace(monthRevision, `"total_tokens":"25"`, `"total_tokens":"30"`, 1)
+	expectRevision(t, f.report(t, "2026-12-31", bSecret, monthRevision, nil), 200, "2")
+	monthRound := setTime("2027-01-01T00:00:01Z")
+	f.waitRound(t, monthRound)
+	f.assertBoard(t, "usage", "month", "2026-12-01", "2027-01-01", monthRound,
+		[]leaderboard.Entry{lifecycleEntry(1, alice, "40"), lifecycleEntry(2, bob, "30")})
+	setTime("2027-01-04T00:00:00Z")
+	expectRevision(t, f.report(t, "2027-01-03", aSecret, lifecycleCorrection, nil), 200, "2")
+	expectRevision(t, f.report(t, "2027-01-04", bSecret, lifecycleFirst, nil), 200, "1")
+	f.finalize(t, "2026-12-30", alice.ID, true)
+	assertPeriods := func(when time.Time, weekAlice, ttft string) {
+		t.Helper()
+		f.assertBoard(t, "usage", "week", "2026-12-28", "2027-01-04", when,
+			[]leaderboard.Entry{lifecycleEntry(1, alice, weekAlice), lifecycleEntry(2, bob, "30")})
+		f.assertBoard(t, "usage", "month", "2026-12-01", "2027-01-01", when,
+			[]leaderboard.Entry{lifecycleEntry(1, alice, "40"), lifecycleEntry(2, bob, "30")})
+		f.assertBoard(t, "ttft", "week", "2026-12-28", "2027-01-04", when,
+			[]leaderboard.Entry{lifecycleEntry(1, alice, ttft)})
+	}
+	round := setTime("2027-01-04T00:00:01Z")
+	f.waitRound(t, round)
+	assertPeriods(round, "100", "75.00")
+	f.assertBoard(t, "usage", "today", "2027-01-04", "2027-01-05", round, []leaderboard.Entry{lifecycleEntry(1, bob, "120")})
+	f.assertBoard(t, "usage", "yesterday", "2027-01-03", "2027-01-04", round, []leaderboard.Entry{lifecycleEntry(1, alice, "60")})
+
+	// Monday's yesterday is still editable even though it belongs to the complete week.
+	revised := strings.ReplaceAll(lifecycleCorrection, `"revision":"2"`, `"revision":"3"`)
+	revised = strings.Replace(revised, `"total_tokens":"60"`, `"total_tokens":"70"`, 1)
+	revised = strings.Replace(revised, `"ttft_avg_ms":100`, `"ttft_avg_ms":120`, 1)
+	expectRevision(t, f.report(t, "2027-01-03", aSecret, revised, nil), 200, "3")
+	round = setTime("2027-01-04T00:00:02Z")
+	f.waitRound(t, round)
+	assertPeriods(round, "110", "85.00")
+	next := setTime("2027-01-05T00:00:00Z")
+	if err := reports.AdvanceWindow(ctx, f.db.Writer, next); err != nil {
+		t.Fatal(err)
+	}
+	f.finalize(t, "2026-12-31", bob.ID, true)
+	f.finalize(t, "2027-01-03", alice.ID, true)
+	round = setTime("2027-01-05T00:00:01Z")
+	f.waitRound(t, round)
+	assertPeriods(round, "110", "85.00")
 }
