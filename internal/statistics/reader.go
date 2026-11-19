@@ -164,7 +164,7 @@ func (r *Reader) merge(ctx context.Context, tx *sql.Tx, result *Snapshot, query 
 		}
 		merged, ok := reports.AddMetrics(old, m)
 		if !ok {
-			return ErrOverflow
+			return fmt.Errorf("client %d: %w", id, ErrOverflow)
 		}
 		result.Rows[id] = merged
 		if result.Profiles != nil {

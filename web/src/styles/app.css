@@ -6,11 +6,11 @@
 .page-width { width: calc(100% - clamp(40px, 7%, 160px)); max-width: 1920px; margin-inline: auto; }
 .header-wrap { border-bottom: 1px solid var(--line); background: #ffffffc9; }
 .site-header { min-height: 88px; display: flex; align-items: center; gap: 42px; }
-.brand { display: inline-flex; align-items: center; gap: 0; font-size: 23px; font-weight: 700; letter-spacing: -.7px; text-decoration: none; white-space: nowrap; }
+.brand { display: inline-flex; align-items: center; gap: 10px; font-size: 23px; font-weight: 700; letter-spacing: -.7px; text-decoration: none; white-space: nowrap; }
 .brand svg { width: 34px; height: 34px; color: #ff7148; }
-.brand .project-icon { width: 62px; height: 62px; flex-shrink: 0; }
+.brand .project-icon { width: 30px; height: 30px; flex-shrink: 0; }
 @media (max-width: 760px) {
-  .brand .project-icon { width: 52px; height: 52px; }
+  .brand .project-icon { width: 28px; height: 28px; }
 }
 .site-header nav { margin-left: auto; display: flex; gap: 24px; align-items: center; }
 .site-header nav a, .admin-identity .logout-link { display: inline-flex; align-items: center; min-height: 44px; padding: 10px 18px; border: 0; border-radius: 10px; background: transparent; color: inherit; font-size: 16px; font-weight: 550; text-decoration: none; }
@@ -129,8 +129,8 @@
 .site-footer > span { font-weight: 600; }
 .site-footer p { color: var(--subtle); font-size: 12px; }
 .brand-footer { justify-content: center; }
-.brand-footer > span { display: inline-flex; align-items: center; }
-.brand-footer .project-icon { width: 40px; height: 40px; }
+.brand-footer > span { display: inline-flex; align-items: center; gap: 8px; }
+.brand-footer .project-icon { width: 22px; height: 22px; }
 @media (min-width: 1800px) { .ranking-empty { min-height: 520px; } .overview { padding-top: 64px; padding-bottom: 50px; } }
 @media (max-width: 1100px) {
   .site-header { gap: 20px; }
@@ -150,7 +150,7 @@
 @media (min-width: 761px) {
   .page-width { width: calc(100% - clamp(32px, 5.6%, 128px)); }
   .site-header { min-height: 70px; gap: 32px; }
-  .brand { gap: 0; font-size: 19px; }
+  .brand { gap: 10px; font-size: 19px; }
   .brand svg { width: 28px; height: 28px; }
   .site-header nav { gap: 18px; }
   .site-header nav a, .admin-identity .logout-link { min-height: 36px; padding: 8px 14px; font-size: 13px; border-radius: 8px; }

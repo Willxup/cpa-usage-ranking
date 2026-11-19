@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { adminRequest, jsonRequest, type AdminSession } from './api'
+import { AdminError, adminRequest, jsonRequest, type AdminSession } from './api'
 import { ConfirmDialog } from './ConfirmDialog'
 
 type Account = { id: string; username: string; created_at: string }
@@ -23,7 +23,7 @@ export function Accounts({ session, onExpired, active = true }: { session: Admin
     let current = true
     adminRequest<AccountsData>('accounts').then((value) => {
       if (current) { setData(value); setError(''); setLoaded(version) }
-    }).catch((error: Error) => { if (current) { setError(error.message); setLoaded(version); onExpired() } })
+    }).catch((error: Error) => { if (current) { setError(error.message); setLoaded(version); if (error instanceof AdminError && error.status === 401) onExpired() } })
     return () => { current = false }
   }, [version, onExpired, active])
   async function create(event: FormEvent<HTMLFormElement>) {
@@ -35,7 +35,7 @@ export function Accounts({ session, onExpired, active = true }: { session: Admin
     try {
       await adminRequest('accounts', jsonRequest('POST', { username: form.get('username'), password: form.get('password') }, session.csrf_token))
       element.reset(); setVersion((old) => old + 1)
-    } catch (error) { setCreateError((error as Error).message); onExpired() }
+    } catch (error) { setCreateError((error as Error).message); if (error instanceof AdminError && error.status === 401) onExpired() }
     finally { setBusy('') }
   }
   async function remove(account: Account) {
@@ -44,7 +44,7 @@ export function Accounts({ session, onExpired, active = true }: { session: Admin
     try {
       await adminRequest(`accounts/${account.id}`, jsonRequest('DELETE', {}, session.csrf_token))
       setVersion((old) => old + 1)
-    } catch (error) { onExpired(); throw error }
+    } catch (error) { if (error instanceof AdminError && error.status === 401) onExpired(); throw error }
     finally { setBusy('') }
   }
   return <section aria-labelledby="accounts-title">
@@ -60,7 +60,7 @@ export function Accounts({ session, onExpired, active = true }: { session: Admin
       <section className="admin-card admin-account-list" aria-labelledby="accounts-list-title" aria-busy={loading}>
         <h2 className="admin-account-title" id="accounts-list-title">管理员列表</h2>
         {!data && loading && <div className="admin-list-placeholder" aria-hidden="true" />}
-        {data && (data.accounts.length === 0 ? <p className="admin-empty">暂无管理员。</p> : <table className="admin-table"><caption className="sr-only">管理员列表</caption><thead><tr><th scope="col">ID</th><th scope="col">用户名</th><th scope="col">创建时间（UTC）</th><th scope="col">操作</th></tr></thead><tbody>{data.accounts.map((account) => <tr key={account.id}>
+        {data && (data.accounts.length === 0 ? <p className="admin-empty">暂无管理员。</p> : <table className="admin-table"><caption className="sr-only">管理员列表</caption><colgroup><col className="admin-col-account-id" /><col className="admin-col-account" /><col className="admin-col-account-time" /><col className="admin-col-account-action" /></colgroup><thead><tr><th scope="col">ID</th><th scope="col">用户名</th><th scope="col">创建时间（UTC）</th><th scope="col">操作</th></tr></thead><tbody>{data.accounts.map((account) => <tr key={account.id}>
           <td data-label="ID">{account.id}</td><td data-label="用户名">{account.username}</td><td data-label="创建时间（UTC）">{account.created_at.slice(0, 19).replace('T', ' ')}</td><td data-label="操作"><button className="admin-button admin-button--danger admin-button--moderation" disabled={loading || !!error || !!busy} onClick={() => setRemoving(account)}>{busy === account.id ? '正在删除…' : '删除'}</button></td>
         </tr>)}</tbody></table>)}
       </section>

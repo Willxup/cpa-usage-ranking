@@ -27,7 +27,7 @@ export function useLeaderboard(board: Board, period: Period, selectionVersion: n
     let active = true
     fetchAvatarCatalog(controller.signal).then((catalog) => { if (active) setAvatars(catalog) }).catch(() => { /* 无目录时显示中性头像，不影响榜单。 */ })
     return () => { active = false; controller.abort() }
-  }, [enabled, avatars])
+  }, [enabled, avatars, key])
   const loading = result.key !== key
   return { data: result.data, loading, error: loading ? null : result.error, avatars, retry: () => setAttempt((value) => value + 1) }
 }

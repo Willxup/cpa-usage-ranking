@@ -1,134 +1,268 @@
-# CPA Usage Ranking
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./assets/ranking-logo-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="./assets/ranking-logo-light.svg" />
+    <img src="./assets/ranking-logo-light.svg" alt="CPA Usage Ranking" width="520" />
+  </picture>
+</p>
 
-[English](README.md)
+<p align="center">
+  <a href="./README.md">English</a> ｜ <a href="./README.zh.md"><strong>简体中文</strong></a>
+</p>
 
-独立的通用用量排名服务。目前已具备受保护注册、日累计快照上报、后台日结、静态头像及 SQLite 存储。启动时校验[模型目录](docs/model-catalog.md)，将精确名称及别名映射至稳定 ID；参考价格并非独立核实的实时报价，可能过时。统一缓存针对六个固定 UTC 周期构建五个真实榜单，详见[榜单计算说明](docs/leaderboards.md)；普通用户仍无网页账号系统，可通过配置启用[管理员控制台](docs/admin.md)进行账号密码登录和榜单管理。
+<h1 align="center">CPA Usage Ranking</h1>
 
-## Docker 部署
+<p align="center">面向 CLIProxyAPI（CPA）生态的开源 AI 用量排行榜服务端与可视化面板。</p>
 
-使用 Docker Compose 构建并运行镜像；示例仅向宿主回环地址发布 HTTP，SQLite 使用持久数据卷：
+<p align="center">
+  <strong><a href="#客户端接入">客户端接入</a>&emsp;|&emsp;<a href="#快速部署">快速部署</a>&emsp;|&emsp;<a href="#排行榜与评分">排行榜与评分</a>&emsp;|&emsp;<a href="#管理员控制台">管理员控制台</a>&emsp;|&emsp;<a href="#配置">配置参考</a></strong>
+</p>
+
+---
+
+**CPA Usage Ranking** 是一个独立部署的开源排行榜服务端，专为 **[CLIProxyAPI（CPA）](https://github.com/router-for-me/CLIProxyAPI)** 下游生态设计——无论是 **cpa-usage-keeper（Keeper）**、**cpamp**、**oh-my-cpa**，还是其他 CPA 面板、统计采集器与自建工具，都可以通过一套简洁的公开 HTTP 接口完成身份注册、UTC 日快照上报与排行榜读取。
+
+服务端与具体客户端实现完全解耦：不依赖特定 SDK 或上游数据库表结构，不收集用户的上游模型 API Key、提示词（Prompt）或响应正文，仅接收按模型聚合后的脱敏计数与耗时统计，并在单机 SQLite 上提供多维度评分、周期结算、原子缓存榜单与可选的管理后台。
+
+## 核心特性
+
+- **开放的 CPA 客户端接入协议**：客户端自行生成并保管 32 字节随机凭据（服务端仅存 `SHA-256` 摘要），无需预发账号，仅需“注册身份 → 提交 UTC 日累计快照”两步即可接入。
+- **隐私最小化与协议幂等**：仅上报模型级 Token、请求数、成功率与延迟统计；支持 `revision` 版本控制与幂等重试，网络超时重发不会重复累加数据。
+- **五维榜单与完整自然周期**：内置**综合总榜、用量榜、缓存复用榜、成功率榜、首字响应榜**，支持**今日、昨日、周榜（上一完整 UTC 自然周）、月榜（上一完整 UTC 自然月）**切换，64 位大整数全程十进制字符串传输与无损格式化。
+- **轻量单机高吞吐架构**：基于 Go + SQLite（`WAL`、`FULL` 同步、单写串行队列），后台自动完成封窗日结与历史裁剪，内存原子缓存秒级响应公开读请求；2 vCPU / 1 GiB 内存限制下实测可持续处理 [500 TPS 日快照上报](docs/benchmark.md)。
+- **内嵌响应式前端与可选管理台**：同域托管极简 Web 榜单（桌面、平板、手机自适应，内置 66 款 WebP 头像）；按需挂载配置文件即可开启管理员控制台，支持用户检索、封禁与独立下榜管理。
+
+## 客户端接入
+
+适用于 `keeper`、`cpamp`、`oh-my-cpa` 等任意需要上报用量或展示排行榜的下游项目。完整字段约束、重试策略与状态码请查阅 **[通用客户端接入指南](docs/integration.md)** 与 **[接入时序流程图](docs/integration-flow.md)**。
+
+### 接入流程概览
+
+| 步骤 | 接口 | 鉴权 | 说明 |
+| --- | --- | --- | --- |
+| 1. 生成凭据 | 客户端本地生成 | — | 生成 32 字节密码学安全随机数，编码为 43 字符无填充 `base64url` 并本地持久化 |
+| 2. 注册/找回身份 | `POST /v1/clients/register` | `Bearer <secret>` | 提交 `display_name` 与可选 `avatar_id`（`1`–`66`）；首次返回 `201`，同凭据重试幂等返回 `200` |
+| 3. 上报日快照 | `PUT /v1/reports/{utc_day}` | `Bearer <secret>` | 开放窗口为 UTC **今日与昨日**；按标准模型合并当日累计值并递增 `revision` 原子替换 |
+| 4. 读取排行榜 | `GET /v1/leaderboards/{board}/{period}` | 无需凭据 | 读取最新发布的公开缓存榜单（最多前 100 名）；头像清单见 `/avatars/catalog.json` |
+
+> **上报聚合约定**：客户端在提交前须将同一 UTC 日、同一标准模型的统计合并为单条记录（不含 `service_tier` 字段）；`ttft_avg_ms` 与 `latency_avg_ms` 须按各自真实样本数加权计算均值，无样本时传 `null` 且样本数传 `"0"`。未知模型不会报错，但仅纳入目录的[标准模型及别名](docs/model-catalog.md)计入榜单统计。
+
+### 最小接入示例（cURL）
+
+```sh
+# 1. 生成并妥善保存 43 字符无填充 base64url 凭据（32 字节随机数）
+SECRET=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n')
+
+# 2. 注册客户端身份（相同 SECRET 重复调用幂等返回既有 client_id）
+curl -sS -X POST http://127.0.0.1:8080/v1/clients/register \
+  -H "Authorization: Bearer $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"display_name": "CPA-Keeper-Node", "avatar_id": 1}'
+
+# 3. 提交当前 UTC 日的完整累计快照（每次更新递增 revision）
+TODAY=$(date -u +%F)
+curl -sS -X PUT "http://127.0.0.1:8080/v1/reports/$TODAY" \
+  -H "Authorization: Bearer $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "schema_version": 1,
+    "revision": "1",
+    "items": [{
+      "model": "claude-opus-4-5",
+      "total_tokens": "150000",
+      "input_tokens": "100000",
+      "output_tokens": "50000",
+      "cache_read_tokens": "60000",
+      "cache_write_tokens": "0",
+      "reasoning_tokens": "10000",
+      "request_count": "42",
+      "success_count": "41",
+      "ttft_avg_ms": 320.5,
+      "ttft_samples": "41",
+      "latency_avg_ms": 1850.0,
+      "latency_samples": "41"
+    }]
+  }'
+
+# 4. 读取公开综合总榜
+curl -sS http://127.0.0.1:8080/v1/leaderboards/overall/today
+```
+
+## 排行榜与评分
+
+公开接口 `GET /v1/leaderboards/{board}/{period}` 直接从内存原子缓存返回结构化榜单，计算公式与并列规则详见 **[榜单接口与评分说明](docs/leaderboards.md)**。
+
+### 五大榜单（`board`）
+
+| 标识 | 名称 | 排序指标与说明 |
+| --- | --- | --- |
+| `overall` | 综合总榜 | 满分 100 分：用量分位（40）+ Wilson 成功率下界（30）+ 缓存复用率（20）+ 首字响应表现（10），附带 6 项核心指标明细 |
+| `usage` | 用量榜 | 周期内已匹配模型的总 Token 数（64 位精确整数排序） |
+| `cache` | 缓存复用榜 | `cache_read_tokens / input_tokens` 百分比（需 `input_tokens > 0`） |
+| `success` | 成功率榜 | 请求成功率的 95% Wilson 置信下界得分（兼顾高成功率与样本规模） |
+| `ttft` | 首字响应榜 | 平均首字延迟 `ttft_mean_ms` 升序排列（越低越靠前，需有首字延迟样本） |
+
+### 统计周期（`period`）
+
+| 标识 | 页面名称 | UTC 时间范围（左闭右开 `[start, end)`） |
+| --- | --- | --- |
+| `today` | 今日 | 当前 UTC 自然日 `[今日 00:00, 明日 00:00)` |
+| `yesterday` | 昨日 | 前一 UTC 自然日 `[昨日 00:00, 今日 00:00)` |
+| `week` | 周榜 | **上一完整 UTC 自然周** `[上周一 00:00, 本周一 00:00)` |
+| `month` | 月榜 | **上一完整 UTC 自然月** `[上月 1 日 00:00, 本月 1 日 00:00)` |
+
+> 后端缓存同时构建并维护 `year`（当前 UTC 自然年）与 `all`（累计）周期，可供 API 按需读取，前端页面默认聚焦上述四个常用周期。
+
+## 快速部署
+
+推荐使用 Docker Compose 部署（支持 `linux/amd64` 与 `linux/arm64`），镜像已内置静态编译的 Go/SQLite 服务、Web 前端、头像资源与模型目录，无需在宿主机安装 Go 或 Node.js。完整说明见 **[Docker 部署指南](docs/docker.zh.md)**。
+
+### 1. 本地构建并启动
 
 ```sh
 docker compose -p cpa-ranking up -d --build
+docker compose -p cpa-ranking ps
 ```
 
-接收远程凭据前必须通过可信反向代理提供 HTTPS。[Docker 部署说明](docs/docker.zh.md)涵盖双架构、权限、健康检查、备份恢复及升级。本项目不提供独立二进制发行包。
+### 2. 使用已发布的 GHCR 镜像
 
-## 开发
-
-需要 Go 1.26.10 或更新版本、启用 CGO，以及 C 编译器（如 GCC）。
+镜像发布采用严格的 `vMAJOR.MINOR.PATCH` 与 `sha-<commit>` 不可变标签（不提供浮动 `latest` 标签）：
 
 ```sh
-go test ./...
+export RANKING_IMAGE=ghcr.io/<owner>/cpa-usage-ranking:v0.1.0
+docker compose -p cpa-ranking pull ranking
+docker compose -p cpa-ranking up -d --no-build
+```
+
+### 生产环境安全提示
+
+- **必须启用 HTTPS**：客户端注册与上报请求携带 Bearer 凭据。示例 `compose.yaml` 默认仅绑定宿主机回环 `127.0.0.1:8080:8080`，对公网提供服务时请前置 Nginx / Caddy / Traefik 等反向代理终止 TLS，切勿在公网明文暴露 HTTP。
+- **可信代理配置**：服务端默认不信任 `X-Forwarded-For` 等转发头；前置反向代理后，请将代理 IP/网段填入 `RANKING_TRUSTED_PROXIES`，以确保按真实客户端来源执行注册与登录限流（详见[注册来源说明](docs/registration-sources.md)）。
+- **单实例与持久化卷**：容器以非特权 `10001:10001` 运行，SQLite 数据持久化于 `/data`（命名卷 `cpa-ranking_ranking-data`）。请保持单实例本地磁盘运行，勿在 NFS 或多副本间共享同一 SQLite 文件。
+
+## 管理员控制台
+
+管理后台默认关闭，公开排行榜与客户端上报无需开启后台即可独立运行。
+
+如需管理参与者与管理员账号，在静态目录之外准备权限为 `0600` 或 `0640` 的主管理员配置文件（容器内由 `10001` 可读），并通过 `RANKING_ADMIN_CONFIG_FILE` 指定路径后重启服务：
+
+```json
+{
+  "username": "admin",
+  "password": "replace-with-strong-password-12-to-72-bytes"
+}
+```
+
+启用后，页面右上角将出现**登录 / 控制台**入口，提供：
+- **榜单管理**：预览四周期五维榜单、手动触发缓存刷新、对指定身份执行**下榜 / 恢复上榜**（下榜后仍正常接收该客户端上报，但从全部榜单与评分参考样本中排除）。
+- **用户管理**：按昵称子串或精确 ID 搜索已注册客户端，执行**封禁 / 解封**（封禁后拒绝后续上报并退出全部榜单；封禁与下榜状态彼此独立）。
+- **管理员管理**（仅主管理员可见）：新增或删除数据库普通管理员（删除后其活跃会话立即失效）。
+
+详细部署与安全边界请参阅 **[管理员控制台文档](docs/admin.md)**。
+
+## 配置
+
+以下列出核心运行与管理配置（源码运行默认值与[容器镜像默认值](docs/docker.zh.md#配置和健康检查)已在表中标明；显式空值或非法格式将在启动时直接报错退出）：
+
+| 环境变量 | 源码默认值（镜像默认值） | 说明 |
+| --- | --- | --- |
+| `RANKING_HTTP_ADDR` | `127.0.0.1:8080`（镜像 `0.0.0.0:8080`） | HTTP 监听地址 |
+| `RANKING_SQLITE_PATH` | `data/ranking.db`（镜像 `/data/ranking.db`） | SQLite 数据库文件路径（启动自动建表，同结构重启保留数据） |
+| `RANKING_MODELS_PATH` | `config/models.json`（镜像 `/app/config/models.json`） | 启动加载的模型目录与别名映射文件 |
+| `RANKING_WEB_DIR` | 未设置（镜像 `/app/web`） | 前端构建产物目录；未设置时仅暴露后端 API |
+| `RANKING_CACHE_REFRESH_INTERVAL` | `5m` | 排行榜统一缓存定时刷新周期 |
+| `RANKING_SHUTDOWN_TIMEOUT` | `10s` | 优雅停机各阶段排空超时 |
+| `RANKING_TRUSTED_PROXIES` | 未设置（不信任任何转发头） | 逗号分隔的可信反向代理 IP 或 CIDR |
+| `RANKING_REGISTRATION_ENABLED` | `true` | 是否允许注册新客户端身份（设为 `false` 仍保留已有身份鉴权与幂等找回） |
+| `RANKING_REGISTRATION_IPV6_64` | `true` | 原生 IPv6 来源按 `/64` 前缀归并计算注册/登录限流 |
+| `RANKING_SETTLED_DAY_RETENTION_DAYS` | `31` | 已日结的单日汇总保留天数（范围 `1`–`36500`） |
+| `RANKING_ADMIN_CONFIG_FILE` | 未设置（关闭管理后台） | 主管理员 JSON 配置文件路径（须位于 `RANKING_WEB_DIR` 之外） |
+
+注册请求窗口/创建配额与上报并发/速率桶等细粒度调优参数，详见 **[注册 API 配置](docs/registration-api.md#startup-configuration)**、**[注册准入限流](docs/registration-admission.md)** 与 **[日快照上报规范](docs/report-snapshots.md)**。
+
+### 健康与就绪探针
+
+- `GET /healthz`：返回 `200 {"status":"ok"}`，仅表示 HTTP 进程存活。
+- `GET /readyz`：仅当 SQLite、模型与头像目录初始化完成，且**首轮真实榜单缓存构建成功**后返回 `200 {"status":"ready"}`（容器健康检查默认使用此端点）。
+
+## 性能基准
+
+在 2 vCPU / 1 GiB 内存（无 Swap）的受限 cgroup 环境下，面对 20,000+ 注册客户端与起始积压负载，服务完成了连续 20 分钟、约 **500 TPS** 的日快照持续写入与积压恢复验证。完整硬件环境、负载模型、延迟分布与适用边界请参阅 **[500 TPS 持续上报基准测试报告](docs/benchmark.md)** 及 **[容量测试工具说明](docs/capacity-tool.md)**。
+
+## 文档导航
+
+- **客户端接入**：[通用客户端接入指南](docs/integration.md) · [接入时序与流程图](docs/integration-flow.md) · [凭据格式与哈希](docs/client-credentials.md) · [注册 API](docs/registration-api.md) · [昵称规范](docs/display-names.md) · [日快照上报 API](docs/report-snapshots.md)
+- **榜单与数据**：[榜单 API 与评分规则](docs/leaderboards.md) · [模型目录与别名](docs/model-catalog.md) · [内置头像目录](docs/avatar-catalog.md) · [SQLite 存储与结算](docs/storage.md) · [客户端存储表](docs/client-storage.md)
+- **运维与安全**：[Docker 部署指南](docs/docker.zh.md) · [管理员控制台](docs/admin.md) · [注册准入限流](docs/registration-admission.md) · [可信代理与来源识别](docs/registration-sources.md) · [基准测试](docs/benchmark.md)
+
+## 本地开发与验证
+
+<details>
+<summary>展开查看目录结构、本地源码运行与测试命令</summary>
+
+### 目录结构
+
+```text
+cmd/ranking/           生产服务端入口、装配与优雅关停
+cmd/ranking-capacity/  离线合成数据与有界容量压测工具（不打入生产镜像）
+config/models.json     标准模型名称、别名与参考价格目录
+internal/
+  admin/               主管理员配置、数据库普通管理员、会话与封禁/下榜服务
+  auth/                Bearer 凭据严格解析与 SHA-256 哈希鉴权
+  avatars/             内置 66 张 WebP 头像目录与内存分发
+  cache/               多周期原子快照缓存与合并刷新调度
+  clients/             客户端身份存储与字面量分页检索
+  httpserver/          Gin 路由、安全响应头、os.OpenRoot 静态托管与同源/CSRF 保护
+  leaderboard/         五维榜单评分、Wilson 下界、中位数参考与 Top 100 截断
+  models/              模型目录校验与标准名称/别名解析
+  periods/             UTC 自然日/周/月/年周期边界计算
+  registration/        注册幂等服务、来源固定窗口限流与滚动创建配额
+  reports/             严格 JSON 解码、快照摘要、单写串行队列、后台日结与自然保留
+  statistics/          只读事务合并已结周期表与未结日表候选快照
+  storage/             SQLite 连接池与当前表结构初始化
+web/                   React 19 + TypeScript + Tailwind CSS 前端与测试套件
+deploy/                CI 门禁、GHCR 发布标签策略与 Docker 冒烟验证脚本
+docs/                  对外协议、部署与运维文档
+```
+
+### 环境要求
+
+- **Go 1.26.10+**（启用 `CGO_ENABLED=1`）及 C 编译器（如 GCC / Clang，用于编译 `go-sqlite3`）
+- **Node.js 24.15+**（24.x）与 `npm`
+
+### 本地前后端联调
+
+在两个终端分别启动后端与 Vite 开发服务器（Vite 默认将 `/healthz`、`/readyz`、`/v1/*` 与 `/avatars/*` 代理至 `http://127.0.0.1:8080`）：
+
+```sh
+# 终端 1：启动后端 API
 go run ./cmd/ranking
-```
 
-默认监听 `http://127.0.0.1:8080`。SIGINT/SIGTERM 停止新接入，并在配置的宽限期内等待进行中的请求完成；关停超时会关闭剩余连接并以失败状态退出。启动和关停事件以 JSON 写入 stderr。
-
-测试统一放在对应模块的 `test/` 目录，不与生产文件混放。基于 SQLite 文件的 HTTP 上报生命周期回归覆盖注册、重试、修正、日结、缓存读取及重启恢复：
-
-```sh
-go test ./internal/httpserver/test -run '^TestCompleteIngestionLifecycle$'
-```
-
-隔离合成夹具和有界 HTTP 负载可使用可选的[容量测试工具](docs/capacity-tool.md)；不要将其指向生产服务。
-
-## 存储基础
-
-启动时在监听 HTTP 之前打开 `data/ranking.db`，可通过 `RANKING_SQLITE_PATH` 覆盖。自动创建缺失的父目录，在一个事务中初始化当前表结构，启用 WAL、FULL 同步和外键，并登记当前目录的标准模型名称；不填充模拟参与者。同结构数据库重启保留数据，不升级或转换旧结构。连接或初始化失败直接退出，不自动修复或回退。关停先排空 HTTP，再关闭有界读写连接池，业务就绪还要求真实缓存完整构建成功。具体约定见 [SQLite 存储说明](docs/storage.md)和[客户端存储说明](docs/client-storage.md)。
-
-注册应用公开[昵称规则](docs/display-names.md)及头像目录校验，不提供资料修改接口。[静态头像目录](docs/avatar-catalog.md)校验编号、默认项和资源；二进制嵌入获准复用的 66 张 WebP（默认编号 1），通过 `/avatars/catalog.json` 和 `/avatars/images/001.webp` 至 `066.webp` 分发，不依赖前端目录。
-[凭据解析与摘要](docs/client-credentials.md)接受客户端预先保存的 32 字节 CSPRNG 秘密，使用规范无填充 base64url Bearer 编码；服务端仅存 SHA-256 摘要，不签发秘密。
-`POST /v1/clients/register` 已接通[受保护注册 API](docs/registration-api.md)：新建返回 201，相同秘密重试返回 200 及当前资料、不覆盖。客户端首次尝试前先生成并保存 32 字节 CSPRNG 秘密，通过 HTTPS Bearer 携带。来源/全局请求限流包含失败和重试；成功新建另受滚动配额（默认 3/小时、10/24 小时）保护。有界内存状态仅属于单机进程、重启清零。`RANKING_REGISTRATION_ENABLED=false` 重启后仅关闭新建，保留已有身份重试和鉴权；不是全站停机。请求、响应、状态码、代理信任与全部部署参数见 API 文档。内部[鉴权中间件](docs/client-credentials.md#internal-identity-enforcement)仅凭秘密选择身份，不增加演示 `/me` API。
-
-`PUT /v1/reports/{utc_day}` 接收该凭据所属客户端的 UTC 今天或昨天完整快照。版本、目录无关的幂等重试、持久封窗、限流及原子替换见[日快照上报 API](docs/report-snapshots.md)。后台有界日结，并清理过期日摘要和周统计，不删除未结快照。内部候选读取在同一 SQLite 快照中合并已结和待结用量；日结后不保留逐模型日历史，见[存储说明](docs/storage.md)。
-
-## 前端开发
-
-需要 Node.js 24.15+（24.x）和 npm。运行时仅依赖 React 与 React DOM。Tailwind 仅参与构建，统一色彩、字体和焦点样式在 `web/src/styles/tokens.css`；不请求外部字体或图标服务。当前选用的 React Bits 控件仅使用 CSS，不新增动效运行时；固定来源、改动和 MIT + Commons Clause 授权见[第三方源码说明](THIRD_PARTY_NOTICES.md)。
-
-```sh
+# 终端 2：安装前端依赖并启动开发服务器
 npm --prefix web ci
 npm --prefix web run dev
-npm --prefix web run typecheck
-npm --prefix web run lint
-npm --prefix web test
-npm --prefix web run build
 ```
 
-页面采用浅色宽屏布局、橙紫点缀和紧凑桌面尺寸，不使用页面 zoom，手机端独立适配。页面提供五榜和今日、昨日、周榜（上一完整 UTC 自然周）、月榜（上一完整 UTC 自然月）四个周期，默认今日，不伪造汇总数字；年度和累计仍由后端维护，但不在页面提供入口。项目图标资源及重新生成方法见[图标说明](docs/brand-icons.md)。
-
-响应式页面提供榜单加载、空态、错误和重试，切换或重试时旧结果始终保留其原榜单、周期和缓存生成时间标签；还有独立的连接状态面板。不伪造名次或用量统计。昵称按文本显示，头像来自服务端目录；缺项使用目录默认头像，加载失败使用中性回退。检测按钮按需调用真实的 `GET /healthz`、校验 JSON 协议，8 秒超时，支持重试，组件卸载时取消请求；不自动轮询。检测成功不代表排名业务就绪。
-
-装饰动效遵循 `prefers-reduced-motion`，控件离屏、禁用或页面隐藏时停止。缺少观察器 API 时降级为静态控件；卸载时移除观察器与监听器。页面不使用 Canvas、WebGL、外部字体或后台 JavaScript 动画循环。
-
-本地开发时，分别在两个终端执行 `go run ./cmd/ranking` 与 `npm --prefix web run dev`。Vite 绑定回环地址，将健康检查、榜单和头像请求代理到 `http://127.0.0.1:8080`，可通过 `RANKING_DEV_PROXY_TARGET` 修改开发代理目标；无需放宽 CORS 或部署生产 Node 服务。
-
-前端测试及初始化放在 `web/src/**/test/`。由于 lint 解析器支持的 TypeScript 上限低于 6.1，暂使用 6.0。其传递依赖 `minimatch` 单独锁定到 11.0.1，修复 GHSA-g3hv-75wg-m249；上游允许安全版本后应移除该 override。
-
-## 全栈验证
-
-安装 Go、Node/npm 和 Make 后：
+单进程托管构建后的前端与 API：
 
 ```sh
-make deps       # Go 模块及 npm 锁定依赖
-make verify     # 格式、vet、Go 测试、前端类型/lint/测试，以及双端构建
-make test-race  # Go 并发检查
-make browser-install # 可选：没有可复用浏览器时才安装
-make verify-all      # 基础检查 + race + 正式产物浏览器冒烟
-make run        # 构建后由 Go 在 8080 端口提供页面
-```
-
-`BIN_DIR` 默认 `bin`，`GO_TEST_FLAGS` 默认 `-p 2`，均可覆盖。构建不依赖本地秘密或内部规划文件。前端产物在 `web/dist/assets/third-party-notices.txt` 中包含 React Bits 来源及完整许可，部署时保留该文件。
-
-浏览器测试及配置位于 `web/test/`。`make test-browser` 构建并启动独立 Go 进程，使用回环端口 4187，验证桌面/手机布局、真实健康请求、键盘/触控、减少动效、失败重试、404 边界、66 张头像解码及真实注册/安全重试，然后停止进程；不会接管已有服务。端口占用时可覆盖 `RANKING_TEST_PORT`。产物默认在 `web/test/results/`，可用 `PLAYWRIGHT_OUTPUT_DIR`、`PLAYWRIGHT_BROWSERS_PATH` 调整产物及浏览器下载位置。浏览器检查使用结果目录旁 `databases/<port>/` 中的独立测试库，不访问应用默认数据库。精简 Linux 环境可能需要管理员先补齐 Playwright 的 Chromium 系统依赖。这些冒烟测试不代表已经验证十万客户端容量。
-
-Playwright 不再要求精确版本（`@playwright/test: "*"`）。npm 锁文件保留干净安装时的已解析依赖记录，不是运行时版本检查；已有兼容依赖可以直接复用，不必再次执行 `make deps`。浏览器测试不会自动安装浏览器，也不要求项目专属的浏览器 revision。复用已有 Chromium 可执行文件：
-
-```sh
-PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium make test-browser
-```
-
-也可以设置 `PLAYWRIGHT_CHROMIUM_CHANNEL=chrome` 复用已安装的 Chrome 通道，两项只选一项。不设置时沿用 Playwright 默认查找方式（包括 `PLAYWRIGHT_BROWSERS_PATH`）；仅改变缓存目录并不能发现不同 revision 的浏览器，跨 revision 复用应指定可执行文件。只有确实没有可用浏览器时才运行 `make browser-install`，兼容性以实际运行的工具和浏览器验证结果为准。
-
-## 源码本地前端托管
-
-```sh
-npm --prefix web ci
 npm --prefix web run build
 go build -o bin/ranking ./cmd/ranking
 RANKING_WEB_DIR=web/dist ./bin/ranking
 ```
 
-Go 同域提供构建后的页面和 API。以上为源码开发示例；部署请使用包含模型目录、前端及第三方声明/许可的 Docker 镜像。`RANKING_WEB_DIR` 的相对路径以进程工作目录为基准；未设置时仅启用后端路由，设置后若缺少完整入口文件则启动失败。
+### 质量检查与测试
 
-仅提供 `/`、`/index.html`、`/favicon.svg` 和 `/assets/` 下实际存在的文件，不做任意 SPA 页面回退或目录列表。缺失资源、未知 API 和未知页面保持 404；拒绝目录穿越及越界软链接。HTML、非指纹文件及公共资源子目录中的稳定文件名需要重新验证，顶层带构建指纹的资源可缓存一年。运行期间不要原地修改资源，应停止进程、更换构建后重启。
+```sh
+make verify       # gofmt、go vet、Go 单元测试、前端 typecheck/lint/Vitest 及双端构建
+make test-race    # Go 全包并发竞态检查（-race）
+make test-browser # 启动独立回环实例运行 Playwright 端到端浏览器检查
+```
 
-## HTTP 基础
+复用本机已有 Chromium 可指定 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium make test-browser`。品牌图标说明见 [docs/brand-icons.md](docs/brand-icons.md)。
 
-- `GET /healthz`：200 与 `{"status":"ok"}` 仅表示进程存活。
-- `GET /readyz`：仅在数据库和目录已初始化且首轮真实缓存完整成功后返回 200；此前即使 `/healthz` 健康也返回 503。后续刷新失败保留上轮完整缓存，不额外规定缓存过期 SLA。
-- `POST /v1/clients/register`：受保护创建/安全重试，见[注册 API](docs/registration-api.md)。
-- `PUT /v1/reports/{utc_day}`：受保护的完整日快照，见[上报 API](docs/report-snapshots.md)。
-- `GET /v1/leaderboards/{board}/{period}`：固定公开缓存榜单，见[接口与评分说明](docs/leaderboards.md)。
-- `GET`/`HEAD /avatars/catalog.json` 及目录列出的 `/avatars/images/*` 图片。
-- 未知路由和不支持的方法返回 JSON 错误（404/405）。
-- 异常响应不暴露细节，日志不记录请求正文、请求头或 panic 值。
-- 默认不信任客户端提供的转发 IP 头；显式代理配置见[注册来源说明](docs/registration-sources.md)。
+</details>
 
-## 配置
+## License
 
-下列默认值适用于源码运行；[Docker 镜像](docs/docker.zh.md#配置和健康检查)覆盖其中四项路径或监听设置。
-
-| 环境变量 | 默认值 | 含义 |
-| --- | --- | --- |
-| `RANKING_HTTP_ADDR` | `127.0.0.1:8080` | 监听地址，数值端口 0 表示选择空闲端口 |
-| `RANKING_SHUTDOWN_TIMEOUT` | `10s` | 正数形式的优雅关停等待时间 |
-| `RANKING_CACHE_REFRESH_INTERVAL` | `5m` | 内部缓存定时刷新间隔，必须为正数 |
-| `RANKING_WEB_DIR` | 未设置 | 可选的前端构建目录；未设置时不提供前端路由 |
-| `RANKING_SQLITE_PATH` | `data/ranking.db` | SQLite 文件路径，相对路径以进程工作目录为基准 |
-| `RANKING_MODELS_PATH` | `config/models.json` | 模型目录文件，相对路径以进程工作目录为基准 |
-| `RANKING_TRUSTED_PROXIES` | 未设置（无） | 逗号分隔的可信代理 IP/CIDR |
-| `RANKING_REGISTRATION_IPV6_64` | `true` | 原生 IPv6 注册来源按 /64 分组 |
-
-注册限额、请求体边界和新建开关见[注册 API 配置](docs/registration-api.md#startup-configuration)，上报接入和写入队列参数见[上报 API](docs/report-snapshots.md)。显式空值或非法配置会校验失败。模型目录为启动必需；环境变量不从 `.env` 文件自动加载，不提交凭据或本地 `.env` 文件。
+本项目基于 [MIT License](./LICENSE) 开源。第三方源码声明与许可详见 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)。

@@ -54,6 +54,15 @@
 .admin-list-placeholder { min-height: 120px; }
 .admin-empty { padding: 32px 16px; text-align: center; color: var(--muted); }
 .admin-table { width: 100%; border-collapse: collapse; font-size: 14px; table-layout: fixed; }
+.admin-col-id { width: 9%; }
+.admin-col-user { width: 32%; }
+.admin-col-time { width: 23%; }
+.admin-col-status { width: 11%; }
+.admin-col-action { width: 14%; }
+.admin-col-account-id { width: 12%; }
+.admin-col-account { width: 38%; }
+.admin-col-account-time { width: 32%; }
+.admin-col-account-action { width: 18%; }
 .admin-table th, .admin-table td { padding: 14px 12px; text-align: left; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .admin-table th { background: #faf9fc; color: var(--muted); font-size: 12px; font-weight: 500; }
 .admin-table td { font-variant-numeric: tabular-nums; }
@@ -71,6 +80,7 @@
   .admin-main .admin-search input { min-height: 40px; font-size: 16px; }
   .admin-search .admin-button { min-height: 40px; }
   .admin-table, .admin-table tbody { display: block; }
+  .admin-table colgroup { display: none; }
   .admin-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .admin-table tr { display: block; padding: 12px 0; border-bottom: 1px solid var(--line); }
   .admin-table td { display: grid; grid-template-columns: 110px minmax(0, 1fr); align-items: center; gap: 12px; padding: 8px 0; border: 0; }

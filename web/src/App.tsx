@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Board, Period } from './api/leaderboards'
 import { boards, periods } from './leaderboardLabels'
 import { LeaderboardView } from './components/LeaderboardPanel'
@@ -10,8 +10,12 @@ import './styles/app.css'
 export default function App({ active = true }: { active?: boolean }) {
   const [selection, setSelection] = useState<{ board: Board; period: Period; version: number }>({ board: 'overall', period: 'today', version: 0 })
   const { board, period } = selection
-  const result = useLeaderboard(board, period, selection.version * 2 + (active ? 1 : 0))
+  const result = useLeaderboard(board, period, selection.version, active)
   const shown = result.data ?? selection
+  useEffect(() => {
+    if (!active) return
+    return () => setSelection((old) => ({ ...old, version: old.version + 1 }))
+  }, [active])
   function select(change: Partial<{ board: Board; period: Period }>) {
     setSelection((current) => {
       const base = result.error && result.data ? result.data : current

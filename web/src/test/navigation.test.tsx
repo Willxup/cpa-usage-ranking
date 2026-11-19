@@ -5,7 +5,7 @@ import RootApp from '../RootApp'
 
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } })
 const session = { enabled: true, authenticated: true, user: { id: 'owner', username: 'owner', owner: true }, csrf_token: 'csrf', expires_at: new Date(Date.now() + 3600000).toISOString() }
-const empty = { board: 'overall', period: 'today', start: '2026-11-16', end: '2026-11-17', generated_at: '2026-11-16T00:00:00Z', entries: [] }
+const empty = { board: 'overall', period: 'today', start: '2026-11-16', end: '2026-11-17', generated_at: '2026-11-16T00:00:00Z', entries: [{ rank: 1, client_id: '7', display_name: '测试用户', avatar_id: '1', metric: '50.00' }] }
 const catalog = { default_avatar_id: 1, avatars: [{ avatar_id: 1, path: 'images/001.webp' }] }
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); window.history.replaceState({}, '', '/') })
 
@@ -23,12 +23,15 @@ it('keeps the document and console shell while sharing one session across tabs a
   render(<RootApp />)
   await user.click(await screen.findByRole('link', { name: '控制台' }))
   const navigation = await screen.findByRole('navigation', { name: '控制台导航' })
+  await screen.findByRole('button', { name: '下榜' })
+  const ids = Array.from(document.querySelectorAll('[id]')).map((node) => node.id)
+  expect(new Set(ids).size).toBe(ids.length)
   expect(focus).toHaveBeenCalledWith({ preventScroll: true })
   const header = screen.getByRole('navigation', { name: '页面导航' })
   expect(within(header).getAllByRole('link').map((link) => link.textContent)).toEqual(['排行榜', '控制台'])
   expect(within(header).getByRole('link', { name: '控制台' })).toHaveAttribute('aria-current', 'page')
   expect(screen.getByRole('contentinfo')).toHaveTextContent(/^CPA Usage Ranking$/)
-  expect(screen.getByRole('contentinfo').querySelector('img')).toHaveAttribute('src', '/assets/brand/project-icon.svg')
+  expect(screen.getByRole('contentinfo').querySelector('img')).toHaveAttribute('src', '/assets/brand/logo.svg')
   await user.click(screen.getByRole('link', { name: '用户管理' }))
   expect(await screen.findByRole('heading', { name: '用户管理' })).toBeVisible()
   expect(screen.getByRole('navigation', { name: '控制台导航' })).toBe(navigation)
@@ -68,4 +71,21 @@ it('invalidates the shared identity on a protected 401 instead of trusting the p
   expect(within(header).getByRole('link', { name: '登录' })).toHaveAttribute('aria-current', 'page')
   await user.click(within(header).getByRole('link', { name: '排行榜' }))
   expect(await screen.findByRole('link', { name: '登录' })).toBeVisible()
+})
+
+it('does not fetch public leaderboards or avatars while the public view is hidden', async () => {
+  const fetcher = vi.fn((path: RequestInfo | URL) => Promise.resolve(json(String(path).includes('/admin/session') ? { enabled: true, authenticated: false } : String(path).includes('avatars') ? catalog : empty)))
+  vi.stubGlobal('fetch', fetcher)
+  window.history.replaceState({}, '', '/admin/login')
+  const user = userEvent.setup()
+  render(<RootApp />)
+  expect(await screen.findByRole('heading', { name: '管理员登录' })).toBeVisible()
+  expect(fetcher.mock.calls.map(([path]) => String(path))).toEqual(['/v1/admin/session'])
+  await user.click(within(screen.getByRole('navigation', { name: '页面导航' })).getByRole('link', { name: '排行榜' }))
+  expect(await screen.findByRole('heading', { name: '今日 · 综合总榜' })).toBeVisible()
+  const publicReads = fetcher.mock.calls.filter(([path]) => String(path) === '/v1/leaderboards/overall/today').length
+  expect(publicReads).toBe(1)
+  await user.click(within(screen.getByRole('navigation', { name: '页面导航' })).getByRole('link', { name: '登录' }))
+  expect(await screen.findByRole('heading', { name: '管理员登录' })).toBeVisible()
+  expect(fetcher.mock.calls.filter(([path]) => String(path) === '/v1/leaderboards/overall/today')).toHaveLength(publicReads)
 })

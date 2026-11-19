@@ -196,9 +196,10 @@ func TestInvalidAndExtremeMeasurements(t *testing.T) {
 	s := snapshot()
 	add(&s, 1, reports.Metrics{RequestCount: 1, TTFTSamples: 1, TTFTSumMS: math.MaxFloat64})
 	add(&s, 2, reports.Metrics{RequestCount: 1, TTFTSamples: 1, TTFTSumMS: math.MaxFloat64 / 2})
+	add(&s, 3, reports.Metrics{OutputTokens: 1, RequestCount: 1, LatencySamples: 1, LatencySumMS: math.SmallestNonzeroFloat64})
 	b := build(t, s)
-	if b[leaderboard.TTFT][0].ClientID != "2" {
-		t.Fatal(b[leaderboard.TTFT][0])
+	if b[leaderboard.TTFT][0].ClientID != "2" || find(t, b[leaderboard.Overall], 3).Details.LatencyMeanMS == nil || *find(t, b[leaderboard.Overall], 3).Details.LatencyMeanMS != "0.00" {
+		t.Fatal(b[leaderboard.TTFT][0], find(t, b[leaderboard.Overall], 3))
 	}
 	delete(s.Profiles, 1)
 	if _, err := leaderboard.Build(context.Background(), s); err == nil {

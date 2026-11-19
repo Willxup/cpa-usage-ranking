@@ -82,7 +82,7 @@ func Build(ctx context.Context, s statistics.Snapshot) (map[string][]Entry, erro
 			return nil, errors.New("missing public profile")
 		}
 		d, err := statistics.Derive(m)
-		if err != nil {
+		if err != nil && !errors.Is(err, statistics.ErrOverflow) {
 			return nil, err
 		}
 		if m.RequestCount == 0 {

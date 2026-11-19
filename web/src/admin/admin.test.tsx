@@ -59,15 +59,17 @@ it('shows one administrator identity without role/config explanations and retain
 
 it('does not retry a failed account creation automatically', async () => {
   const fetcher = vi.fn((_path: RequestInfo | URL, init?: RequestInit) => Promise.resolve(init?.method === 'POST' ? json({}, 409) : json({ owner: { username: 'owner' }, accounts: [] })))
+  const onExpired = vi.fn()
   vi.stubGlobal('fetch', fetcher)
   const user = userEvent.setup()
-  render(<Accounts session={{ enabled: true, authenticated: true, csrf_token: 'test-csrf' }} onExpired={vi.fn()} />)
+  render(<Accounts session={{ enabled: true, authenticated: true, csrf_token: 'test-csrf' }} onExpired={onExpired} />)
   expect(await screen.findByText('暂无管理员。')).toBeVisible()
   await user.type(screen.getByLabelText('用户名'), 'staff')
   await user.type(screen.getByLabelText('初始密码'), 'isolated-test-password')
   await user.click(screen.getByRole('button', { name: '添加管理员' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('用户名已存在')
   expect(fetcher.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(1)
+  expect(onExpired).not.toHaveBeenCalled()
 })
 
 it('allows password manager input, prevents duplicate login and reports failure', async () => {
@@ -91,4 +93,36 @@ it('allows password manager input, prevents duplicate login and reports failure'
   finish(json({}, 401))
   expect(await screen.findByRole('alert')).toHaveTextContent('用户名或密码错误')
   expect(screen.getByRole('button', { name: '登录' })).toBeEnabled()
+})
+
+it('clears expired logout state instead of showing a stale alert after re-login', async () => {
+  window.history.replaceState({}, '', '/admin/leaderboards')
+  let attempts = 0
+  let expired = false
+  const emptyBoard = { board: 'overall', period: 'today', start: '2026-11-16', end: '2026-11-17', generated_at: '2026-11-16T00:00:00Z', entries: [] }
+  vi.stubGlobal('fetch', vi.fn((path: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(path)
+    if (url === '/v1/admin/session' && init?.method === 'DELETE') {
+      attempts++
+      if (attempts === 1) { expired = true; return Promise.resolve(json({}, 500)) }
+      return Promise.resolve(json({}, 401))
+    }
+    if (url === '/v1/admin/session' && init?.method === 'POST') {
+      expired = false
+      return Promise.resolve(json({ enabled: true, authenticated: true, user: { id: 'owner', username: 'owner', owner: true }, csrf_token: 'csrf-2' }))
+    }
+    if (url === '/v1/admin/session') {
+      return Promise.resolve(json(expired ? { enabled: true, authenticated: false } : { enabled: true, authenticated: true, user: { id: 'owner', username: 'owner', owner: true }, csrf_token: 'csrf-1' }))
+    }
+    return Promise.resolve(json(url.includes('avatars') ? { default_avatar_id: 1, avatars: [] } : emptyBoard))
+  }))
+  const user = userEvent.setup()
+  render(<AdminApp />)
+  await user.click(await screen.findByRole('button', { name: '退出' }))
+  expect(await screen.findByRole('heading', { name: '管理员登录' })).toBeVisible()
+  await user.type(screen.getByLabelText('用户名'), 'owner')
+  await user.type(screen.getByLabelText('密码'), 'correct-test-password')
+  await user.click(screen.getByRole('button', { name: '登录' }))
+  expect(await screen.findByRole('navigation', { name: '控制台导航' })).toBeVisible()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 })

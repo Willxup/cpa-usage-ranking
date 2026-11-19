@@ -1,11 +1,11 @@
 # Registration request admission
 
 Registration has its own source and global request budgets. These are distinct
-from new-identity creation quotas: **every attempt** that reaches the gate is
-counted before credential or body validation, including failed requests, safe
-retries and source/capacity rejections against the global budget. A globally
-exhausted gate stops immediately. This does not apply registration budgets to
-health, readiness, frontend or avatar routes.
+from new-identity creation quotas: **every admitted attempt** is counted before
+credential or body validation, including failed requests and safe retries, while
+requests already rejected by per-source or source-capacity limits do not consume
+remaining global slots. A globally exhausted gate stops immediately. This does
+not apply registration budgets to health, readiness, frontend or avatar routes.
 
 The internal `registration.RequestLimiter` and Gin `RegistrationAdmission`
 middleware use fixed windows, starting at the first request for a source (and

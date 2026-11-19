@@ -57,7 +57,7 @@ test('keeps console tabs and public-to-console navigation horizontally aligned',
     const accounts = await position(page)
     const footer = page.locator('.admin-shell .brand-footer')
     await expect(footer).toHaveText('CPA Usage Ranking')
-    await expect(footer.locator('img')).toHaveAttribute('src', '/assets/brand/project-icon.svg')
+    await expect(footer.locator('img')).toHaveAttribute('src', '/assets/brand/logo.svg')
     const footerBox = (await footer.boundingBox())!
     const footerBrand = (await footer.locator('span').boundingBox())!
     expect(Math.abs(footerBrand.x + footerBrand.width / 2 - footerBox.x - footerBox.width / 2)).toBeLessThan(1)

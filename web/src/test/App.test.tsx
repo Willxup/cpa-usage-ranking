@@ -154,7 +154,7 @@ describe('application shell', () => {
     render(<App />)
     const footer = screen.getByRole('contentinfo')
     expect(footer).toHaveTextContent(/^CPA Usage Ranking$/)
-    expect(footer.querySelector('img')).toHaveAttribute('src', '/assets/brand/project-icon.svg')
+    expect(footer.querySelector('img')).toHaveAttribute('src', '/assets/brand/logo.svg')
     expect(footer.querySelector('p')).not.toBeInTheDocument()
     await screen.findByRole('heading', { name: '今日 · 综合总榜' })
   })
@@ -168,5 +168,25 @@ describe('application shell', () => {
     expect(screen.queryByText('LIVE CONNECTION')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '检查服务连接' })).not.toBeInTheDocument()
     expect(fetcher.mock.calls.some(([path]) => String(path) === '/healthz')).toBe(false)
+  })
+
+  it('retries a missing avatar catalog when the user switches or retries the leaderboard', async () => {
+    let failCatalog = true
+    const row = { rank: 1, client_id: '1', display_name: '参与者', avatar_id: '1', metric: '12.34' }
+    const fetcher = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/admin/session')) return Promise.resolve(json({ enabled: false, authenticated: false }))
+      if (url.includes('avatars')) return failCatalog ? Promise.resolve(json({}, 503)) : Promise.resolve(json(catalog))
+      const [, board = 'overall', period = 'today'] = url.match(/leaderboards\/([^/]+)\/([^/]+)/) ?? []
+      return Promise.resolve(json({ ...empty, board, period, entries: [row] }))
+    })
+    vi.stubGlobal('fetch', fetcher)
+    const user = userEvent.setup()
+    render(<App />)
+    const cell = await screen.findByRole('cell', { name: '参与者' })
+    expect(cell.querySelector('img')).toBeNull()
+    failCatalog = false
+    await user.click(screen.getByRole('button', { name: '用量榜' }))
+    await waitFor(() => expect(screen.getByRole('cell', { name: '参与者' }).querySelector('img')).toHaveAttribute('src', '/avatars/images/001.webp'))
   })
 })

@@ -6,7 +6,9 @@ not a live status indicator.
 
 Sources and exports:
 
-- `web/public/assets/brand/project-icon.svg`: scalable project icon, transparent outside the rounded outer tile.
+- `assets/ranking-logo-light.svg` and `assets/ranking-logo-dark.svg`: horizontal README banner logos with wordmark for light and dark themes.
+- `assets/ranking-logo.svg` and `web/public/assets/brand/logo.svg`: standalone frameless brand mark used in the web header and footer.
+- `web/public/assets/brand/project-icon.svg`: single-tile rounded application icon master.
 - `web/public/assets/brand/project-icon-512.png`: general project/repository artwork.
 - `web/public/assets/brand/project-icon-192.png`: smaller application artwork.
 - `web/public/assets/brand/project-icon-180.png`: Apple touch icon.

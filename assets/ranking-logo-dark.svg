@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 170" fill="none" role="img" aria-labelledby="ranking-logo-dark-title">
+  <title id="ranking-logo-dark-title">CPA Usage Ranking</title>
+  <defs>
+    <linearGradient id="bar-low" x1="20" y1="68" x2="20" y2="112" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FCBBA8" />
+      <stop offset="1" stop-color="#F69377" />
+    </linearGradient>
+    <linearGradient id="bar-mid" x1="52" y1="42" x2="52" y2="112" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FA9478" />
+      <stop offset="1" stop-color="#F26E4B" />
+    </linearGradient>
+    <linearGradient id="bar-high" x1="84" y1="14" x2="84" y2="112" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F77B58" />
+      <stop offset="1" stop-color="#E6552E" />
+    </linearGradient>
+    <linearGradient id="pulse-dot" x1="102" y1="93" x2="118" y2="111" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B99AF8" />
+      <stop offset="1" stop-color="#9466E8" />
+    </linearGradient>
+  </defs>
+  <g transform="translate(36 21)">
+    <rect x="9" y="68" width="22" height="44" rx="7" fill="url(#bar-low)" />
+    <rect x="41" y="42" width="22" height="70" rx="7" fill="url(#bar-mid)" />
+    <rect x="73" y="14" width="22" height="98" rx="7" fill="url(#bar-high)" />
+    <circle cx="110" cy="102" r="10" fill="url(#pulse-dot)" />
+  </g>
+  <text x="196" y="112" fill="#F5F7FA" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif" font-size="74" font-weight="800" letter-spacing="8">RANKING</text>
+</svg>
