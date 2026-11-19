@@ -29,7 +29,7 @@ test('loads the real leaderboard without an introduction or health card', async 
   await expect(page.getByRole('button', { name: '检查服务连接' })).toHaveCount(0)
   const footer = page.locator('.brand-footer')
   await expect(footer).toHaveText('CPA Usage Ranking')
-  await expect(footer.locator('img')).toHaveAttribute('src', '/assets/brand/project-icon.svg')
+  await expect(footer.locator('img')).toHaveAttribute('src', '/assets/brand/logo.svg')
   const box = (await footer.locator('span').boundingBox())!
   const footerBox = (await footer.boundingBox())!
   expect(Math.abs(box.x + box.width / 2 - footerBox.x - footerBox.width / 2)).toBeLessThan(1)
@@ -45,13 +45,13 @@ test('uses compact desktop sizing without scaling down mobile or applying page z
   expect(await heading.evaluate((node) => parseFloat(getComputedStyle(node).fontSize))).toBeLessThan(34)
   expect((await page.locator('.site-header').boundingBox())!.height).toBeLessThanOrEqual(72)
   expect(await page.locator('body').evaluate((node) => getComputedStyle(node).zoom)).toBe('1')
-  expect((await page.locator('.brand .project-icon').boundingBox())!.width).toBe(62)
-  expect(await page.locator('.brand').evaluate((node) => getComputedStyle(node).columnGap)).toBe('0px')
+  expect((await page.locator('.brand .project-icon').boundingBox())!.width).toBe(30)
+  expect(await page.locator('.brand').evaluate((node) => getComputedStyle(node).columnGap)).toBe('10px')
   await page.setViewportSize({ width: 375, height: 812 })
   expect(await heading.evaluate((node) => parseFloat(getComputedStyle(node).fontSize))).toBe(34)
   expect((await page.locator('.site-header').boundingBox())!.height).toBeGreaterThanOrEqual(116)
-  expect((await page.locator('.brand .project-icon').boundingBox())!.width).toBe(52)
-  expect(await page.locator('.brand').evaluate((node) => getComputedStyle(node).columnGap)).toBe('0px')
+  expect((await page.locator('.brand .project-icon').boundingBox())!.width).toBe(28)
+  expect(await page.locator('.brand').evaluate((node) => getComputedStyle(node).columnGap)).toBe('10px')
 })
 
 for (const width of [320, 375, 768]) {
@@ -63,7 +63,7 @@ for (const width of [320, 375, 768]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     const footer = page.locator('.brand-footer')
     await expect(footer).toHaveText('CPA Usage Ranking')
-    await expect(footer.locator('img')).toHaveAttribute('src', '/assets/brand/project-icon.svg')
+    await expect(footer.locator('img')).toHaveAttribute('src', '/assets/brand/logo.svg')
     const box = (await footer.locator('span').boundingBox())!
     const footerBox = (await footer.boundingBox())!
     expect(Math.abs(box.x + box.width / 2 - footerBox.x - footerBox.width / 2)).toBeLessThan(1)
@@ -108,7 +108,7 @@ test('serves decodable project icons and browser favicon variants', async ({ pag
   await page.goto('/')
   await expect(page.locator('.brand .project-icon')).toBeVisible()
   await expect(page.locator('link[rel="icon"][type="image/svg+xml"]')).toHaveAttribute('href', '/favicon.svg?v=2')
-  const files = ['/favicon.svg', '/assets/brand/project-icon.svg', '/assets/brand/favicon.ico',
+  const files = ['/favicon.svg', '/assets/brand/logo.svg', '/assets/brand/project-icon.svg', '/assets/brand/favicon.ico',
     ...[16, 32, 48].map((size) => `/assets/brand/favicon-${size}.png`),
     ...[180, 192, 512].map((size) => `/assets/brand/project-icon-${size}.png`)]
   for (const file of files) {

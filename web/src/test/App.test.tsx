@@ -154,7 +154,7 @@ describe('application shell', () => {
     render(<App />)
     const footer = screen.getByRole('contentinfo')
     expect(footer).toHaveTextContent(/^CPA Usage Ranking$/)
-    expect(footer.querySelector('img')).toHaveAttribute('src', '/assets/brand/project-icon.svg')
+    expect(footer.querySelector('img')).toHaveAttribute('src', '/assets/brand/logo.svg')
     expect(footer.querySelector('p')).not.toBeInTheDocument()
     await screen.findByRole('heading', { name: '今日 · 综合总榜' })
   })

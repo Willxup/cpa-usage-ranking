@@ -31,7 +31,7 @@ it('keeps the document and console shell while sharing one session across tabs a
   expect(within(header).getAllByRole('link').map((link) => link.textContent)).toEqual(['排行榜', '控制台'])
   expect(within(header).getByRole('link', { name: '控制台' })).toHaveAttribute('aria-current', 'page')
   expect(screen.getByRole('contentinfo')).toHaveTextContent(/^CPA Usage Ranking$/)
-  expect(screen.getByRole('contentinfo').querySelector('img')).toHaveAttribute('src', '/assets/brand/project-icon.svg')
+  expect(screen.getByRole('contentinfo').querySelector('img')).toHaveAttribute('src', '/assets/brand/logo.svg')
   await user.click(screen.getByRole('link', { name: '用户管理' }))
   expect(await screen.findByRole('heading', { name: '用户管理' })).toBeVisible()
   expect(screen.getByRole('navigation', { name: '控制台导航' })).toBe(navigation)
