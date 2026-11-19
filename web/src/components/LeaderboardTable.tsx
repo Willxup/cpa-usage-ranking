@@ -45,7 +45,7 @@ export function LeaderboardTable({ data, avatars, renderAction }: { data: Leader
     {data.entries.map((entry) => {
       return <tbody key={entry.client_id} role="rowgroup" className="leaderboard-group">
         <tr role="row" className="leaderboard-row">
-          <td role="cell" className="rank-cell"><span className={`rank-number${entry.rank <= 3 ? ' rank-leading' : ''}`}>{entry.rank}</span></td>
+          <td role="cell" className="rank-cell"><span className={`rank-number${entry.rank <= 3 ? ` rank-leading rank-${entry.rank}` : ''}`}>{entry.rank}</span></td>
           <td role="cell" className="participant-cell"><div className="participant"><Avatar id={entry.avatar_id} catalog={avatars} /><span id={`${renderAction ? 'admin-' : ''}participant-${entry.client_id}`}>{entry.display_name}</span></div></td>
           <td role="cell" className="metric-value" data-label={boards[data.board].metric}><Amount value={entry.metric} kind={kinds[data.board]} /></td>
           {overall && columns.map(({ key, label, kind }) => <td key={key} role="cell" className="detail-cell" data-label={label}><Amount value={entry.details?.[key]} kind={kind} /></td>)}
