@@ -16,8 +16,8 @@
 .header-actions { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 .site-header nav { margin-left: auto; display: flex; gap: 10px; align-items: center; }
 .header-actions nav { margin-left: 0; }
-.lang-switch { display: inline-flex; align-items: center; padding: 3px; border-radius: 9px; background: #f1f1f3; gap: 2px; }
-.lang-switch button { min-height: 30px; padding: 4px 9px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 600; line-height: 1; transition: color 120ms ease; }
+.lang-switch { display: inline-flex; flex-shrink: 0; align-items: center; padding: 3px; border-radius: 9px; background: #f1f1f3; gap: 2px; }
+.lang-switch button { min-height: 30px; padding: 4px 9px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 600; line-height: 1; white-space: nowrap; transition: color 120ms ease; }
 .lang-switch button:not([aria-pressed="true"]):hover { color: var(--ink); }
 .lang-switch button[aria-pressed="true"] { background: #ffffff; color: var(--ink); box-shadow: 0 1px 3px rgba(24, 24, 27, 0.08); }
 .site-header nav a, .admin-identity .logout-link { display: inline-flex; align-items: center; min-height: 44px; padding: 10px 18px; border: 0; border-radius: 10px; background: transparent; color: inherit; font-size: 16px; font-weight: 550; text-decoration: none; transition: color 120ms ease; }
@@ -185,4 +185,11 @@
   .empty-caption { font-size: 11px; }
   .ranking-bottom { padding: 14px 16px; font-size: 12px; }
   .site-footer { flex-wrap: wrap; gap: 10px; padding: 22px 0; }
+}
+@media (max-width: 374px) {
+  .header-actions { gap: 6px; }
+  .site-header nav { gap: 4px; }
+  .site-header nav a { font-size: 13px; padding: 8px 10px; }
+  .lang-switch button { padding: 4px 7px; font-size: 11px; }
+  .period-control button { min-height: 40px; padding-inline: 4px; font-size: 13px; }
 }
