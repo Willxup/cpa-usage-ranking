@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none" role="img" aria-labelledby="ranking-mark-title">
+  <title id="ranking-mark-title">CPA Usage Ranking</title>
+  <defs>
+    <linearGradient id="bar-low" x1="20" y1="68" x2="20" y2="112" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FBA992" />
+      <stop offset="1" stop-color="#F48768" />
+    </linearGradient>
+    <linearGradient id="bar-mid" x1="52" y1="42" x2="52" y2="112" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F78666" />
+      <stop offset="1" stop-color="#EC623D" />
+    </linearGradient>
+    <linearGradient id="bar-high" x1="84" y1="14" x2="84" y2="112" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F36D47" />
+      <stop offset="1" stop-color="#DC4720" />
+    </linearGradient>
+    <linearGradient id="pulse-dot" x1="102" y1="93" x2="118" y2="111" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A67FF5" />
+      <stop offset="1" stop-color="#8250D5" />
+    </linearGradient>
+  </defs>
+  <rect x="9" y="68" width="22" height="44" rx="7" fill="url(#bar-low)" />
+  <rect x="41" y="42" width="22" height="70" rx="7" fill="url(#bar-mid)" />
+  <rect x="73" y="14" width="22" height="98" rx="7" fill="url(#bar-high)" />
+  <circle cx="110" cy="102" r="10" fill="url(#pulse-dot)" />
+</svg>

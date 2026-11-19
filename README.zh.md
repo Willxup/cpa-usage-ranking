@@ -1,5 +1,9 @@
 <p align="center">
-  <img src="./web/public/assets/brand/project-icon.svg" alt="CPA Usage Ranking" width="88" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./assets/ranking-logo-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="./assets/ranking-logo-light.svg" />
+    <img src="./assets/ranking-logo-light.svg" alt="CPA Usage Ranking" width="520" />
+  </picture>
 </p>
 
 <p align="center">
