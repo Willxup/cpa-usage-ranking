@@ -1,5 +1,8 @@
 import type { Board, Period } from './api/leaderboards'
 
+export const BOARD_ORDER: readonly Board[] = ['overall', 'usage', 'cache', 'success', 'ttft']
+export const PERIOD_ORDER: readonly Period[] = ['today', 'yesterday', 'week', 'month']
+
 export const boards: Record<Board, { label: string; metric: string; unit: string }> = {
   overall: { label: '综合总榜', metric: '总分', unit: '分' },
   usage: { label: '用量榜', metric: 'Token 用量', unit: 'tokens' },

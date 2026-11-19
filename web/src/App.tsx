@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import type { Board, Period } from './api/leaderboards'
-import { boards, periods } from './leaderboardLabels'
+import { BOARD_ORDER, PERIOD_ORDER } from './leaderboardLabels'
 import { LeaderboardView } from './components/LeaderboardPanel'
 import { SiteFooter } from './components/SiteFooter'
 import { SiteHeader } from './components/SiteHeader'
 import { useLeaderboard } from './hooks/useLeaderboard'
+import { useI18n } from './i18n'
 import './styles/app.css'
 
 export default function App({ active = true }: { active?: boolean }) {
+  const { m } = useI18n()
   const [selection, setSelection] = useState<{ board: Board; period: Period; version: number }>({ board: 'overall', period: 'today', version: 0 })
   const { board, period } = selection
   const result = useLeaderboard(board, period, selection.version, active)
@@ -28,12 +30,12 @@ export default function App({ active = true }: { active?: boolean }) {
       <SiteHeader />
       <main id="main" className="page-width">
         <section id="overview" className="overview" aria-labelledby="page-title">
-          <div><p className="eyebrow">LEADERBOARDS</p><h1 id="page-title">CPA 用量榜</h1></div>
+          <div><p className="eyebrow">{m.publicPage.eyebrow}</p><h1 id="page-title">{m.publicPage.title}</h1></div>
         </section>
-        <section id="ranking" className="ranking-section" aria-label="排行榜">
+        <section id="ranking" className="ranking-section" aria-label={m.publicPage.sectionAria}>
           <div className="ranking-toolbar">
-            <fieldset className="board-control"><legend className="sr-only">榜单类型</legend>{(Object.keys(boards) as Board[]).map((item) => <button key={item} type="button" aria-pressed={shown.board === item} onClick={() => select({ board: item })}>{boards[item].label}</button>)}</fieldset>
-            <fieldset className="period-control"><legend className="sr-only">时间范围</legend>{(Object.keys(periods) as Period[]).map((item) => <button key={item} type="button" aria-pressed={shown.period === item} onClick={() => select({ period: item })}>{periods[item]}</button>)}</fieldset>
+            <fieldset className="board-control"><legend className="sr-only">{m.publicPage.boardLegend}</legend>{BOARD_ORDER.map((item) => <button key={item} type="button" aria-pressed={shown.board === item} onClick={() => select({ board: item })}>{m.boards[item].label}</button>)}</fieldset>
+            <fieldset className="period-control"><legend className="sr-only">{m.publicPage.periodLegend}</legend>{PERIOD_ORDER.map((item) => <button key={item} type="button" aria-pressed={shown.period === item} onClick={() => select({ period: item })}>{m.periods[item]}</button>)}</fieldset>
           </div>
           <LeaderboardView board={board} period={period} result={result} quietSwitch />
         </section>
