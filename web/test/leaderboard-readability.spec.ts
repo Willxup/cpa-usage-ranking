@@ -10,7 +10,7 @@ for (const width of [320, 375, 390, 768, 1200, 1440]) {
       }),
     }))
     await page.goto('/')
-    await page.getByRole('button', { name: '用量榜', exact: true }).click()
+    await page.getByRole('button', { name: 'Token Usage', exact: true }).click()
     await expect(page.locator('.metric-value')).toHaveText('9223372036.85 B')
     await expect(page.locator('#participant-1')).toHaveCSS('font-weight', '750')
     await expect(page.getByRole('columnheader')).toHaveCount(3)

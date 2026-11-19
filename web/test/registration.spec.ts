@@ -62,5 +62,5 @@ test('registers and safely retries against the real production binary without ad
   }).toBe(true)
   await page.reload()
   await expect(page.getByText('Browser 🙂')).toBeVisible()
-  await expect(page.getByRole('button', { name: /注册|登录/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Sign up|Sign in|注册|登录/ })).toHaveCount(0)
 })

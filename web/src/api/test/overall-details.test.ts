@@ -26,6 +26,6 @@ describe('overall details contract', () => {
     { cache_read_rate: '-1.00' }, { ttft_mean_ms: 'Infinity' }, { latency_mean_ms: '1e3' }, { latency_mean_ms: undefined },
   ])('rejects malformed details %j', async (invalid) => {
     response({ details: { ...details, ...invalid } })
-    await expect(fetchLeaderboard('overall', 'today', new AbortController().signal)).rejects.toThrow('榜单响应无效，请稍后重试。')
+    await expect(fetchLeaderboard('overall', 'today', new AbortController().signal)).rejects.toThrow('Invalid leaderboard response. Please retry shortly.')
   })
 })

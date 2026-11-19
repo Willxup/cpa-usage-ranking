@@ -18,14 +18,17 @@ for (const width of [375, 1440]) {
   test(`selected navigation and board text meet AA contrast at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1000 })
     await page.goto('/')
-    const nav = page.getByRole('navigation', { name: '页面导航' }).getByRole('link', { name: '排行榜', exact: true })
+    const nav = page.getByRole('navigation', { name: 'Page navigation' }).getByRole('link', { name: 'Leaderboards', exact: true })
     await expect(nav).toBeVisible()
     expect(await contrast(nav)).toBeGreaterThanOrEqual(4.5)
-    for (const name of ['综合总榜', '用量榜', '缓存复用榜', '成功率榜', '首字响应榜']) {
+    for (const name of ['Overall', 'Token Usage', 'Cache Reuse', 'Reliability', 'First-Token Latency']) {
       const button = page.getByRole('button', { name, exact: true })
       await button.click()
       await expect(button).toHaveAttribute('aria-pressed', 'true')
       expect(await contrast(button)).toBeGreaterThanOrEqual(4.5)
     }
+    const activeLang = page.getByRole('button', { name: 'Switch language to English', exact: true })
+    await expect(activeLang).toHaveAttribute('aria-pressed', 'true')
+    expect(await contrast(activeLang)).toBeGreaterThanOrEqual(4.5)
   })
 }
