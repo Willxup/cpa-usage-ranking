@@ -68,36 +68,40 @@
 .metric-unit { color: var(--muted); font-size: 12px; font-weight: 400; }
 .metric-missing { color: var(--muted); font-weight: 400; }
 @media (max-width: 1199px) {
-  .leaderboard-table--overall { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .leaderboard-table--overall { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding: 14px; background: #faf9fd; }
   .leaderboard-table--overall colgroup { display: none; }
   .leaderboard-table--overall thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .leaderboard-table--overall .leaderboard-group { display: block; min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: #ffffffa6; }
-  .leaderboard-table--overall .leaderboard-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; }
-  .leaderboard-table--overall .leaderboard-row td { border: 0; padding: 8px 0; min-width: 0; }
-  .leaderboard-table--overall .rank-cell { grid-column: 1; grid-row: 1; align-self: start; }
-  .leaderboard-table--overall td.participant-cell { grid-column: 1 / -1; grid-row: 1; min-height: 64px; padding-left: 36px; }
-  .leaderboard-table--overall td.metric-value { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 4px 0 8px; padding-bottom: 12px; border-bottom: 1px solid var(--line); font-size: 22px; }
-  .leaderboard-table--overall .metric-value::before, .leaderboard-table--overall .detail-cell::before { content: attr(data-label); color: var(--muted); font-size: 12px; font-weight: 400; }
+  .leaderboard-table--overall .leaderboard-group { display: block; min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: #ffffff; box-shadow: var(--shadow-sm); }
+  .leaderboard-table--overall .leaderboard-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 14px; }
+  .leaderboard-table--overall .leaderboard-row td { border: 0; padding: 7px 0; min-width: 0; }
+  .leaderboard-table--overall .rank-cell { grid-column: 1; grid-row: 1; align-self: center; padding-left: 0; }
+  .leaderboard-table--overall td.participant-cell { grid-column: 1 / -1; grid-row: 1; min-height: 44px; padding-left: 38px; display: flex; align-items: center; }
+  .leaderboard-table--overall td.metric-value { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 4px 0 6px; padding: 10px 12px; border-radius: 10px; background: #faf9fd; font-size: 21px; }
+  .leaderboard-table--overall .metric-value::before, .leaderboard-table--overall .detail-cell::before { content: attr(data-label); color: var(--muted); font-size: 11px; font-weight: 500; }
   .leaderboard-table--overall .detail-cell { text-align: left; font-size: 14px; }
-  .leaderboard-table--overall .detail-cell::before { display: block; margin-bottom: 4px; }
-  .leaderboard-table--overall .participant { gap: 8px; }
-  .leaderboard-table--overall .avatar { width: 32px; height: 32px; border-radius: 10px; }
+  .leaderboard-table--overall .detail-cell::before { display: block; margin-bottom: 3px; }
+  .leaderboard-table--overall .participant { gap: 10px; }
+  .leaderboard-table--overall .avatar { width: 34px; height: 34px; border-radius: 10px; }
 }
 @media (max-width: 760px) {
-  .board-heading { align-items: start; flex-direction: column; gap: 4px; margin-bottom: 18px; }
+  .board-heading { align-items: start; flex-direction: column; gap: 6px; padding: 16px; }
   .board-heading h2 { font-size: 18px; }
-  .leaderboard-table--overall { grid-template-columns: 1fr; }
+  .leaderboard-table--overall { grid-template-columns: 1fr; padding: 10px; gap: 10px; }
+  .leaderboard-table--overall .leaderboard-group { padding: 12px; }
+  .leaderboard-table--overall .leaderboard-row { column-gap: 12px; }
+  .leaderboard-table--overall .detail-cell { font-size: 13px; }
   .leaderboard-table:not(.leaderboard-table--overall) { display: block; }
   .leaderboard-table:not(.leaderboard-table--overall) colgroup { display: none; }
   .leaderboard-table:not(.leaderboard-table--overall) thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .leaderboard-table:not(.leaderboard-table--overall) .leaderboard-group { display: block; padding: 12px 0; border-bottom: 1px solid var(--line); }
-  .leaderboard-table:not(.leaderboard-table--overall) .leaderboard-row { display: grid; grid-template-columns: 36px minmax(0, 1fr); }
-  .leaderboard-table:not(.leaderboard-table--overall) .leaderboard-row td { border: 0; padding: 6px 0; }
-  .leaderboard-table:not(.leaderboard-table--overall) .rank-cell { grid-column: 1; grid-row: 1; }
+  .leaderboard-table:not(.leaderboard-table--overall) .leaderboard-group { display: block; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .leaderboard-table:not(.leaderboard-table--overall) .leaderboard-group:last-of-type { border-bottom: 0; }
+  .leaderboard-table:not(.leaderboard-table--overall) .leaderboard-row { display: grid; grid-template-columns: 38px minmax(0, 1fr); align-items: center; }
+  .leaderboard-table:not(.leaderboard-table--overall) .leaderboard-row td { border: 0; padding: 5px 0; }
+  .leaderboard-table:not(.leaderboard-table--overall) .rank-cell { grid-column: 1; grid-row: 1; padding-left: 0; }
   .leaderboard-table:not(.leaderboard-table--overall) .participant-cell { grid-column: 2; grid-row: 1; }
-  .leaderboard-table:not(.leaderboard-table--overall) .metric-value { grid-column: 2 / -1; grid-row: 2; text-align: left; font-size: 20px; }
-  .leaderboard-table:not(.leaderboard-table--overall) .metric-value::before { content: attr(data-label); display: block; margin-bottom: 2px; color: var(--muted); font-size: 12px; font-weight: 400; }
-  .participant { gap: 8px; }
+  .leaderboard-table:not(.leaderboard-table--overall) .metric-value { grid-column: 2 / -1; grid-row: 2; text-align: left; font-size: 19px; padding-right: 0; }
+  .leaderboard-table:not(.leaderboard-table--overall) .metric-value::before { content: attr(data-label); display: block; margin-bottom: 2px; color: var(--muted); font-size: 11px; font-weight: 500; }
+  .participant { gap: 9px; }
   .avatar { width: 36px; height: 36px; border-radius: 11px; }
 }
 .period-control { display: flex; margin: 0; padding: 4px; border: 0; background: #efeff5; border-radius: 12px; }
