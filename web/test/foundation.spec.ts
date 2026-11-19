@@ -23,7 +23,7 @@ test('loads the real leaderboard without an introduction or health card', async 
     if (new URL(request.url()).pathname === '/healthz') healthRequests.push(request.url())
   })
   await page.goto('/')
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('AI 用量排行榜')
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('CPA 用量榜')
   await expect(page.getByRole('heading', { name: '等待第一份真实数据' })).toBeVisible()
   await expect(page.getByText(/ABOUT THE RANKING|LIVE CONNECTION/)).toHaveCount(0)
   await expect(page.getByRole('button', { name: '检查服务连接' })).toHaveCount(0)

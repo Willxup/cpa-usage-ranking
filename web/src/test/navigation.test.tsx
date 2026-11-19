@@ -48,7 +48,7 @@ it('keeps the document and console shell while sharing one session across tabs a
   expect(await screen.findByRole('heading', { name: '管理员管理' })).toBeVisible()
   const reads = fetcher.mock.calls.filter(([path]) => String(path) === '/v1/leaderboards/overall/today').length
   await user.click(screen.getByRole('link', { name: '排行榜' }))
-  expect(screen.getByRole('heading', { name: 'AI 用量排行榜' })).toBeVisible()
+  expect(screen.getByRole('heading', { name: 'CPA 用量榜' })).toBeVisible()
   await waitFor(() => expect(fetcher.mock.calls.filter(([path]) => String(path) === '/v1/leaderboards/overall/today').length).toBeGreaterThan(reads))
   expect(fetcher.mock.calls.filter(([path]) => String(path) === '/v1/admin/session')).toHaveLength(1)
 })

@@ -28,7 +28,7 @@ export default function App({ active = true }: { active?: boolean }) {
       <SiteHeader />
       <main id="main" className="page-width">
         <section id="overview" className="overview" aria-labelledby="page-title">
-          <div><p className="eyebrow">A CLEARER VIEW OF AI USAGE</p><h1 id="page-title">AI 用量排行榜</h1></div>
+          <div><p className="eyebrow">LEADERBOARDS</p><h1 id="page-title">CPA 用量榜</h1></div>
         </section>
         <section id="ranking" className="ranking-section" aria-label="排行榜">
           <div className="ranking-toolbar">

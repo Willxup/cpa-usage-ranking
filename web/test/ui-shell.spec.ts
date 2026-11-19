@@ -117,7 +117,7 @@ test('records the earlier tab and shell geometry for comparison', async ({ brows
       await expect(page.getByRole('heading', { name: '用户管理' })).toBeVisible()
       const admin = await position(page)
       await page.getByRole('link', { name: '公开榜单' }).click()
-      await expect(page.getByRole('heading', { name: 'AI 用量排行榜' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'CPA 用量榜' })).toBeVisible()
       const publicPage = await position(page)
       writeFileSync(info.outputPath(`baseline-positions-${width}.json`), JSON.stringify({ long, short, admin, publicPage }, null, 2))
       await page.getByRole('link', { name: '控制台', exact: true }).click()
