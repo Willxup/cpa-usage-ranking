@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, expect, it } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
 import { LanguageSwitcher } from '../../components/LanguageSwitcher'
 import { DEFAULT_LOCALE, formatLocalizedError, getLocale, LOCALE_STORAGE_KEY, LocalizedError, setLocale, useI18n } from '../index'
 
@@ -45,4 +45,34 @@ it('falls back to English on unknown stored values and re-translates LocalizedEr
   const err = new LocalizedError((m) => m.leaderboardErrors.notReady)
   expect(err.message).toBe('Leaderboard cache is not ready yet. Please retry shortly.')
   expect(formatLocalizedError(err, (m) => m.leaderboardErrors.generic, 'zh')).toBe('榜单缓存尚未就绪，请稍后重试。')
+})
+
+it('preserves the in-memory locale when localStorage remains readable but setItem throws', async () => {
+  window.localStorage.setItem(LOCALE_STORAGE_KEY, 'en')
+  const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    throw new DOMException('Quota exceeded', 'QuotaExceededError')
+  })
+
+  try {
+    const user = userEvent.setup()
+    render(<Probe />)
+
+    expect(screen.getByTestId('locale')).toHaveTextContent('en')
+    await user.click(screen.getByRole('button', { name: 'Switch language to Chinese' }))
+
+    expect(getLocale()).toBe('zh')
+    expect(document.documentElement.lang).toBe('zh-CN')
+    expect(screen.getByTestId('locale')).toHaveTextContent('zh')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('CPA 用量榜')
+    expect(window.localStorage.getItem(LOCALE_STORAGE_KEY)).toBe('en')
+
+    await user.click(screen.getByRole('button', { name: '切换为英文' }))
+
+    expect(getLocale()).toBe('en')
+    expect(document.documentElement.lang).toBe('en')
+    expect(screen.getByTestId('locale')).toHaveTextContent('en')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('CPA Usage')
+  } finally {
+    setItemSpy.mockRestore()
+  }
 })

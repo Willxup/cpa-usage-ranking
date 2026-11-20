@@ -10,6 +10,7 @@ export const LOCALE_STORAGE_KEY = 'ranking_locale'
 const dictionaries: Record<Locale, Messages> = { en, zh }
 const listeners = new Set<() => void>()
 let memoryFallback: Locale = DEFAULT_LOCALE
+let memoryAuthoritative = false
 
 export function isSupportedLocale(value: unknown): value is Locale {
   return value === 'en' || value === 'zh'
@@ -25,16 +26,18 @@ function syncDocumentLang(locale: Locale) {
 }
 
 export function getLocale(): Locale {
-  try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const stored = window.localStorage.getItem(LOCALE_STORAGE_KEY)
-      const resolved = isSupportedLocale(stored) ? stored : DEFAULT_LOCALE
-      memoryFallback = resolved
-      syncDocumentLang(resolved)
-      return resolved
+  if (!memoryAuthoritative) {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = window.localStorage.getItem(LOCALE_STORAGE_KEY)
+        const resolved = isSupportedLocale(stored) ? stored : DEFAULT_LOCALE
+        memoryFallback = resolved
+        syncDocumentLang(resolved)
+        return resolved
+      }
+    } catch {
+      // Fall back to in-memory state when storage access is blocked.
     }
-  } catch {
-    // Fall back to in-memory state when storage access is blocked.
   }
   syncDocumentLang(memoryFallback)
   return memoryFallback
@@ -47,9 +50,13 @@ export function setLocale(next: Locale): void {
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
       window.localStorage.setItem(LOCALE_STORAGE_KEY, next)
+      memoryAuthoritative = false
+    } else {
+      memoryAuthoritative = true
     }
   } catch {
     // Keep the in-memory selection if storage writes fail.
+    memoryAuthoritative = true
   }
   syncDocumentLang(next)
   if (previous !== next) {
@@ -65,6 +72,7 @@ function subscribe(listener: () => void): () => void {
   listeners.add(listener)
   const onStorage = (event: StorageEvent) => {
     if (event.key === null || event.key === LOCALE_STORAGE_KEY) {
+      memoryAuthoritative = false
       syncDocumentLang(getLocale())
       listener()
     }
