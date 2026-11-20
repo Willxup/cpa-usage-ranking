@@ -14,6 +14,7 @@ authentication and readiness checks are separate from this storage layer.
 | `display_name` | Current display name; duplicates are allowed |
 | `avatar_id` | Positive integer catalog reference, represented as `int64`; not restricted to 66 or 255 |
 | `disabled` | 0 (initial state) or 1; identity remains stored while disabled |
+| `ranking_hidden` | 0 (initial state) or 1; excludes the client from leaderboards while still accepting reports |
 | `created_at_ms` | UTC Unix milliseconds, set by the creation operation and unchanged by profile/status updates |
 
 `id` uses `INTEGER PRIMARY KEY AUTOINCREMENT` so deleting the highest row does
@@ -22,7 +23,7 @@ internal `sqlite_sequence` table for this purpose. There is no separate user
 account ID, avatar table or identity mapping based on names, avatars or IPs.
 
 The database enforces credential uniqueness and shape, positive avatar IDs,
-and the two-valued disabled flag. Name normalization/validation and catalog
+and the two-valued `disabled` and `ranking_hidden` flags. Name normalization/validation and catalog
 membership checking are **not implemented here**; callers must supply validated
 profile values, as the [registration service](registration.md) does. The repository neither
 normalizes names nor guesses an avatar default. The separate

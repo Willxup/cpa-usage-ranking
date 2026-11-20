@@ -18,6 +18,6 @@ for (const width of [320, 1440]) {
     await row.scrollIntoViewIfNeeded()
     await expect(row.locator('.participant-cell')).toHaveText('演示参与者-100')
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-    await expect(page.getByText('已显示 100 位 · 最多 100 位')).toBeVisible()
+    await expect(page.getByText('Showing 100 · Top 100')).toBeVisible()
   })
 }

@@ -1,3 +1,5 @@
+import { LocalizedError } from '../i18n'
+
 export type Board = 'overall' | 'usage' | 'cache' | 'success' | 'ttft'
 export type Period = 'today' | 'yesterday' | 'week' | 'month'
 export type OverallDetails = { total_tokens: string; request_count: string; success_rate: string; cache_read_rate: string | null; ttft_mean_ms: string | null; latency_mean_ms: string | null }
@@ -22,23 +24,27 @@ export async function fetchLeaderboard(board: Board, period: Period, signal: Abo
   try {
     signal.throwIfAborted()
     const response = await fetch(`/v1/leaderboards/${board}/${period}`, { signal: controller.signal, cache: 'no-store', credentials: 'omit', headers: { Accept: 'application/json' } })
-    if (!response.ok) throw new Error(response.status === 503 ? '榜单缓存尚未就绪，请稍后重试。' : `榜单加载失败（${response.status}），请重试。`)
-    if (response.headers.get('content-type')?.split(';')[0].trim() !== 'application/json') throw new Error('榜单响应无效，请稍后重试。')
+    if (!response.ok) {
+      throw response.status === 503
+        ? new LocalizedError((m) => m.leaderboardErrors.notReady)
+        : new LocalizedError((m) => m.leaderboardErrors.statusFailed(response.status))
+    }
+    if (response.headers.get('content-type')?.split(';')[0].trim() !== 'application/json') throw new LocalizedError((m) => m.leaderboardErrors.invalidResponse)
     let data: unknown
-    try { data = await response.json() } catch { throw new Error('榜单响应无效，请稍后重试。') }
-    if (!object(data) || data.board !== board || data.period !== period || typeof data.start !== 'string' || typeof data.end !== 'string' || typeof data.generated_at !== 'string' || !Array.isArray(data.entries) || data.entries.length > 100) throw new Error('榜单响应无效，请稍后重试。')
+    try { data = await response.json() } catch { throw new LocalizedError((m) => m.leaderboardErrors.invalidResponse) }
+    if (!object(data) || data.board !== board || data.period !== period || typeof data.start !== 'string' || typeof data.end !== 'string' || typeof data.generated_at !== 'string' || !Array.isArray(data.entries) || data.entries.length > 100) throw new LocalizedError((m) => m.leaderboardErrors.invalidResponse)
     const entries: Entry[] = data.entries.map((entry: unknown) => {
-      if (!object(entry) || !Number.isInteger(entry.rank) || (entry.rank as number) < 1 || typeof entry.client_id !== 'string' || !digits.test(entry.client_id) || typeof entry.avatar_id !== 'string' || !digits.test(entry.avatar_id) || typeof entry.display_name !== 'string' || typeof entry.metric !== 'string' || !(board === 'usage' ? /^\d+$/ : /^\d+\.\d{2}$/).test(entry.metric)) throw new Error('榜单响应无效，请稍后重试。')
-      if (board === 'overall' && entry.details !== undefined && !validDetails(entry.details)) throw new Error('榜单响应无效，请稍后重试。')
+      if (!object(entry) || !Number.isInteger(entry.rank) || (entry.rank as number) < 1 || typeof entry.client_id !== 'string' || !digits.test(entry.client_id) || typeof entry.avatar_id !== 'string' || !digits.test(entry.avatar_id) || typeof entry.display_name !== 'string' || typeof entry.metric !== 'string' || !(board === 'usage' ? /^\d+$/ : /^\d+\.\d{2}$/).test(entry.metric)) throw new LocalizedError((m) => m.leaderboardErrors.invalidResponse)
+      if (board === 'overall' && entry.details !== undefined && !validDetails(entry.details)) throw new LocalizedError((m) => m.leaderboardErrors.invalidResponse)
       return entry as Entry
     })
     return { board, period, start: data.start, end: data.end, generated_at: data.generated_at, entries }
   } catch (error) {
     if (signal.aborted) throw signal.reason
-    if (controller.signal.aborted) throw new Error('榜单加载超时，请重试。')
-    if (error instanceof TypeError) throw new Error('无法加载榜单，请检查连接后重试。')
+    if (controller.signal.aborted) throw new LocalizedError((m) => m.leaderboardErrors.timeout)
+    if (error instanceof TypeError) throw new LocalizedError((m) => m.leaderboardErrors.network)
     if (error instanceof Error) throw error
-    throw new Error('无法加载榜单，请重试。')
+    throw new LocalizedError((m) => m.leaderboardErrors.generic)
   } finally {
     clearTimeout(timer)
     signal.removeEventListener('abort', cancel)

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { formatLocalizedError } from '../../i18n'
 import { fetchLeaderboard } from '../leaderboards'
 
 const signal = () => new AbortController().signal
@@ -8,17 +9,25 @@ afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers() })
 describe('leaderboard request errors', () => {
   it.each(['{"entries":', 'private-proxy-detail'])('hides malformed JSON diagnostics: %s', async (body) => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(body)))
-    await expect(fetchLeaderboard('usage', 'today', signal())).rejects.toThrow('榜单响应无效，请稍后重试。')
+    await expect(fetchLeaderboard('usage', 'today', signal())).rejects.toThrow('Invalid leaderboard response. Please retry shortly.')
   })
 
-  it('hides transport diagnostics', async () => {
+  it('hides transport diagnostics and supports localized re-formatting', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('private-network-detail')))
-    await expect(fetchLeaderboard('usage', 'today', signal())).rejects.toThrow('无法加载榜单，请检查连接后重试。')
+    let caught: unknown
+    try {
+      await fetchLeaderboard('usage', 'today', signal())
+    } catch (error) {
+      caught = error
+    }
+    expect(caught).toBeInstanceOf(Error)
+    expect((caught as Error).message).toBe('Unable to reach server. Check your connection and retry.')
+    expect(formatLocalizedError(caught, (m) => m.leaderboardErrors.generic, 'zh')).toBe('无法加载榜单，请检查连接后重试。')
   })
 
   it('preserves the service-unavailable message', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response('{}', 503)))
-    await expect(fetchLeaderboard('usage', 'today', signal())).rejects.toThrow('榜单缓存尚未就绪，请稍后重试。')
+    await expect(fetchLeaderboard('usage', 'today', signal())).rejects.toThrow('Leaderboard cache is not ready yet. Please retry shortly.')
   })
 
   it('preserves caller cancellation without starting a request', async () => {
@@ -39,7 +48,7 @@ describe('leaderboard request errors', () => {
         init.signal!.addEventListener('abort', () => reject(new DOMException('body interrupted', 'AbortError')), { once: true })
       }),
     })))
-    const assertion = expect(fetchLeaderboard('usage', 'today', signal())).rejects.toThrow('榜单加载超时，请重试。')
+    const assertion = expect(fetchLeaderboard('usage', 'today', signal())).rejects.toThrow('Leaderboard request timed out. Please retry.')
     await vi.advanceTimersByTimeAsync(8_000)
     await assertion
   })

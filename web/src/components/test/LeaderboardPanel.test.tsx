@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { setLocale } from '../../i18n'
 import { LeaderboardPanel } from '../LeaderboardPanel'
 
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } })
@@ -14,8 +15,8 @@ describe('live leaderboard', () => {
     const { container } = render(<LeaderboardPanel board="usage" period="today" />)
     expect(await screen.findByText('9007199.25')).toBeVisible()
     expect(container.querySelector('.metric-number')).toHaveTextContent('9007199.25 B')
-    expect(screen.queryByRole('button', { name: /完整数值/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole('columnheader', { name: '详情' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Full Value|完整数值/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: /Details|详情/ })).not.toBeInTheDocument()
     expect(screen.queryByText('K 千 · M 百万 · B 十亿')).not.toBeInTheDocument()
     expect(screen.getByText('<script>alert(1)</script>')).toBeVisible()
     expect(container.querySelector('script')).toBeNull()
@@ -28,7 +29,7 @@ describe('live leaderboard', () => {
     expect(image.getAttribute('src')).toBe('/avatars/images/001.webp')
     fireEvent.error(image)
     expect(image.hidden).toBe(true)
-    expect(screen.getByText(/缓存生成于 2026-12-31 12:00:00 UTC/)).toBeVisible()
+    expect(screen.getByText(/Cached at 2026-12-31 12:00:00 UTC/)).toBeVisible()
   })
 
   it('uses the catalog default for an unknown avatar and never loads a catalog URL', async () => {
@@ -41,8 +42,8 @@ describe('live leaderboard', () => {
 
   it('cancels superseded requests and never labels old data as the new board', async () => {
     const pending = new Map<string, { resolve: (response: Response) => void; signal: AbortSignal }>()
-    const overall = { ...data, board: 'overall', entries: [{ ...data.entries[0], display_name: '旧总榜', metric: '12.34' }] }
-    const success = { ...overall, board: 'success', entries: [{ ...overall.entries[0], display_name: '新成功榜', metric: '20.65' }] }
+    const overall = { ...data, board: 'overall', entries: [{ ...data.entries[0], display_name: 'Old Overall', metric: '12.34' }] }
+    const success = { ...overall, board: 'success', entries: [{ ...overall.entries[0], display_name: 'New Reliability', metric: '20.65' }] }
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       if (url.includes('avatars')) return Promise.resolve(json(catalog))
@@ -50,33 +51,42 @@ describe('live leaderboard', () => {
       return new Promise<Response>((resolve) => pending.set(url, { resolve, signal: init!.signal as AbortSignal }))
     }))
     const view = render(<LeaderboardPanel board="overall" period="today" />)
-    expect(await screen.findByText('旧总榜')).toBeVisible()
+    expect(await screen.findByText('Old Overall')).toBeVisible()
     view.rerender(<LeaderboardPanel board="usage" period="today" />)
     await waitFor(() => expect(pending.has('/v1/leaderboards/usage/today')).toBe(true))
-    expect(screen.getByRole('heading', { name: /今日 · 综合总榜/ })).toHaveTextContent('上次结果')
-    expect(screen.queryByRole('heading', { name: /今日 · 用量榜/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Today · Overall/ })).toHaveTextContent('Previous result')
+    expect(screen.queryByRole('heading', { name: /Today · Token Usage/ })).not.toBeInTheDocument()
     view.rerender(<LeaderboardPanel board="success" period="today" />)
     await waitFor(() => expect(pending.has('/v1/leaderboards/success/today')).toBe(true))
     expect(pending.get('/v1/leaderboards/usage/today')!.signal.aborted).toBe(true)
     pending.get('/v1/leaderboards/success/today')!.resolve(json(success))
-    expect(await screen.findByText('新成功榜')).toBeVisible()
+    expect(await screen.findByText('New Reliability')).toBeVisible()
     pending.get('/v1/leaderboards/usage/today')!.resolve(json(data))
-    await waitFor(() => expect(screen.getByText('新成功榜')).toBeVisible())
+    await waitFor(() => expect(screen.getByText('New Reliability')).toBeVisible())
     expect(screen.queryByText('<script>alert(1)</script>')).not.toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: '成功率得分' })).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'Reliability Score' })).toBeVisible()
+    expect(screen.getByTitle('20.65 pts')).toHaveTextContent('20.65 pts')
+    expect(document.querySelector('.metric-unit')).toHaveTextContent('pts')
   })
 
-  it('shows failure, permits retry and never invents empty results', async () => {
+  it('shows failure, permits retry, re-translates live errors and points units, and never invents empty results', async () => {
     let calls = 0
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
       if (String(input).includes('avatars')) return Promise.resolve(json(catalog))
       calls++
-      return Promise.resolve(calls === 1 ? json({}, 503) : json(data))
+      return Promise.resolve(calls === 1 ? json({}, 503) : json({ ...data, board: 'overall', entries: [{ ...data.entries[0], metric: '42.50' }] }))
     }))
-    render(<LeaderboardPanel board="usage" period="today" />)
+    render(<LeaderboardPanel board="overall" period="today" />)
+    expect(await screen.findByText(/Leaderboard cache is not ready yet/)).toBeVisible()
+    expect(screen.queryByText('Waiting for first usage report')).not.toBeInTheDocument()
+    act(() => setLocale('zh'))
     expect(await screen.findByText(/榜单缓存尚未就绪/)).toBeVisible()
-    expect(screen.queryByText('等待第一份真实数据')).not.toBeInTheDocument()
-    await userEvent.setup().click(screen.getByRole('button', { name: '重试榜单' }))
-    expect(await screen.findByText('9007199.25')).toBeVisible()
+    expect(screen.getByRole('button', { name: '重试榜单' })).toBeVisible()
+    act(() => setLocale('en'))
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Retry leaderboard' }))
+    expect(await screen.findByTitle('42.50 pts')).toBeVisible()
+    act(() => setLocale('zh'))
+    expect(await screen.findByTitle('42.50 分')).toBeVisible()
+    expect(document.querySelector('.metric-unit')).toHaveTextContent('分')
   })
 })

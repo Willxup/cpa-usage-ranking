@@ -9,7 +9,7 @@ test('keeps public navigation consistent for anonymous and authenticated session
   let documents = 0
   page.on('request', (request) => { if (request.isNavigationRequest() && request.resourceType() === 'document') documents++ })
   await page.goto('/')
-  const navigation = page.getByRole('navigation', { name: '页面导航' })
+  const navigation = page.getByRole('navigation', { name: 'Page navigation' })
   const publicRoute = page.locator('.route-view').first()
   const publicMain = publicRoute.locator('main')
   await publicMain.evaluate((node) => {
@@ -17,8 +17,8 @@ test('keeps public navigation consistent for anonymous and authenticated session
     element.dataset.enters = '0'
     element.addEventListener('animationstart', (event) => { if (event.target === element) element.dataset.enters = String(Number(element.dataset.enters) + 1) })
   })
-  const check = async (entry: '登录' | '控制台') => {
-    await expect(navigation.getByRole('link')).toHaveText(['排行榜', entry])
+  const check = async (entry: 'Sign in' | 'Console') => {
+    await expect(navigation.getByRole('link')).toHaveText(['Leaderboards', entry])
     const styles = await navigation.getByRole('link').evaluateAll((links) => links.map((link) => {
       const css = getComputedStyle(link)
       return [css.fontFamily, css.fontSize, css.fontWeight, css.borderWidth, css.padding]
@@ -28,28 +28,28 @@ test('keeps public navigation consistent for anonymous and authenticated session
   }
   for (const width of [1440, 375]) {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 812 })
-    await check('登录')
+    await check('Sign in')
     await page.screenshot({ path: info.outputPath(`anonymous-${width}.png`), fullPage: true })
   }
-  await navigation.getByRole('link', { name: '登录' }).click()
-  await page.getByLabel('用户名', { exact: true }).fill(credentials.username)
-  await page.getByLabel('密码', { exact: true }).fill(credentials.password)
-  await page.getByRole('button', { name: '登录', exact: true }).click()
-  await expect(page.getByRole('navigation', { name: '控制台导航' })).toBeVisible()
-  const adminBoard = page.getByRole('region', { name: '榜单管理' })
-  for (const period of ['周榜', '月榜']) {
+  await navigation.getByRole('link', { name: 'Sign in' }).click()
+  await page.getByLabel('Username', { exact: true }).fill(credentials.username)
+  await page.getByLabel('Password', { exact: true }).fill(credentials.password)
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByRole('navigation', { name: 'Console navigation' })).toBeVisible()
+  const adminBoard = page.getByRole('region', { name: 'Leaderboard moderation' })
+  for (const period of ['Weekly', 'Monthly']) {
     await adminBoard.getByRole('button', { name: period, exact: true }).click()
-    await expect(adminBoard.getByRole('heading', { name: `${period} · 综合总榜` })).toBeVisible()
+    await expect(adminBoard.getByRole('heading', { name: `${period} · Overall` })).toBeVisible()
   }
-  await page.getByRole('navigation', { name: '页面导航' }).getByRole('link', { name: '排行榜' }).click()
+  await page.getByRole('navigation', { name: 'Page navigation' }).getByRole('link', { name: 'Leaderboards' }).click()
   await expect.poll(async () => Number(await publicMain.getAttribute('data-enters'))).toBeGreaterThan(0)
   for (const width of [1440, 375]) {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 812 })
-    await check('控制台')
+    await check('Console')
     await page.screenshot({ path: info.outputPath(`authenticated-${width}.png`), fullPage: true })
   }
-  await navigation.getByRole('link', { name: '控制台' }).click()
-  await expect(page.getByRole('navigation', { name: '控制台导航' })).toBeVisible()
+  await navigation.getByRole('link', { name: 'Console' }).click()
+  await expect(page.getByRole('navigation', { name: 'Console navigation' })).toBeVisible()
   expect(documents).toBe(1)
 })
 
@@ -59,7 +59,7 @@ test('keeps route, tab and result transitions light, interruptible and optional'
   page.on('request', (request) => { if (request.isNavigationRequest() && request.resourceType() === 'document') documents++ })
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: '今日 · 综合总榜' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Today · Overall' })).toBeVisible()
   const publicRoute = page.locator('.route-view').first()
   await publicRoute.evaluate((node) => { (node as HTMLElement).dataset.preserved = 'yes' })
   expect(await publicRoute.evaluate((node) => getComputedStyle(node).animationName)).toBe('none')
@@ -67,68 +67,68 @@ test('keeps route, tab and result transitions light, interruptible and optional'
   expect(await publicRoute.locator('header').evaluate((node) => getComputedStyle(node).animationName)).toBe('none')
   const firstResult = page.locator('.leaderboard-result')
   await firstResult.evaluate((node) => { (node as HTMLElement).dataset.old = 'yes' })
-  await page.getByRole('button', { name: '用量榜' }).click()
-  await expect(page.getByRole('heading', { name: '今日 · 用量榜' })).toBeVisible()
+  await page.getByRole('button', { name: 'Token Usage' }).click()
+  await expect(page.getByRole('heading', { name: 'Today · Token Usage' })).toBeVisible()
   await expect(page.locator('.leaderboard-result')).not.toHaveAttribute('data-old', 'yes')
   expect(await page.locator('.leaderboard-result').evaluate((node) => getComputedStyle(node).animationDuration)).toBe('0.16s')
   const boardTime = await page.evaluate(() => {
     const start = performance.now()
-    for (const name of ['缓存复用榜', '成功率榜', '昨日']) {
+    for (const name of ['Cache Reuse', 'Reliability', 'Yesterday']) {
       const button = Array.from(document.querySelectorAll('button')).find((item) => item.textContent === name)!
       button.click()
     }
     return performance.now() - start
   })
   expect(boardTime).toBeLessThan(160)
-  await expect(page.getByRole('heading', { name: '昨日 · 成功率榜' })).toBeVisible()
-  await page.getByRole('link', { name: '登录', exact: true }).click()
-  await page.getByLabel('用户名', { exact: true }).fill(credentials.username)
-  await page.getByLabel('密码', { exact: true }).fill(credentials.password)
-  await page.getByRole('button', { name: '登录', exact: true }).click()
-  const navigation = page.getByRole('navigation', { name: '控制台导航' })
+  await expect(page.getByRole('heading', { name: 'Yesterday · Reliability' })).toBeVisible()
+  await page.getByRole('link', { name: 'Sign in', exact: true }).click()
+  await page.getByLabel('Username', { exact: true }).fill(credentials.username)
+  await page.getByLabel('Password', { exact: true }).fill(credentials.password)
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  const navigation = page.getByRole('navigation', { name: 'Console navigation' })
   await expect(navigation).toBeVisible()
   await navigation.evaluate((node) => { (node as HTMLElement).dataset.preserved = 'yes' })
   const tabTime = await navigation.evaluate((node) => {
     const start = performance.now()
-    for (const name of ['用户管理', '管理员管理', '用户管理']) {
+    for (const name of ['Users', 'Administrators', 'Users']) {
       const link = Array.from(node.querySelectorAll('a')).find((item) => item.textContent === name)!
       link.click()
     }
     return performance.now() - start
   })
   expect(tabTime).toBeLessThan(160)
-  await expect(page.getByRole('heading', { name: '用户管理' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Users' })).toBeVisible()
   for (const width of [1440, 375]) {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 812 })
-    await navigation.getByRole('link', { name: '用户管理' }).click()
-    await expect(page.getByRole('heading', { name: '用户管理' })).toBeVisible()
-    await navigation.getByRole('link', { name: '管理员管理' }).click()
-    await expect(page.getByRole('heading', { name: '管理员管理', exact: true })).toBeVisible()
+    await navigation.getByRole('link', { name: 'Users' }).click()
+    await expect(page.getByRole('heading', { name: 'Users' })).toBeVisible()
+    await navigation.getByRole('link', { name: 'Administrators' }).click()
+    await expect(page.getByRole('heading', { name: 'Administrators', exact: true })).toBeVisible()
     await page.goBack()
-    await expect(page.getByRole('heading', { name: '用户管理' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Users' })).toBeVisible()
     await page.goForward()
-    await expect(page.getByRole('heading', { name: '管理员管理', exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Administrators', exact: true })).toBeVisible()
     await expect(navigation).toHaveAttribute('data-preserved', 'yes')
     expect(await page.locator('.admin-main > .tab-view:not([hidden])').evaluate((node) => getComputedStyle(node).animationName)).toBe('view-enter')
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: info.outputPath(`admin-tab-${width}.png`), fullPage: true })
   }
-  await navigation.getByRole('link', { name: '榜单管理' }).click()
-  await page.getByRole('button', { name: '已下榜用户' }).click()
-  await expect(page.getByRole('region', { name: '已下榜用户' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: '已下榜用户' })).toHaveCount(0)
+  await navigation.getByRole('link', { name: 'Leaderboards' }).click()
+  await page.getByRole('button', { name: 'Excluded Users' }).click()
+  await expect(page.getByRole('region', { name: 'Excluded Users' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Excluded Users' })).toHaveCount(0)
   expect(await page.locator('.tab-view:not([hidden]) .tab-view:not([hidden])').evaluate((node) => getComputedStyle(node).animationName)).toBe('view-enter')
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await navigation.getByRole('link', { name: '用户管理' }).click()
+  await navigation.getByRole('link', { name: 'Users' }).click()
   expect(await page.locator('.admin-main > .tab-view:not([hidden])').evaluate((node) => getComputedStyle(node).animationName)).toBe('none')
-  await page.getByRole('navigation', { name: '页面导航' }).getByRole('link', { name: '排行榜' }).click()
+  await page.getByRole('navigation', { name: 'Page navigation' }).getByRole('link', { name: 'Leaderboards' }).click()
   await expect(publicRoute).toHaveAttribute('data-preserved', 'yes')
   expect(await publicRoute.evaluate((node) => getComputedStyle(node).animationName)).toBe('none')
   expect(await publicRoute.locator('main').evaluate((node) => getComputedStyle(node).animationName)).toBe('none')
-  await page.getByRole('button', { name: '周榜' }).click()
-  await expect(page.getByRole('heading', { name: '周榜 · 成功率榜' })).toBeVisible()
+  await page.getByRole('button', { name: 'Weekly' }).click()
+  await expect(page.getByRole('heading', { name: 'Weekly · Reliability' })).toBeVisible()
   expect(await page.locator('.leaderboard-result').evaluate((node) => getComputedStyle(node).animationName)).toBe('none')
-  expect(await page.getByRole('button', { name: '周榜' }).evaluate((node) => getComputedStyle(node).transitionDuration)).toBe('0s')
+  expect(await page.getByRole('button', { name: 'Weekly' }).evaluate((node) => getComputedStyle(node).transitionDuration)).toBe('0s')
   await page.screenshot({ path: info.outputPath('public-reduced-375.png'), fullPage: true })
   expect(documents).toBe(1)
 })

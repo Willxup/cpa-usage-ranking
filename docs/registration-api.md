@@ -152,4 +152,4 @@ invalid values fail startup. No configuration file is loaded automatically.
 | `RANKING_TRUSTED_PROXIES` | unset, trust none; otherwise comma-separated proxy IPs/CIDRs |
 
 Tune for shared exits and measured deployment load. This API does not establish
-100,000-client capacity. `/healthz` is process liveness; `/readyz` requires the database, catalogs and a complete real leaderboard cache round. Authenticated daily reporting is available; see the [daily report API](report-snapshots.md). There is no login/registration webpage, production `/me`, profile edit or administration API.
+100,000-client capacity. `/healthz` is process liveness; `/readyz` requires the database, catalogs and a complete real leaderboard cache round. Authenticated daily reporting is available; see the [daily report API](report-snapshots.md). There is no client login/registration webpage, production `/me`, or profile edit API (optional operator moderation is separate; see [admin.md](admin.md)).

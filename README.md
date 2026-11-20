@@ -153,7 +153,7 @@ To enable moderation and administrator management, create a private JSON file ou
 }
 ```
 
-Once enabled, the header exposes **Login / Console** (`/admin/leaderboards`), supporting:
+Once enabled, the header exposes **Sign in / Console** (`/admin/leaderboards`), supporting:
 - **Leaderboard Moderation**: Inspect boards, trigger immediate cache refreshes, and **exclude / restore** participants (`ranking_hidden` removes a client from all 5 boards, 6 periods, and score references while still accepting their daily reports).
 - **User Management**: Search registered clients by literal display-name substring or exact ID, and **ban / unban** (`disabled` rejects future reports and removes the client from all boards; ban and exclusion flags remain independent).
 - **Administrator Accounts** (owner only): Create or delete ordinary database administrators with immediate session revocation.
@@ -232,7 +232,7 @@ docs/                  Public protocol, storage, administration, and deployment 
 
 ### Local Full-Stack Development
 
-Run the Go backend and the Vite dev server in separate terminals (Vite proxies `/healthz`, `/readyz`, `/v1/*`, and `/avatars/*` to `http://127.0.0.1:8080`):
+Run the Go backend and the Vite dev server in separate terminals (Vite proxies `/healthz`, `/readyz`, `/v1/leaderboards`, `/v1/admin`, and `/avatars/*` to `http://127.0.0.1:8080`):
 
 ```sh
 # Terminal 1: API server

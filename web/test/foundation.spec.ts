@@ -4,7 +4,7 @@ test('hides the login entry and admin pages when not configured', async ({ page,
   test.skip(!!process.env.RANKING_TEST_ADMIN_CONFIG, 'Disabled-console check')
   expect(await (await request.get('/v1/admin/session')).json()).toEqual({ enabled: false, authenticated: false })
   await page.goto('/')
-  await expect(page.getByRole('link', { name: /^(登录|控制台)$/ })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: /^(Sign in|Console|登录|控制台)$/ })).toHaveCount(0)
   expect((await request.get('/admin/login')).status()).toBe(404)
 })
 
@@ -23,10 +23,11 @@ test('loads the real leaderboard without an introduction or health card', async 
     if (new URL(request.url()).pathname === '/healthz') healthRequests.push(request.url())
   })
   await page.goto('/')
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('AI 用量排行榜')
-  await expect(page.getByRole('heading', { name: '等待第一份真实数据' })).toBeVisible()
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('CPA Usage')
+  await expect(page.getByRole('heading', { name: 'Waiting for first usage report' })).toBeVisible()
   await expect(page.getByText(/ABOUT THE RANKING|LIVE CONNECTION/)).toHaveCount(0)
-  await expect(page.getByRole('button', { name: '检查服务连接' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Check service connection|检查服务连接/ })).toHaveCount(0)
   const footer = page.locator('.brand-footer')
   await expect(footer).toHaveText('CPA Usage Ranking')
   await expect(footer.locator('img')).toHaveAttribute('src', '/assets/brand/logo.svg')
@@ -74,19 +75,23 @@ for (const width of [320, 375, 768]) {
 
 test('supports keyboard navigation of boards and periods', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('link', { name: '跳到主要内容' })).toHaveCount(0)
-  for (const name of ['CPA Usage Ranking 首页', '排行榜']) {
-    await page.keyboard.press('Tab')
-    await expect(page.getByRole('link', { name, exact: true })).toBeFocused()
-  }
-  for (const name of ['综合总榜', '用量榜', '缓存复用榜', '成功率榜', '首字响应榜', '今日', '昨日', '周榜', '月榜']) {
+  await expect(page.getByRole('link', { name: /Skip to|跳到主要内容/ })).toHaveCount(0)
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('link', { name: 'CPA Usage Ranking Home', exact: true })).toBeFocused()
+  for (const name of ['Switch language to English', 'Switch language to Chinese']) {
     await page.keyboard.press('Tab')
     await expect(page.getByRole('button', { name, exact: true })).toBeFocused()
-    if (name === '成功率榜' || name === '昨日') await page.keyboard.press('Space')
   }
-  await expect(page.getByRole('button', { name: '成功率榜' })).toHaveAttribute('aria-pressed', 'true')
-  await expect(page.getByRole('button', { name: '昨日' })).toHaveAttribute('aria-pressed', 'true')
-  await expect(page.getByRole('heading', { name: '昨日 · 成功率榜' })).toBeVisible()
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('link', { name: 'Leaderboards', exact: true })).toBeFocused()
+  for (const name of ['Overall', 'Token Usage', 'Cache Reuse', 'Reliability', 'First-Token Latency', 'Today', 'Yesterday', 'Weekly', 'Monthly']) {
+    await page.keyboard.press('Tab')
+    await expect(page.getByRole('button', { name, exact: true })).toBeFocused()
+    if (name === 'Reliability' || name === 'Yesterday') await page.keyboard.press('Space')
+  }
+  await expect(page.getByRole('button', { name: 'Reliability' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: 'Yesterday' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('heading', { name: 'Yesterday · Reliability' })).toBeVisible()
 })
 
 test('preserves API and missing-resource boundaries and ships source notices', async ({ request }) => {
@@ -129,9 +134,9 @@ test.describe('touch interaction', () => {
   test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true })
   test('can switch the board and period without hover', async ({ page }) => {
     await page.goto('/')
-    await page.getByRole('button', { name: '用量榜' }).tap()
-    await page.getByRole('button', { name: '昨日' }).tap()
-    await expect(page.getByRole('button', { name: '昨日' })).toHaveAttribute('aria-pressed', 'true')
-    await expect(page.getByRole('heading', { name: '昨日 · 用量榜' })).toBeVisible()
+    await page.getByRole('button', { name: 'Token Usage' }).tap()
+    await page.getByRole('button', { name: 'Yesterday' }).tap()
+    await expect(page.getByRole('button', { name: 'Yesterday' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('heading', { name: 'Yesterday · Token Usage' })).toBeVisible()
   })
 })

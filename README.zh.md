@@ -232,7 +232,7 @@ docs/                  对外协议、部署与运维文档
 
 ### 本地前后端联调
 
-在两个终端分别启动后端与 Vite 开发服务器（Vite 默认将 `/healthz`、`/readyz`、`/v1/*` 与 `/avatars/*` 代理至 `http://127.0.0.1:8080`）：
+在两个终端分别启动后端与 Vite 开发服务器（Vite 默认将 `/healthz`、`/readyz`、`/v1/leaderboards`、`/v1/admin` 与 `/avatars/*` 代理至 `http://127.0.0.1:8080`）：
 
 ```sh
 # 终端 1：启动后端 API

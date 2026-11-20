@@ -14,40 +14,40 @@ test('keeps public navigation unchanged and shares the refresh surface with logo
   }
   for (const width of [1440, 375]) {
     await page.setViewportSize({ width, height: 900 })
-    await expect(page.getByRole('link', { name: '登录', exact: true })).toBeVisible()
-    fonts.set(width, await page.getByRole('link', { name: '排行榜', exact: true }).evaluate(style))
+    await expect(page.getByRole('link', { name: 'Sign in', exact: true })).toBeVisible()
+    fonts.set(width, await page.getByRole('link', { name: 'Leaderboards', exact: true }).evaluate(style))
     const selected = page.locator('.app-shell:visible .board-control button[aria-pressed="true"]')
     expect(await selected.evaluate((node) => { const css = getComputedStyle(node); return css.borderTopColor === css.backgroundColor })).toBe(true)
   }
-  await page.getByRole('link', { name: '登录', exact: true }).click()
+  await page.getByRole('link', { name: 'Sign in', exact: true }).click()
   for (const width of [1440, 375]) {
     await page.setViewportSize({ width, height: 900 })
-    expect(await page.getByRole('navigation', { name: '页面导航' }).getByRole('link', { name: '排行榜' }).evaluate(style)).toEqual(fonts.get(width))
+    expect(await page.getByRole('navigation', { name: 'Page navigation' }).getByRole('link', { name: 'Leaderboards' }).evaluate(style)).toEqual(fonts.get(width))
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   }
-  expect(await page.getByRole('button', { name: '登录', exact: true }).evaluate((node) => getComputedStyle(node).fontSize)).toBe('14px')
-  await page.getByLabel('用户名', { exact: true }).fill(credentials.username)
-  await page.getByLabel('密码', { exact: true }).fill(credentials.password)
-  await page.getByRole('button', { name: '登录', exact: true }).click()
+  expect(await page.getByRole('button', { name: 'Sign in', exact: true }).evaluate((node) => getComputedStyle(node).fontSize)).toBe('14px')
+  await page.getByLabel('Username', { exact: true }).fill(credentials.username)
+  await page.getByLabel('Password', { exact: true }).fill(credentials.password)
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   for (const width of [1440, 375]) {
     await page.setViewportSize({ width, height: 900 })
-    expect(await page.getByRole('navigation', { name: '页面导航' }).getByRole('link', { name: '排行榜' }).evaluate(style)).toEqual(fonts.get(width))
-    const logout = page.getByRole('button', { name: '退出' })
+    expect(await page.getByRole('navigation', { name: 'Page navigation' }).getByRole('link', { name: 'Leaderboards' }).evaluate(style)).toEqual(fonts.get(width))
+    const logout = page.getByRole('button', { name: 'Sign out' })
     expect(await logout.evaluate(style)).toEqual([fonts.get(width)![0], '13px', '550', '3px'])
     expect(await logout.evaluate((node) => getComputedStyle(node).color)).toBe('rgb(190, 52, 52)')
     const surface = (node: Element) => { const css = getComputedStyle(node); return [css.backgroundColor, css.borderColor, css.borderRadius, css.padding, css.boxShadow] }
     await page.mouse.move(0, 0)
-    expect(await logout.evaluate(surface)).toEqual(await page.getByRole('button', { name: '刷新榜单', exact: true }).evaluate(surface))
-    expect(await page.getByRole('link', { name: '用户管理' }).evaluate((node) => getComputedStyle(node).fontSize)).toBe('14px')
+    expect(await logout.evaluate(surface)).toEqual(await page.getByRole('button', { name: 'Refresh', exact: true }).evaluate(surface))
+    expect(await page.getByRole('link', { name: 'Users' }).evaluate((node) => getComputedStyle(node).fontSize)).toBe('14px')
     const selected = page.locator('.admin-shell .board-control button[aria-pressed="true"]:visible')
     for (const node of await selected.all()) expect(await node.evaluate((item) => { const css = getComputedStyle(item); return css.borderTopColor === css.backgroundColor })).toBe(true)
     await page.screenshot({ path: info.outputPath(`navigation-${width}.png`), fullPage: true })
   }
   await page.keyboard.press('Tab')
-  const boardButton = page.getByRole('button', { name: '用量榜', exact: true })
+  const boardButton = page.getByRole('button', { name: 'Token Usage', exact: true })
   await boardButton.focus()
   expect(await boardButton.evaluate((node) => getComputedStyle(node).outlineStyle)).not.toBe('none')
-  await expect(page.getByRole('heading', { name: '今日 · 综合总榜' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Today · Overall' })).toBeVisible()
   let releaseBoard!: () => void
   let beginBoard!: () => void
   const boardBlocked = new Promise<void>((resolve) => { releaseBoard = resolve })
@@ -58,40 +58,40 @@ test('keeps public navigation unchanged and shares the refresh surface with logo
     await boardStarted
     for (const width of [1440, 375]) {
       await page.setViewportSize({ width, height: 900 })
-      await expect(page.getByRole('heading', { name: '今日 · 综合总榜' })).toBeVisible()
-      await expect(page.getByText(/正在加载|上次结果/)).toHaveCount(0)
+      await expect(page.getByRole('heading', { name: 'Today · Overall' })).toBeVisible()
+      await expect(page.getByText(/Loading|Previous result/)).toHaveCount(0)
       await expect(page.locator('.admin-progress')).toHaveCount(0)
       await page.screenshot({ path: info.outputPath(`board-pending-${width}.png`), fullPage: true })
     }
     releaseBoard()
-    await expect(page.getByRole('heading', { name: '今日 · 用量榜' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Today · Token Usage' })).toBeVisible()
   } finally { releaseBoard() }
-  const navigation = page.getByRole('navigation', { name: '控制台导航' })
-  await navigation.getByRole('link', { name: '用户管理' }).click()
-  await expect(page.getByText('未找到匹配的用户。')).toBeVisible()
-  await navigation.getByRole('link', { name: '管理员管理' }).click()
+  const navigation = page.getByRole('navigation', { name: 'Console navigation' })
+  await navigation.getByRole('link', { name: 'Users' }).click()
+  await expect(page.getByText('No matching users found.')).toBeVisible()
+  await navigation.getByRole('link', { name: 'Administrators' }).click()
   let release!: () => void
   let begin!: () => void
   const blocked = new Promise<void>((resolve) => { release = resolve })
   const started = new Promise<void>((resolve) => { begin = resolve })
   await page.route('**/v1/admin/users?*', async (route) => { begin(); await blocked; await route.continue().catch(() => {}) }, { times: 1 })
   try {
-    await navigation.getByRole('link', { name: '用户管理' }).click()
+    await navigation.getByRole('link', { name: 'Users' }).click()
     await started
-    await expect(page.getByText('未找到匹配的用户。')).toBeVisible()
-    await expect(page.getByRole('region', { name: '用户管理' })).toBeVisible()
-    await expect(page.getByLabel('昵称或ID')).toBeVisible()
+    await expect(page.getByText('No matching users found.')).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Users' })).toBeVisible()
+    await expect(page.getByLabel('Display name or ID')).toBeVisible()
     await expect(page.locator('.admin-progress')).toHaveCount(0)
     await expect(page.getByRole('progressbar')).toHaveCount(0)
     for (const width of [1440, 375]) {
       await page.setViewportSize({ width, height: 900 })
       await page.screenshot({ path: info.outputPath(`tab-pending-${width}.png`), fullPage: true })
     }
-    await navigation.getByRole('link', { name: '管理员管理' }).click()
+    await navigation.getByRole('link', { name: 'Administrators' }).click()
     release()
-    await navigation.getByRole('link', { name: '用户管理' }).click()
-    await expect(page.getByText('未找到匹配的用户。')).toBeVisible()
+    await navigation.getByRole('link', { name: 'Users' }).click()
+    await expect(page.getByText('No matching users found.')).toBeVisible()
   } finally { release() }
-  await page.getByRole('button', { name: '退出' }).click()
-  await expect(page.getByRole('link', { name: '登录', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Sign out' }).click()
+  await expect(page.getByRole('link', { name: 'Sign in', exact: true })).toBeVisible()
 })

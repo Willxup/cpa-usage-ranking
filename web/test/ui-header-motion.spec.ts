@@ -47,22 +47,22 @@ function range(frames: Frame[], key: 'header' | 'icon' | 'text') {
 
 async function logIn(page: Page, origin: string) {
   await page.goto(`${origin}/admin/login`)
-  await page.getByLabel('用户名', { exact: true }).fill(credentials.username)
-  await page.getByLabel('密码', { exact: true }).fill(credentials.password)
-  await page.getByRole('button', { name: '登录', exact: true }).click()
-  await expect(page.getByRole('navigation', { name: '控制台导航' })).toBeVisible()
+  await page.getByLabel('Username', { exact: true }).fill(credentials.username)
+  await page.getByLabel('Password', { exact: true }).fill(credentials.password)
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByRole('navigation', { name: 'Console navigation' })).toBeVisible()
 }
 
 test('keeps the header and brand stable in every frame across both routes', async ({ page, baseURL }, info) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await logIn(page, baseURL!)
-  const header = page.getByRole('navigation', { name: '页面导航' })
+  const header = page.getByRole('navigation', { name: 'Page navigation' })
   for (const width of [1440, 375]) {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 812 })
-    if (new URL(page.url()).pathname !== '/') await header.getByRole('link', { name: '排行榜' }).click()
-    await expect(header.getByRole('link', { name: '控制台' })).toBeVisible()
-    const toAdmin = await sampleTransition(page, header.getByRole('link', { name: '控制台' }))
-    const toPublic = await sampleTransition(page, header.getByRole('link', { name: '排行榜' }))
+    if (new URL(page.url()).pathname !== '/') await header.getByRole('link', { name: 'Leaderboards' }).click()
+    await expect(header.getByRole('link', { name: 'Console' })).toBeVisible()
+    const toAdmin = await sampleTransition(page, header.getByRole('link', { name: 'Console' }))
+    const toPublic = await sampleTransition(page, header.getByRole('link', { name: 'Leaderboards' }))
     writeFileSync(info.outputPath(`frames-${width}.json`), JSON.stringify({ toAdmin, toPublic }, null, 2))
     for (const frames of [toAdmin, toPublic]) {
       expect(frames.length).toBeGreaterThan(10)
@@ -80,12 +80,12 @@ test('records the previous full-shell animation across the same transitions', as
   try {
     const page = await context.newPage()
     await logIn(page, baselineURL!)
-    const header = page.getByRole('navigation', { name: '页面导航' })
+    const header = page.getByRole('navigation', { name: 'Page navigation' })
     for (const width of [1440, 375]) {
       await page.setViewportSize({ width, height: width === 1440 ? 1000 : 812 })
-      if (new URL(page.url()).pathname !== '/') await header.getByRole('link', { name: '排行榜' }).click()
-      const toAdmin = await sampleTransition(page, header.getByRole('link', { name: '控制台' }))
-      const toPublic = await sampleTransition(page, header.getByRole('link', { name: '排行榜' }))
+      if (new URL(page.url()).pathname !== '/') await header.getByRole('link', { name: 'Leaderboards' }).click()
+      const toAdmin = await sampleTransition(page, header.getByRole('link', { name: 'Console' }))
+      const toPublic = await sampleTransition(page, header.getByRole('link', { name: 'Leaderboards' }))
       expect(range(toAdmin, 'header')).toBeGreaterThan(1)
       expect(range(toPublic, 'header')).toBeGreaterThan(1)
       writeFileSync(info.outputPath(`baseline-frames-${width}.json`), JSON.stringify({ toAdmin, toPublic }, null, 2))

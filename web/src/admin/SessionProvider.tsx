@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { formatLocalizedError, useI18n } from '../i18n'
 import { adminRequest, type AdminSession } from './api'
 import { SessionContext } from './sessionContext'
 
 // One live in-memory session for this document, shared by public and console
 // navigation. It is never persisted or trusted instead of server authorization.
 export function SessionProvider({ children }: { children: ReactNode }) {
+  const { locale } = useI18n()
   const [session, setSession] = useState<AdminSession | null>(null)
-  const [error, setError] = useState('')
+  const [rawError, setRawError] = useState<unknown>(null)
+  const error = rawError == null ? '' : formatLocalizedError(rawError, (m) => m.admin.errors.network, locale)
   const generation = useRef(0)
   const active = useRef(false)
   const pending = useRef<Promise<void> | null>(null)
@@ -14,14 +17,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     generation.current++
     const expired = value.expires_at && Date.parse(value.expires_at) <= Date.now()
     setSession(expired ? { enabled: value.enabled, authenticated: false } : value)
-    setError('')
+    setRawError(null)
   }, [])
   const refresh = useCallback(() => {
     if (pending.current) return pending.current
     const ticket = ++generation.current
     const request = adminRequest<AdminSession>('session').then((value) => {
       if (active.current && ticket === generation.current) accept(value)
-    }).catch((error: Error) => { if (active.current && ticket === generation.current) setError(error.message) }).finally(() => { if (pending.current === request) pending.current = null })
+    }).catch((err: unknown) => { if (active.current && ticket === generation.current) setRawError(err ?? true) }).finally(() => { if (pending.current === request) pending.current = null })
     pending.current = request
     return request
   }, [accept])

@@ -1,5 +1,7 @@
 // Keeper's K/M/B and adaptive duration presentation, adapted to decimal-string
 // counters. Never pass an int64 counter through Number before scaling it.
+import { getLocale, getMessages, type Locale } from './i18n'
+
 export type MetricKind = 'count' | 'duration' | 'percent' | 'points'
 
 export function formatCount(value: string): string {
@@ -49,15 +51,15 @@ export function formatDuration(value: string): string {
   return parts.join(' ')
 }
 
-export function formatMetric(value: string | null | undefined, kind: MetricKind): string {
+export function formatMetric(value: string | null | undefined, kind: MetricKind, locale: Locale = getLocale()): string {
   if (value == null) return '—'
   if (kind === 'count') return formatCount(value)
   if (kind === 'duration') return formatDuration(value)
-  return `${value}${kind === 'percent' ? ' %' : ' 分'}`
+  return `${value}${kind === 'percent' ? ' %' : ` ${getMessages(locale).table.pointsUnit}`}`
 }
 
-export function exactMetric(value: string | null | undefined, kind: MetricKind): string {
+export function exactMetric(value: string | null | undefined, kind: MetricKind, locale: Locale = getLocale()): string {
   if (value == null) return '—'
   if (kind === 'count') return BigInt(value).toLocaleString('en-US')
-  return `${value}${kind === 'duration' ? ' ms' : kind === 'percent' ? ' %' : ' 分'}`
+  return `${value}${kind === 'duration' ? ' ms' : kind === 'percent' ? ' %' : ` ${getMessages(locale).table.pointsUnit}`}`
 }
