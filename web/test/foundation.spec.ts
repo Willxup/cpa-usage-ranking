@@ -76,11 +76,15 @@ for (const width of [320, 375, 768]) {
 test('supports keyboard navigation of boards and periods', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('link', { name: /Skip to|跳到主要内容/ })).toHaveCount(0)
-  for (const name of ['CPA Usage Ranking Home', 'Leaderboards']) {
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('link', { name: 'CPA Usage Ranking Home', exact: true })).toBeFocused()
+  for (const name of ['Switch language to English', 'Switch language to Chinese']) {
     await page.keyboard.press('Tab')
-    await expect(page.getByRole('link', { name, exact: true })).toBeFocused()
+    await expect(page.getByRole('button', { name, exact: true })).toBeFocused()
   }
-  for (const name of ['Switch language to English', 'Switch language to Chinese', 'Overall', 'Token Usage', 'Cache Reuse', 'Reliability', 'First-Token Latency', 'Today', 'Yesterday', 'Weekly', 'Monthly']) {
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('link', { name: 'Leaderboards', exact: true })).toBeFocused()
+  for (const name of ['Overall', 'Token Usage', 'Cache Reuse', 'Reliability', 'First-Token Latency', 'Today', 'Yesterday', 'Weekly', 'Monthly']) {
     await page.keyboard.press('Tab')
     await expect(page.getByRole('button', { name, exact: true })).toBeFocused()
     if (name === 'Reliability' || name === 'Yesterday') await page.keyboard.press('Space')

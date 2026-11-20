@@ -9,8 +9,8 @@ export function SiteHeader({ admin = false }: { admin?: boolean }) {
   return <header className="header-wrap"><div className="site-header page-width">
     {admin ? <Link className="brand" href="/" aria-label={m.nav.homeAria}>{brand}</Link> : <a className="brand" href="#overview" aria-label={m.nav.homeAria}>{brand}</a>}
     <div className="header-actions">
-      <nav aria-label={m.nav.pageNav}>{admin ? <Link href="/">{m.nav.leaderboards}</Link> : <a className="nav-current" href="#ranking" aria-current="page">{m.nav.leaderboards}</a>}<AdminEntry current={admin} /></nav>
       <LanguageSwitcher />
+      <nav aria-label={m.nav.pageNav}>{admin ? <Link href="/">{m.nav.leaderboards}</Link> : <a className="nav-current" href="#ranking" aria-current="page">{m.nav.leaderboards}</a>}<AdminEntry current={admin} /></nav>
     </div>
   </div></header>
 }
