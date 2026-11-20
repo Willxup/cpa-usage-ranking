@@ -101,11 +101,15 @@ test('uses keyboard navigation to change the real board and period', async ({ pa
   const observed = observePage(page, baseURL!)
   await page.goto('/')
   await expect(page.getByRole('row', { name: new RegExp(participant) })).toBeVisible()
-  for (const name of ['CPA Usage Ranking Home', 'Leaderboards']) {
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('link', { name: 'CPA Usage Ranking Home', exact: true })).toBeFocused()
+  for (const name of ['Switch language to English', 'Switch language to Chinese']) {
     await page.keyboard.press('Tab')
-    await expect(page.getByRole('link', { name, exact: true })).toBeFocused()
+    await expect(page.getByRole('button', { name, exact: true })).toBeFocused()
   }
-  for (const name of ['Switch language to English', 'Switch language to Chinese', 'Overall', 'Token Usage']) {
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('link', { name: 'Leaderboards', exact: true })).toBeFocused()
+  for (const name of ['Overall', 'Token Usage']) {
     await page.keyboard.press('Tab')
     await expect(page.getByRole('button', { name, exact: true })).toBeFocused()
   }
