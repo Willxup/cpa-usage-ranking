@@ -2,6 +2,8 @@ package test
 
 import (
 	"context"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +14,36 @@ import (
 	"cpa-usage-ranking/internal/httpserver"
 	"cpa-usage-ranking/internal/reports"
 )
+
+func TestWithdrawUnknownContentLength(t *testing.T) {
+	f := newRegistrationFixture(t, defaultRegistrationSettings())
+	httpserver.MountWithdraw(f.router, f.repo, nil)
+	secret := testSecret(1)
+	f.register(t, secret, 42, "Seat")
+	for _, body := range []string{"x", ""} {
+		req, err := http.NewRequest(http.MethodPost, f.server.URL+withdrawPath, io.NopCloser(strings.NewReader(body)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.ContentLength = -1
+		req.TransferEncoding = []string{"chunked"}
+		req.Header.Set("Authorization", "Bearer "+secret)
+		resp, err := f.server.Client().Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		data, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if body != "" {
+			requireHTTPError(t, registrationResponse{status: resp.StatusCode, body: data}, http.StatusBadRequest, "invalid_request")
+		} else if resp.StatusCode != http.StatusNoContent || len(data) != 0 {
+			t.Fatalf("empty chunked withdrawal: %d %s", resp.StatusCode, data)
+		}
+	}
+}
 
 func TestMultiWriterReportAndWholeSeatWithdrawal(t *testing.T) {
 	f := reportSetup(t, defaultRegistrationSettings(), generousReportLimits(), nil)

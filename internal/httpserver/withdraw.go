@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"errors"
+	"io"
 	"net/http"
 
 	"cpa-usage-ranking/internal/auth"
@@ -16,7 +17,12 @@ func MountWithdraw(router *gin.Engine, repo *clients.Repository, requestRefresh 
 			writeInvalidCredential(c)
 			return
 		}
-		if c.Request.ContentLength != 0 || c.Request.URL.RawQuery != "" {
+		invalid := c.Request.ContentLength > 0 || c.Request.URL.RawQuery != ""
+		if !invalid && c.Request.ContentLength < 0 && c.Request.Body != nil {
+			body, err := io.ReadAll(io.LimitReader(c.Request.Body, 1))
+			invalid = err != nil || len(body) != 0
+		}
+		if invalid {
 			writeError(c, http.StatusBadRequest, "invalid_request", "Withdrawal accepts no body or query")
 			return
 		}
