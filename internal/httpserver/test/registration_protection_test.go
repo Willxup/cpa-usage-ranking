@@ -200,7 +200,7 @@ func TestRegistrationHTTPClosedDisabledWithdrawnAndStorageFailure(t *testing.T) 
 	if err := f.db.Writer.Close(); err != nil {
 		t.Fatal(err)
 	}
-	requireHTTPError(t, f.complete(t, secret, id), 500, "internal_error")
+	requireHTTPError(t, f.complete(t, secret, third), 500, "internal_error")
 }
 
 func TestRegistrationHTTPBodyBoundForKnownAndChunkedLength(t *testing.T) {

@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"cpa-usage-ranking/internal/clients"
+	"cpa-usage-ranking/internal/storage"
 )
 
 var (
@@ -50,19 +51,20 @@ func DefaultOptions() Options {
 }
 
 type Service struct {
+	reader   *sql.DB
 	writer   *sql.DB
 	avatarID int64
 	options  Options
 }
 
-func NewService(writer *sql.DB, defaultAvatarID int64, options Options) (*Service, error) {
-	if writer == nil || defaultAvatarID <= 0 || options.TTL < time.Millisecond || options.Capacity <= 0 {
+func NewService(db *storage.DB, defaultAvatarID int64, options Options) (*Service, error) {
+	if db == nil || db.Reader == nil || db.Writer == nil || defaultAvatarID <= 0 || options.TTL < time.Millisecond || options.Capacity <= 0 {
 		return nil, fmt.Errorf("invalid registration options")
 	}
 	if options.Now == nil {
 		options.Now = time.Now
 	}
-	return &Service{writer: writer, avatarID: defaultAvatarID, options: options}, nil
+	return &Service{reader: db.Reader, writer: db.Writer, avatarID: defaultAvatarID, options: options}, nil
 }
 
 func opaqueToken() string {
@@ -145,51 +147,62 @@ func (s *Service) PruneExpired(ctx context.Context) error {
 	return err
 }
 
-// Complete 在同一 IMMEDIATE 写事务内核验状态、绑定上报端及保存办结结果。
+// Complete 先用读池检查请求，仅 approved 进入 IMMEDIATE 写事务复查并绑定上报端。
 func (s *Service) Complete(ctx context.Context, hash clients.CredentialHash, id string) (Result, error) {
 	if !validToken(id) {
 		return Result{}, ErrInvalidRequest
+	}
+	var now time.Time
+	var expiry int64
+	var stage, cpaUUID string
+	var githubID sql.NullInt64
+	var name sql.NullString
+	checkRequest := func(queryRow func(context.Context, string, ...any) *sql.Row) (Result, error) {
+		var savedHash []byte
+		var clientID sql.NullInt64
+		err := queryRow(ctx, `SELECT token_hash,expires_at_ms,stage,cpa_uuid,github_id,display_name,client_id
+			FROM registration_requests WHERE id=?`, id).Scan(&savedHash, &expiry, &stage, &cpaUUID, &githubID, &name, &clientID)
+		if errors.Is(err, sql.ErrNoRows) {
+			// 过期清理后的编号与未签发编号不可区分，也没有额外的找回入口。
+			return Result{}, ErrExpired
+		}
+		if err != nil {
+			return Result{}, err
+		}
+		if subtle.ConstantTimeCompare(savedHash, hash[:]) != 1 {
+			return Result{}, ErrWrongCredential
+		}
+		now = s.options.Now()
+		if expiry <= now.UnixMilli() {
+			return Result{}, ErrExpired
+		}
+		switch stage {
+		case "denied":
+			return Result{}, ErrDenied
+		case "failed":
+			return Result{}, ErrGitHub
+		case "completed":
+			seat, err := readSeat(queryRow(ctx, seatFields+` WHERE id=?`, clientID.Int64))
+			if err == nil && expiry <= s.options.Now().UnixMilli() {
+				return Result{}, ErrExpired
+			}
+			return Result{Client: seat}, err
+		case "approved":
+			return Result{}, nil
+		default:
+			return Result{}, ErrPending
+		}
+	}
+	if result, err := checkRequest(s.reader.QueryRowContext); err != nil || stage != "approved" {
+		return result, err
 	}
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
 		return Result{}, err
 	}
 	defer tx.Rollback()
-	var savedHash []byte
-	var expiry int64
-	var stage, cpaUUID string
-	var githubID, clientID sql.NullInt64
-	var name sql.NullString
-	err = tx.QueryRowContext(ctx, `SELECT token_hash,expires_at_ms,stage,cpa_uuid,github_id,display_name,client_id
-		FROM registration_requests WHERE id=?`, id).Scan(&savedHash, &expiry, &stage, &cpaUUID, &githubID, &name, &clientID)
-	if errors.Is(err, sql.ErrNoRows) {
-		// 过期清理后的编号与未签发编号不可区分，也没有额外的找回入口。
-		return Result{}, ErrExpired
-	}
-	if err != nil {
-		return Result{}, err
-	}
-	if subtle.ConstantTimeCompare(savedHash, hash[:]) != 1 {
-		return Result{}, ErrWrongCredential
-	}
-	now := s.options.Now()
-	if expiry <= now.UnixMilli() {
-		return Result{}, ErrExpired
-	}
-	switch stage {
-	case "denied":
-		return Result{}, ErrDenied
-	case "failed":
-		return Result{}, ErrGitHub
-	case "completed":
-		seat, err := readSeat(tx.QueryRowContext(ctx, seatFields+` WHERE id=?`, clientID.Int64))
-		if err == nil && expiry <= s.options.Now().UnixMilli() {
-			return Result{}, ErrExpired
-		}
-		return Result{Client: seat}, err
-	case "approved":
-	default:
-		return Result{}, ErrPending
+	if result, err := checkRequest(tx.QueryRowContext); err != nil || stage != "approved" {
+		return result, err
 	}
 
 	var boundID int64

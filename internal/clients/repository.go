@@ -75,16 +75,24 @@ func scanClient(row interface{ Scan(...any) error }, extra ...any) (Client, erro
 	return client, nil
 }
 
-// Withdraw 只凭已登记的摘要选择整席，与上报事务共享 SQLite 写锁。
+// Withdraw 先用读池核验凭据和退出状态，实际退出与上报事务共享 SQLite 写锁。
 // 禁用、隐藏或已经退出均不妨碍退出。只有首次退出需要请求刷新。
 func (r *Repository) Withdraw(ctx context.Context, hash CredentialHash) (bool, error) {
+	var withdrawn bool
+	err := r.reader.QueryRowContext(ctx, `SELECT c.withdrawn FROM client_writers w JOIN clients c ON c.id=w.client_id
+		WHERE w.token_hash=?`, hash[:]).Scan(&withdrawn)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, ErrNotFound
+	}
+	if err != nil || withdrawn {
+		return false, err
+	}
 	tx, err := r.writer.BeginTx(ctx, nil)
 	if err != nil {
 		return false, err
 	}
 	defer tx.Rollback()
 	var id int64
-	var withdrawn bool
 	err = tx.QueryRowContext(ctx, `SELECT c.id,c.withdrawn FROM client_writers w JOIN clients c ON c.id=w.client_id
 		WHERE w.token_hash=?`, hash[:]).Scan(&id, &withdrawn)
 	if errors.Is(err, sql.ErrNoRows) {

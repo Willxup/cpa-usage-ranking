@@ -119,7 +119,7 @@ func newRegistrationFixture(t *testing.T, settings registrationSettings) *regist
 func (f *registrationFixture) mountRegistration(t *testing.T, settings registrationSettings, avatar int64) {
 	t.Helper()
 	var err error
-	f.reg, err = registration.NewService(f.db.Writer, avatar, settings.service)
+	f.reg, err = registration.NewService(f.db, avatar, settings.service)
 	if err != nil {
 		t.Fatal(err)
 	}

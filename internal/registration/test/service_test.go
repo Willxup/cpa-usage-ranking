@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"cpa-usage-ranking/internal/clients"
 	"cpa-usage-ranking/internal/registration"
@@ -28,7 +29,7 @@ func open(t *testing.T, path string, options registration.Options) (*storage.DB,
 	if err := storage.InitSchema(context.Background(), db.Writer); err != nil {
 		t.Fatal(err)
 	}
-	service, err := registration.NewService(db.Writer, 1, options)
+	service, err := registration.NewService(db, 1, options)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,6 +97,53 @@ func TestConcurrentSafeRetriesAcrossIndependentSQLitePools(t *testing.T) {
 		t.Fatalf("created %d seats", created)
 	}
 	counts(t, db, 1, 2, 2)
+}
+
+func TestReadOnlyRegistrationWhileWriterBusy(t *testing.T) {
+	db, s := open(t, filepath.Join(t.TempDir(), "registration.db"), registration.DefaultOptions())
+	hash := digest(1)
+	pending, err := s.Start(t.Context(), hash, uuid, returnTo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	completed, err := s.Start(t.Context(), hash, uuid, returnTo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	approve(t, db, completed)
+	created, err := s.Complete(t.Context(), hash, completed)
+	if err != nil || !created.Created {
+		t.Fatalf("complete fixture: %+v %v", created, err)
+	}
+	tx, err := db.Writer.BeginTx(t.Context(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 500*time.Millisecond)
+	defer cancel()
+	unknown := strings.Repeat("A", 43) // 格式合法但未签发，确保查到数据库。
+	for _, tc := range []struct {
+		name, id string
+		wantID   int64
+		wantErr  error
+	}{
+		{"unknown", unknown, 0, registration.ErrExpired},
+		{"pending", pending, 0, registration.ErrPending},
+		{"completed", completed, created.Client.ID, nil},
+	} {
+		got, err := s.Complete(ctx, hash, tc.id)
+		if !errors.Is(err, tc.wantErr) || got.Client.ID != tc.wantID || got.Created {
+			t.Errorf("complete %s: client=%d created=%t err=%v; want client=%d created=false err=%v", tc.name, got.Client.ID, got.Created, err, tc.wantID, tc.wantErr)
+		}
+	}
+	if _, err := s.Authorize(ctx, unknown); !errors.Is(err, registration.ErrInvalidRequest) {
+		t.Errorf("unknown authorize: %v", err)
+	}
+	if _, err := s.Callback(ctx, nil, unknown, unknown, ""); !errors.Is(err, registration.ErrInvalidRequest) {
+		t.Errorf("unknown callback: %v", err)
+	}
 }
 
 type roundTripFunc func(*http.Request) (*http.Response, error)

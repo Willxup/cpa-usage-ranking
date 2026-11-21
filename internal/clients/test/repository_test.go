@@ -187,6 +187,29 @@ func TestMissingClientAndCancellationErrors(t *testing.T) {
 	}
 }
 
+func TestWithdrawNoOpWhileWriterBusy(t *testing.T) {
+	db, repo := openRepository(t, filepath.Join(t.TempDir(), "ranking.db"))
+	create(t, db, "withdrawn")
+	hash := credentialHash("withdrawn")
+	if changed, err := repo.Withdraw(t.Context(), hash); !changed || err != nil {
+		t.Fatalf("first withdrawal: changed=%t err=%v", changed, err)
+	}
+	tx, err := db.Writer.BeginTx(t.Context(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 500*time.Millisecond)
+	defer cancel()
+	if changed, err := repo.Withdraw(ctx, credentialHash("missing")); changed || !errors.Is(err, clients.ErrNotFound) {
+		t.Errorf("unknown withdrawal: changed=%t err=%v", changed, err)
+	}
+	if changed, err := repo.Withdraw(ctx, hash); changed || err != nil {
+		t.Errorf("repeated withdrawal: changed=%t err=%v", changed, err)
+	}
+}
+
 func TestConcurrentDuplicateCredentialCreatesOneClient(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "ranking.db")
 	db, repository := openRepository(t, path)
