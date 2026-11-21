@@ -119,8 +119,8 @@ func (s *Service) claimCallback(ctx context.Context, state, browserSession strin
 }
 
 func (s *Service) finishCallback(requestCtx context.Context, id, stage string, githubID, name any) (string, error) {
-	// state 已消耗；即使浏览器断线，也给最终结果一次有时限的写库机会。
-	ctx, cancel := context.WithTimeout(context.WithoutCancel(requestCtx), 2*time.Second)
+	// state 已消耗；即使浏览器断线，最终落库仍使用与 SQLite 一致的写超时。
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(requestCtx), 5*time.Second)
 	defer cancel()
 	tx, err := s.writer.BeginTx(ctx, nil)
 	if err != nil {
